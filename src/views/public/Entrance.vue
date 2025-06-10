@@ -22,6 +22,7 @@ const enter = (type) => {
         <el-button type="success" @click="enter(2)">教师入口</el-button>
         <el-button type="info" @click="enter(3)">管理员入口</el-button>
         111111111
+        TESTbyWHZ_2025611
     </div>
 </template>
 
