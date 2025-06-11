@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/entrance',
+    path: '/',
     name: 'Entrance',
     component: () => import('@/views/public/Entrance.vue') // 三按钮入口页
   },
@@ -23,7 +23,7 @@ const routes = [
           { path: 'home', name: 'StudentHome', component: () => import('@/views/student/Home.vue') },
           { path: 'study', name: 'StudentStudy', component: () => import('@/views/student/Study.vue') },
           { path: 'practise', name: 'StudentPractise', component: () => import('@/views/student/Practise.vue') },
-          { path: 'feedback', name: 'StudentFeedback', component: () => import('@/views/student/Feedback.vue') }
+          { path: 'interact', name: 'StudentInteract', component: () => import('@/views/student/Interact.vue') }
         ]
       }
     ]
@@ -46,7 +46,7 @@ const routes = [
           { path: 'resources', name: 'TeacherResources', component: () => import('@/views/teacher/Resources.vue') },
           { path: 'practise', name: 'TeacherPractise', component: () => import('@/views/teacher/Practise.vue') },
           { path: 'analysis', name: 'TeacherAnalysis', component: () => import('@/views/teacher/Analysis.vue') },
-          { path: 'feedback', name: 'TeacherFeedback', component: () => import('@/views/teacher/Feedback.vue') }
+          { path: 'interact', name: 'TeacherInteract', component: () => import('@/views/teacher/Interact.vue') }
         ]
       }
     ]
