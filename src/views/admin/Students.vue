@@ -38,11 +38,11 @@ const handleSelectionChange = (val) => {
 </script>
 
 <template>
-  <h1>员工管理</h1>
+  <h1>学生管理</h1>
   <div class="container">
     <el-form :inline="true" :model="searchUser" class="demo-form-inline">
       <el-form-item label="姓名">
-        <el-input v-model="searchUser.name" placeholder="请输入员工姓名" clearable />
+        <el-input v-model="searchUser.name" placeholder="请输入学生姓名" clearable />
       </el-form-item>
 
       <el-form-item label="性别">
@@ -59,7 +59,7 @@ const handleSelectionChange = (val) => {
   </div>
 
   <div class=container>
-    <el-button type="primary" @click="">新增员工</el-button>
+    <el-button type="primary" @click="">新增学生</el-button>
     <el-button type="danger" @click="">批量删除</el-button>
   </div>
 
