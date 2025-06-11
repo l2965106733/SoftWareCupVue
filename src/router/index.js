@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
-    path: '/',
+    path: '/entrance',
     name: 'Entrance',
     component: () => import('@/views/public/Entrance.vue') // 三按钮入口页
   },
@@ -10,7 +10,7 @@ const routes = [
   // 学生模块
   {
     path: '/student',
-    redirect: '/student/login',
+    redirect: '/student/home',
     children: [
       { path: 'login', name: 'StudentLogin', component: () => import('@/views/student/Login.vue') },
       { path: 'reset', name: 'StudentReset', component: () => import('@/views/student/Reset.vue') },
@@ -32,7 +32,7 @@ const routes = [
   // 教师模块
   {
     path: '/teacher',
-    redirect: '/teacher/login',
+    redirect: '/teacher/home',
     children: [
       { path: 'login', name: 'TeacherLogin', component: () => import('@/views/teacher/Login.vue') },
       { path: 'reset', name: 'TeacherReset', component: () => import('@/views/teacher/Reset.vue') },
@@ -55,7 +55,7 @@ const routes = [
   // 管理员模块
   {
     path: '/admin',
-    redirect: '/admin/login',
+    redirect: '/admin/home',
     children: [
       { path: 'login', name: 'AdminLogin', component: () => import('@/views/admin/Login.vue') },
       { path: 'reset', name: 'AdminReset', component: () => import('@/views/admin/Reset.vue') },
