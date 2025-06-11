@@ -10,7 +10,7 @@ const routes = [
   // 学生模块
   {
     path: '/student',
-    redirect: '/student/login',
+    redirect: '/student/home',
     children: [
       { path: 'login', name: 'StudentLogin', component: () => import('@/views/student/Login.vue') },
       { path: 'reset', name: 'StudentReset', component: () => import('@/views/student/Reset.vue') },
@@ -23,7 +23,7 @@ const routes = [
           { path: 'home', name: 'StudentHome', component: () => import('@/views/student/Home.vue') },
           { path: 'study', name: 'StudentStudy', component: () => import('@/views/student/Study.vue') },
           { path: 'practise', name: 'StudentPractise', component: () => import('@/views/student/Practise.vue') },
-          { path: 'feedback', name: 'StudentFeedback', component: () => import('@/views/student/Feedback.vue') }
+          { path: 'interact', name: 'StudentInteract', component: () => import('@/views/student/Interact.vue') }
         ]
       }
     ]
@@ -32,7 +32,7 @@ const routes = [
   // 教师模块
   {
     path: '/teacher',
-    redirect: '/teacher/login',
+    redirect: '/teacher/home',
     children: [
       { path: 'login', name: 'TeacherLogin', component: () => import('@/views/teacher/Login.vue') },
       { path: 'reset', name: 'TeacherReset', component: () => import('@/views/teacher/Reset.vue') },
@@ -46,7 +46,7 @@ const routes = [
           { path: 'resources', name: 'TeacherResources', component: () => import('@/views/teacher/Resources.vue') },
           { path: 'practise', name: 'TeacherPractise', component: () => import('@/views/teacher/Practise.vue') },
           { path: 'analysis', name: 'TeacherAnalysis', component: () => import('@/views/teacher/Analysis.vue') },
-          { path: 'feedback', name: 'TeacherFeedback', component: () => import('@/views/teacher/Feedback.vue') }
+          { path: 'interact', name: 'TeacherInteract', component: () => import('@/views/teacher/Interact.vue') }
         ]
       }
     ]
@@ -55,7 +55,7 @@ const routes = [
   // 管理员模块
   {
     path: '/admin',
-    redirect: '/admin/login',
+    redirect: '/admin/home',
     children: [
       { path: 'login', name: 'AdminLogin', component: () => import('@/views/admin/Login.vue') },
       { path: 'reset', name: 'AdminReset', component: () => import('@/views/admin/Reset.vue') },

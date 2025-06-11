@@ -1,5 +1,8 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+
+const router = useRouter()
 
 const enter = (type) => {
     switch (type) {
@@ -27,4 +30,5 @@ const enter = (type) => {
 </template>
 
 <style scoped>
+
 </style>
