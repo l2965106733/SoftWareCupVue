@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 
-const searchUser = ref({name: '', gender: ''})
+const searchUser = ref({ name: '', gender: '', subject: '' })
 
 const genders = ref([{ name: '男', value: 1 }, { name: '女', value: 2 }])
 
@@ -12,6 +12,7 @@ const user = ref([{
   password: '',          // 加密后的密码
   name: '',              // 姓名
   gender: '',            // 性别，可为 '男' / '女' / ''
+  role: '',             // 角色，可为 '学生' / '教师' / '管理员'
   identifier: '',        // 学号/教师号/管理员号
   subject: '',           // 教师教学科目（仅教师）
   createTime: '',        // 注册时间（字符串）
@@ -49,6 +50,9 @@ const handleSelectionChange = (val) => {
         <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable>
           <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
         </el-select>
+        <el-form-item label="科目">
+          <el-input v-model="searchUser.subject" placeholder="请输入教学科目" clearable />
+        </el-form-item>
       </el-form-item>
 
       <el-form-item>
@@ -79,7 +83,7 @@ const handleSelectionChange = (val) => {
         </template>
       </el-table-column> */} -->
       <el-table-column prop="identifier" label="教工号" width="150" align="center" />
-    
+      <el-table-column prop="subject" label="科目" width="150" align="center" />
       <el-table-column prop="udpateTime" label="最后操作时间" width="200" align="center" />
       <el-table-column label="操作" width="180" align="center">
         <template #default="scope">

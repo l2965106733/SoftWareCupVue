@@ -43,7 +43,7 @@ const routes = [
         redirect: 'home',
         children: [
           { path: 'home', name: 'TeacherHome', component: () => import('@/views/teacher/Home.vue') },
-          { path: 'resources', name: 'TeacherResources', component: () => import('@/views/teacher/Resources.vue') },
+          { path: 'resources', name: 'TeacherResource', component: () => import('@/views/teacher/Resource.vue') },
           { path: 'practise', name: 'TeacherPractise', component: () => import('@/views/teacher/Practise.vue') },
           { path: 'analysis', name: 'TeacherAnalysis', component: () => import('@/views/teacher/Analysis.vue') },
           { path: 'interact', name: 'TeacherInteract', component: () => import('@/views/teacher/Interact.vue') }
@@ -66,10 +66,8 @@ const routes = [
         redirect: 'home',
         children: [
           { path: 'home', name: 'AdminHome', component: () => import('@/views/admin/Home.vue') },
-          { path: 'students', name: 'AdminStudents', component: () => import('@/views/admin/Students.vue') },
-          { path: 'teachers', name: 'AdminTeachers', component: () => import('@/views/admin/Teachers.vue') },
-          { path: 'admins', name: 'AdminAdmins', component: () => import('@/views/admin/Admins.vue') },
-          { path: 'resources', name: 'AdminResources', component: () => import('@/views/admin/Resources.vue') },
+          { path: 'user', name: 'AdminUser', component: () => import('@/views/admin/User.vue') },
+          { path: 'resources', name: 'AdminResource', component: () => import('@/views/admin/Resource.vue') },
           { path: 'teacherstats', name: 'AdminTeacherStats', component: () => import('@/views/admin/TeacherStats.vue') },
           { path: 'studentstats', name: 'AdminStudentStats', component: () => import('@/views/admin/StudentStats.vue') },
           { path: 'overallstats', name: 'AdminOverallStats', component: () => import('@/views/admin/OverallStats.vue') }

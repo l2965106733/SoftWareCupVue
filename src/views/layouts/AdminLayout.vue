@@ -67,36 +67,18 @@ const logOut = () => {
                             </el-icon> 首页
                         </el-menu-item>
 
-
-                        <el-sub-menu index="/managent">
-                            <template #title>
-                                <el-icon>
+                        <el-menu-item index="/admin/user">
+                            <el-icon>
                                     <Tools />
                                 </el-icon>用户管理
-                            </template>
-                            <el-menu-item index="/admin/students">
-                                <el-icon>
-                                    <HelpFilled />
-                                </el-icon>学生管理
-                            </el-menu-item>
-                            <el-menu-item index="/admin/teachers">
-                                <el-icon>
-                                    <Avatar />
-                                </el-icon>教师管理
-                            </el-menu-item>
-                            <el-menu-item index="/admin/admins">
-                                <el-icon>
-                                    <Avatar />
-                                </el-icon>管理员管理
-                            </el-menu-item>
-                        </el-sub-menu>
+                        </el-menu-item>
 
-
-                        <el-menu-item index="/admin/resources">
+                        <el-menu-item index="/admin/resource">
                             <el-icon>
                                 <Menu />
                             </el-icon> 课程资源管理
                         </el-menu-item>
+
 
                         <el-sub-menu index="/status">
                             <template #title>
