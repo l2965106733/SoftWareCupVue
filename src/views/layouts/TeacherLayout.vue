@@ -15,7 +15,7 @@ onMounted(() => {
 
 const reset = () => {
     // 跳转到修改密码页面
-    router.push('/teacher/reset');
+    router.push('/reset?mode=modify&role=2');
 }
 
 const logOut = () => {
@@ -25,9 +25,9 @@ const logOut = () => {
         type: 'warning'
     }).then(() => {
         // 清除登录用户信息
-        // localStorage.removeItem('loginUser');
+        localStorage.removeItem('loginUser');
         // 跳转到登录页面
-        router.push('/teacher/login')
+        router.push('/')
     }).catch(() => {
         ElMessage.info('已取消退出登录');
     });
@@ -67,7 +67,7 @@ const logOut = () => {
                             </el-icon> 首页
                         </el-menu-item>
 
-                        <el-menu-item index="/teacher/resources">
+                        <el-menu-item index="/teacher/resource">
                             <el-icon>
                                 <Menu />
                             </el-icon> 备课模块
