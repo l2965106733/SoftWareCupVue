@@ -1,21 +1,44 @@
 <script setup>
-import { RouterView } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
+import { computed } from 'vue'
+
+const route = useRoute()
+
+// 计算是否显示页眉 - 只在公共页面显示
+const showHeader = computed(() => {
+  const publicRoutes = ['/', '/register', '/reset']
+  return publicRoutes.includes(route.path) || route.path.startsWith('/reset')
+})
+
+// 计算是否禁用滚动 - 在公共页面禁用滚动
+const disableScroll = computed(() => {
+  const noScrollRoutes = ['/', '/register', '/reset']
+  return noScrollRoutes.includes(route.path) || route.path.startsWith('/reset')
+})
 </script>
 
 <template>
-  <div id="app">
-    <!-- 常驻页眉 -->
-    <header class="app-header">
+  <div id="app" :class="{ 'no-scroll': disableScroll }">
+    <!-- 全局页眉 - 只在登录相关页面显示 -->
+    <header v-if="showHeader" class="global-header">
       <div class="header-content">
-        <h1 class="app-title">欢迎使用教学实训智能体软件</h1>
+        <div class="header-left">
+          <h1 class="system-title">
+            <i class="fas fa-graduation-cap title-icon"></i>
+            欢迎使用教学实训智能体软件
+          </h1>
+        </div>
         <div class="header-right">
-          <span class="startup-text">启动页</span>
+          <div class="startup-text">
+            <i class="fas fa-rocket startup-icon"></i>
+            启动页
+          </div>
         </div>
       </div>
     </header>
-    
+
     <!-- 主要内容区域 -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'with-header': showHeader, 'no-scroll': disableScroll }">
       <transition name="page-transition" mode="out-in">
         <RouterView />
       </transition>
@@ -24,27 +47,35 @@ import { RouterView } from 'vue-router'
 </template>
 
 <style scoped>
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
 #app {
   min-height: 100vh;
   background: var(--gradient-blue);
-  display: flex;
-  flex-direction: column;
 }
 
-.app-header {
+/* 禁用滚动的样式 */
+#app.no-scroll {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 全局页眉样式 */
+.global-header {
+  height: 70px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 70px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 1000;
-  animation: header-fade-in 0.8s cubic-bezier(.4,0,.2,1);
+  animation: header-slide-down 0.8s cubic-bezier(.4,0,.2,1);
 }
 
-@keyframes header-fade-in {
+@keyframes header-slide-down {
   0% { 
     opacity: 0; 
     transform: translateY(-20px);
@@ -61,16 +92,30 @@ import { RouterView } from 'vue-router'
   justify-content: space-between;
   height: 100%;
   padding: 0 32px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.app-title {
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.system-title {
   font-size: 24px;
   font-weight: 700;
   color: #fff;
   margin: 0;
+  display: flex;
+  align-items: center;
   text-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  letter-spacing: 0.05em;
-  animation: title-glow 2s ease-in-out infinite alternate;
+  animation: title-glow 3s ease-in-out infinite alternate;
+}
+
+.title-icon {
+  margin-right: 12px;
+  font-size: 28px;
+  animation: icon-rotate 4s ease-in-out infinite;
 }
 
 @keyframes title-glow {
@@ -82,27 +127,65 @@ import { RouterView } from 'vue-router'
   }
 }
 
+@keyframes icon-rotate {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
 .header-right {
   display: flex;
   align-items: center;
 }
 
 .startup-text {
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  margin: 0;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  letter-spacing: 0.05em;
-  animation: title-glow 2s ease-in-out infinite alternate;
+  font-size: 18px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  animation: startup-pulse 2s ease-in-out infinite;
+}
+
+.startup-icon {
+  margin-right: 8px;
+  animation: rocket-fly 3s ease-in-out infinite;
+}
+
+@keyframes startup-pulse {
+  0%, 100% { 
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes rocket-fly {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-3px) rotate(-5deg); }
+  75% { transform: translateY(3px) rotate(5deg); }
 }
 
 .main-content {
-  flex: 1;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main-content.with-header {
   padding-top: 70px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.main-content.no-scroll {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 针对学生系统等内部页面，不需要居中 */
+.main-content > * {
+  width: 100%;
 }
 
 .page-transition-enter-active, .page-transition-leave-active {
@@ -115,5 +198,38 @@ import { RouterView } from 'vue-router'
 .page-transition-leave-to {
   opacity: 0;
   transform: translateY(-20px) scale(1.02);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 20px;
+  }
+  
+  .system-title {
+    font-size: 20px;
+  }
+  
+  .title-icon {
+    font-size: 24px;
+  }
+  
+  .startup-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 16px;
+  }
+  
+  .system-title {
+    font-size: 18px;
+  }
+  
+  .startup-text {
+    font-size: 14px;
+  }
 }
 </style>

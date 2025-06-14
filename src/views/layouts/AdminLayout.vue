@@ -2,9 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useRouter } from 'vue-router';
-import router from '../../router';
 
+const router = useRouter();
 const loginName = ref('');
+
 onMounted(() => {
     // 从localStorage中获取登录用户信息
     const loginUser = JSON.parse(localStorage.getItem('loginUser'));

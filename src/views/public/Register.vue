@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { registerApi } from '@/api/public'
 
@@ -8,6 +8,16 @@ const router = useRouter()
 const route = useRoute()
 
 const role = ref(Number(route.query.role || 1))
+
+// 检查角色权限
+onMounted(() => {
+  if (role.value !== 3) {
+    ElMessage.error('只有管理员可以注册，学生和教师账号请联系学校管理员开通')
+    router.push('/')
+    return
+  }
+})
+
 const roleLabel = computed(() => {
   switch (role.value) {
     case 1:
@@ -33,6 +43,11 @@ const registerForm = ref({
 
 // 注册操作
 const register = async () => {
+  if (role.value !== 3) {
+    ElMessage.error('只有管理员可以注册')
+    return
+  }
+  
   if (!registerForm.value.username || !registerForm.value.password || !registerForm.value.name) {
     ElMessage.error('请填写完整信息')
     return
@@ -51,7 +66,7 @@ const register = async () => {
   try {
     const result = await registerApi(registerForm.value)
     if (result.code) {
-      ElMessage.success('注册成功，请登录')
+      ElMessage.success('管理员注册成功，请登录')
       router.push('/')
     } else {
       ElMessage.error(result.message || '注册失败')
@@ -69,7 +84,7 @@ const backToLogin = () => {
 
 <template>
   <div id="container">
-    <div class="register-form page-transition">
+    <div class="register-form page-transition" v-if="role === 3">
       <el-form label-width="80px">
         <p class="title">{{ roleLabel }}注册</p>
         
@@ -99,6 +114,17 @@ const backToLogin = () => {
         </div>
       </el-form>
     </div>
+    
+    <!-- 非管理员访问提示 -->
+    <div v-else class="access-denied page-transition">
+      <div class="denied-content">
+        <i class="fas fa-exclamation-triangle denied-icon"></i>
+        <h3 class="denied-title">访问受限</h3>
+        <p class="denied-message">只有管理员可以注册新账号</p>
+        <p class="denied-subtitle">学生和教师账号请联系学校管理员开通</p>
+        <el-button class="back-button" type="primary" @click="backToLogin">返回登录</el-button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -107,7 +133,7 @@ const backToLogin = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 70px);
+  min-height: 100vh;
   padding: 20px;
 }
 
@@ -119,6 +145,59 @@ const backToLogin = () => {
   box-shadow: 0 8px 32px rgba(0,0,0,0.13);
   position: relative;
   backdrop-filter: blur(6px);
+}
+
+.access-denied {
+  width: 400px;
+  background: rgba(255,255,255,0.92);
+  padding: 40px 32px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+  position: relative;
+  backdrop-filter: blur(6px);
+  text-align: center;
+}
+
+.denied-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.denied-icon {
+  font-size: 48px;
+  color: #ff7b6c;
+  margin-bottom: 20px;
+  animation: icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.denied-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 16px 0;
+}
+
+.denied-message {
+  font-size: 16px;
+  color: #666;
+  margin: 0 0 8px 0;
+}
+
+.denied-subtitle {
+  font-size: 14px;
+  color: #999;
+  margin: 0 0 24px 0;
+}
+
+.back-button {
+  border-radius: 12px;
+  padding: 12px 24px;
 }
 
 .page-transition {

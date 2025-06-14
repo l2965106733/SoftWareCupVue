@@ -68,7 +68,13 @@ const reset = () => {
 
 // 注册
 const goRegister = () => {
-  router.push(`/register?role=${role.value}`)
+  if (role.value === 3) {
+    // 只有管理员可以注册
+    router.push(`/register?role=${role.value}`)
+  } else {
+    // 学生和教师显示提示
+    ElMessage.info('学生和教师账号请联系学校管理员开通')
+  }
 }
 </script>
 
@@ -127,8 +133,11 @@ const goRegister = () => {
         </div>
         <!-- 注册链接 -->
         <div class="register-link">
-          <span>还没有账号？</span>
-          <a href="javascript:;" @click="goRegister" class="register-btn">立即注册</a>
+          <span v-if="role === 3">还没有账号？</span>
+          <span v-else>没有账号？</span>
+          <a href="javascript:;" @click="goRegister" class="register-btn">
+            {{ role === 3 ? '立即注册' : '请询问学校管理员' }}
+          </a>
         </div>
       </el-form>
     </div>
@@ -142,15 +151,17 @@ const goRegister = () => {
 #container {
   display: flex;
   justify-content: center;
-  align-items: center;
-  min-height: calc(100vh - 70px);
-  padding: 20px;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 90px 20px 20px 20px;
+  width: 100%;
 }
 .enter_select_card {
   display: flex;
   flex-direction: column;
   align-items: center;
   animation: fade-in 1s;
+  margin-top: 60px;
 }
 .welcome-text {
   text-align: center;
@@ -310,6 +321,7 @@ const goRegister = () => {
   box-shadow: 0 8px 32px rgba(0,0,0,0.13);
   position: relative;
   backdrop-filter: blur(6px);
+  margin-top: 90px;
 }
 .page-transition {
   animation: page-fade-in 0.7s cubic-bezier(.4,0,.2,1);
