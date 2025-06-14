@@ -75,7 +75,6 @@ const handleSelectionChange = (val) => {
   selectIds.value = val.map(item => item.id);
 }
 
-
 const deleteById = async (id) => {
   ElMessageBox.confirm('是否确认删除该员工？', '提示', {
     confirmButtonText: '确定',
@@ -148,7 +147,7 @@ const save = async () => {
         result = await addUserApi(formUser.value);
       }
       if (result.code) {
-        ElMessage.success(roleLabel + '信息保存成功');
+        ElMessage.success(roleLabel.value + '信息保存成功');
         dialogVisible.value = false;
         search();
       } else {
@@ -164,9 +163,9 @@ const save = async () => {
 const edit = async (id) => {
   const result = await getUserInfoApi(id);
   if (result.code) {
-    employee.value = result.data;
+    formUser.value = result.data;
     dialogVisible.value = true;
-    dialogTitle.value = '修改' + roleLabel;
+    dialogTitle.value = '修改' + roleLabel.value;
   } else {
     ElMessage.error(result.msg);
   }

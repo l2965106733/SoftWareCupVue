@@ -1,5 +1,7 @@
 import axios from 'axios'
- 
+import { ElMessage } from 'element-plus'
+import router from '@/router' 
+
 //创建axios实例对象
 const request = axios.create({
   baseURL: '/api',
@@ -26,6 +28,10 @@ request.interceptors.response.use(
     return response.data
   },
   (error) => { //失败回调
+    if (error.response.status === 401) {
+      ElMessage.error("登录超时，请重新登录");
+      router.push("/login");
+    }
     return Promise.reject(error)
   }
 )

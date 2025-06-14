@@ -15,7 +15,7 @@ onMounted(() => {
 
 const reset = () => {
     // 跳转到修改密码页面
-    router.push('/admin/reset');
+    router.push('/reset?mode=modify&role=3');
 }
 
 const logOut = () => {
@@ -24,10 +24,11 @@ const logOut = () => {
         cancelButtonText: '取消',
         type: 'warning'
     }).then(() => {
+        ElMessage.success("退出成功")
         // 清除登录用户信息
-        // localStorage.removeItem('loginUser');
+        localStorage.removeItem('loginUser');
         // 跳转到登录页面
-        router.push('/admin/login')
+        router.push('/')
     }).catch(() => {
         ElMessage.info('已取消退出登录');
     });

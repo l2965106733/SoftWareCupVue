@@ -1,24 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
-  {
-    path: '/',
-    name: 'Entrance',
-    component: () => import('@/views/public/Entrance.vue') // 三按钮入口页
-  },
-
+  { path: '/', name: 'Login', component: () => import('@/views/public/Login.vue')},
+  { path: '/reset', name: 'Reset', component: () => import('@/views/public/Reset.vue') },
   // 学生模块
   {
     path: '/student',
     redirect: '/student/home',
     children: [
-      { path: 'login', name: 'StudentLogin', component: () => import('@/views/student/Login.vue') },
-      { path: 'reset', name: 'StudentReset', component: () => import('@/views/student/Reset.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/StudentLayout.vue'),
         meta: { role: 'student' },
-        redirect: 'home',
+        redirect: '/student/home',
         children: [
           { path: 'home', name: 'StudentHome', component: () => import('@/views/student/Home.vue') },
           { path: 'study', name: 'StudentStudy', component: () => import('@/views/student/Study.vue') },
@@ -34,13 +28,11 @@ const routes = [
     path: '/teacher',
     redirect: '/teacher/home',
     children: [
-      { path: 'login', name: 'TeacherLogin', component: () => import('@/views/teacher/Login.vue') },
-      { path: 'reset', name: 'TeacherReset', component: () => import('@/views/teacher/Reset.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/TeacherLayout.vue'),
         meta: { role: 'teacher' },
-        redirect: 'home',
+        redirect: '/teacher/home',
         children: [
           { path: 'home', name: 'TeacherHome', component: () => import('@/views/teacher/Home.vue') },
           { path: 'resource', name: 'TeacherResource', component: () => import('@/views/teacher/Resource.vue') },
@@ -57,13 +49,11 @@ const routes = [
     path: '/admin',
     redirect: '/admin/home',
     children: [
-      { path: 'login', name: 'AdminLogin', component: () => import('@/views/admin/Login.vue') },
-      { path: 'reset', name: 'AdminReset', component: () => import('@/views/admin/Reset.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/AdminLayout.vue'),
         meta: { role: 'admin' },
-        redirect: 'home',
+        redirect: '/admin/home',
         children: [
           { path: 'home', name: 'AdminHome', component: () => import('@/views/admin/Home.vue') },
           { path: 'user', name: 'AdminUser', component: () => import('@/views/admin/User.vue') },

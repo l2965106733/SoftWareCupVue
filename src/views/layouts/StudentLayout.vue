@@ -15,7 +15,7 @@ onMounted(() => {
 
 const reset = () => {
     // 跳转到修改密码页面
-    router.push('/student/reset');
+    router.push('/reset?mode=modify&role=1');
 }
 
 const logOut = () => {
@@ -25,9 +25,9 @@ const logOut = () => {
         type: 'warning'
     }).then(() => {
         // 清除登录用户信息
-        // localStorage.removeItem('loginUser');
+        localStorage.removeItem('loginUser');
         // 跳转到登录页面
-        router.push('/student/login')
+        router.push('/')
     }).catch(() => {
         ElMessage.info('已取消退出登录');
     });
