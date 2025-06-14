@@ -14,6 +14,7 @@ const routes = [
     children: [
       { path: 'login', name: 'StudentLogin', component: () => import('@/views/student/Login.vue') },
       { path: 'reset', name: 'StudentReset', component: () => import('@/views/student/Reset.vue') },
+      { path: 'register', name: 'StudentRegister', component: () => import('@/views/student/Register.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/StudentLayout.vue'),
@@ -36,6 +37,7 @@ const routes = [
     children: [
       { path: 'login', name: 'TeacherLogin', component: () => import('@/views/teacher/Login.vue') },
       { path: 'reset', name: 'TeacherReset', component: () => import('@/views/teacher/Reset.vue') },
+      { path: 'register', name: 'TeacherRegister', component: () => import('@/views/teacher/Register.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/TeacherLayout.vue'),
@@ -59,6 +61,7 @@ const routes = [
     children: [
       { path: 'login', name: 'AdminLogin', component: () => import('@/views/admin/Login.vue') },
       { path: 'reset', name: 'AdminReset', component: () => import('@/views/admin/Reset.vue') },
+      { path: 'register', name: 'AdminRegister', component: () => import('@/views/admin/Register.vue') },
       {
         path: '',
         component: () => import('@/views/layouts/AdminLayout.vue'),
