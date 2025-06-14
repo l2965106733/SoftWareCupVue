@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
-  { path: '/', name: 'Login', component: () => import('@/views/public/Login.vue')},
+  { path: '/', name: 'Login', component: () => import('@/views/public/Login.vue') },
   { path: '/reset', name: 'Reset', component: () => import('@/views/public/Reset.vue') },
+  { path: '/register', name: 'Register', component: () => import('@/views/public/Register.vue') },
   // 学生模块
   {
     path: '/student',

@@ -1,13 +1,17 @@
 :root {
-    --student-color: #2979ff;
-    --teacher-color: #ff9800;
-    --admin-color: #00bcd4;
+    --student-color: #2563eb;
+    --teacher-color: #f59e42;
+    --admin-color: #10b981;
     --card-radius: 20px;
-    --card-shadow: 0 4px 24px rgba(0, 0, 0, 0.10);
-    --transition: 0.22s cubic-bezier(.4, 0, .2, 1);
-    --bg-light: #f5f7fa;
+    --card-shadow: 0 6px 32px rgba(0, 0, 0, 0.12);
+    --transition: 0.28s cubic-bezier(.4, 0, .2, 1);
+    --bg-light: #f4f6fa;
     --text-main: #222;
-    --text-sub: #888;
+    --text-sub: #6b7280;
+    --gradient-blue: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
+    --gradient-orange: linear-gradient(135deg, #f59e42 0%, #fbbf24 100%);
+    --gradient-green: linear-gradient(135deg, #10b981 0%, #6ee7b7 100%);
+    --glass-blur: blur(8px);
 }
 
 .card {
@@ -15,23 +19,53 @@
     box-shadow: var(--card-shadow);
     transition: transform var(--transition), box-shadow var(--transition);
     background: #fff;
+    overflow: hidden;
+    position: relative;
+    animation: card-fade-in 0.7s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes card-fade-in {
+    0% {
+        opacity: 0;
+        transform: translateY(40px) scale(0.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .card:hover {
-    transform: translateY(-8px) scale(1.03);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    transform: translateY(-10px) scale(1.04);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
 }
 
 .button {
-    border-radius: 8px;
-    font-weight: bold;
+    border-radius: 12px;
+    font-weight: 600;
     transition: background var(--transition), color var(--transition), box-shadow var(--transition), transform var(--transition);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    background: var(--gradient-blue);
+    color: #fff;
+    border: none;
+    padding: 10px 28px;
+    font-size: 1.1em;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.button:active {
+    transform: scale(0.98);
 }
 
 .button:hover {
-    transform: translateY(-2px) scale(1.04);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    background: var(--gradient-orange);
+    color: #fff;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.13);
+    filter: brightness(1.05);
 }
 
 .link {
@@ -40,8 +74,16 @@
     border: none;
     cursor: pointer;
     transition: color var(--transition);
+    font-weight: 500;
 }
 
 .link:hover {
     text-decoration: underline;
+    color: var(--admin-color);
+}
+
+.glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: var(--glass-blur);
+    border-radius: var(--card-radius);
 }

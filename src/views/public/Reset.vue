@@ -25,11 +25,11 @@ const selectedRole = computed(() => {
 const roleLabel = computed(() => {
   switch (role.value) {
     case 1:
-      return '学'
+      return '学生'
     case 2:
       return '教工'
     case 3:
-      return '管理员编'
+      return '管理员'
     default:
       return '用户'
   }
@@ -89,7 +89,7 @@ const back = () => {
 
 <template>
   <div id="container">
-    <div class="login-form">
+    <div class="reset-form page-transition">
       <el-form label-width="80px">
         <p class="title">{{ titleText }}</p>
 
@@ -109,10 +109,10 @@ const back = () => {
           <el-input v-model="form.repeatPassword" type="password" placeholder="请再次输入新密码" />
         </el-form-item>
 
-        <el-form-item>
-          <el-button class="button" type="info" @click="back">返回</el-button>
-          <el-button class="button" type="primary" @click="sure">确认</el-button>
-        </el-form-item>
+        <div class="button-group">
+          <el-button class="reset-button back-btn" @click="back">返回</el-button>
+          <el-button class="reset-button confirm-btn" type="primary" @click="sure">确认</el-button>
+        </div>
       </el-form>
     </div>
   </div>
@@ -123,21 +123,81 @@ const back = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  min-height: calc(100vh - 70px);
+  padding: 20px;
 }
 
-.login-form {
+.reset-form {
   width: 400px;
-  padding: 40px;
-  border-radius: 8px;
-  background-color: #f8f8f8;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  background: rgba(255,255,255,0.92);
+  padding: 40px 36px 32px 36px;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13);
+  position: relative;
+  backdrop-filter: blur(6px);
+}
+
+.page-transition {
+  animation: page-fade-in 0.7s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes page-fade-in {
+  0% { opacity: 0; transform: translateY(40px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
+}
+
+@keyframes card-fade-in {
+  0% { opacity: 0; transform: translateY(40px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
 }
 
 .title {
   text-align: center;
-  font-size: 24px;
-  margin-bottom: 20px;
-  font-weight: bold;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: var(--student-color);
+  letter-spacing: 0.04em;
+}
+
+.el-form-item {
+  margin-bottom: 18px;
+}
+
+.button-group {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.reset-button {
+  flex: 1;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+  padding: 12px 24px;
+}
+
+.back-btn {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.back-btn:hover {
+  background: #e8e8e8;
+  transform: translateY(-1px);
+}
+
+.confirm-btn {
+  background:rgb(78, 167, 255);
+  color: #fff;
+}
+
+.confirm-btn:hover {
+  background:rgb(65, 251, 90);
+  transform: translateY(-1px);
 }
 </style>
