@@ -105,7 +105,8 @@ const logOut = () => {
 
 .student-layout {
     height: 100vh;
-    background: var(--gradient-blue);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
     max-width: 75vw;

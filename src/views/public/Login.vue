@@ -226,9 +226,9 @@ const goRegister = () => {
 }
 .card {
   width: 240px;
-  background: linear-gradient(135deg,rgb(79, 111, 255) 0%, #6fd6ff 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
   border-radius: 22px;
-  box-shadow: 0 4px 24px rgba(37,99,235,0.13);
+  box-shadow: 0 4px 24px rgba(30,64,175,0.15);
   padding: 32px 18px 28px 18px;
   display: flex;
   flex-direction: column;
@@ -241,16 +241,16 @@ const goRegister = () => {
 }
 .card:hover {
   transform: translateY(-8px) scale(1.05);
-  box-shadow: 0 12px 36px rgba(37,99,235,0.18);
+  box-shadow: 0 12px 36px rgba(30,64,175,0.25);
 }
 .card-student {
-  background: linear-gradient(135deg,rgb(0, 255, 34) 0%,rgb(58, 255, 235) 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
 }
 .card-design {
-  background: linear-gradient(135deg, #ff7b6c 0%,  #ffb86c 100%);
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
 }
 .card-admin {
-  background: linear-gradient(135deg,rgb(255, 108, 108) 0%,rgb(255, 108, 206) 100%);
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 50%, #f43f5e 100%);
 }
 .icon {
   width: 56px;
@@ -368,19 +368,19 @@ const goRegister = () => {
   transform: translateY(-1px);
 }
 .forgot-btn {
-  background:rgb(251, 104, 104);
-  color:rgb(255, 255, 255);
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
+  color: #fff;
 }
 .forgot-btn:hover {
-  background:rgb(255, 175, 71);
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
   transform: translateY(-1px);
 }
 .login-btn {
-  background:rgb(70, 161, 253);
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
   color: #fff;
 }
 .login-btn:hover {
-  background:rgb(9, 227, 71);
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
   transform: translateY(-1px);
 }
 .register-link {

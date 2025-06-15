@@ -9,6 +9,9 @@ const genders = ref([{ name: '男', value: 1 }, { name: '女', value: 2 }])
 
 const roles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 }, { name: '管理员', value: 3 }])
 
+// 用于表单的角色选项（不包含管理员）
+const formRoles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 }])
+
 const user = ref([{
   id: '',              // 用户唯一ID
   username: '',          // 用户名
@@ -43,23 +46,53 @@ const total = ref(0)          // 总条数
 const background = true
 const currentPage = ref(1)    // 当前页
 
+const tableRef = ref();
+
 const search = async () => {
   searchUser.value.role = tempRole.value;
   const result = await pageQueryApi(
     searchUser.value.name, searchUser.value.gender, searchUser.value.role, searchUser.value.subject, currentPage.value, pageSize.value)
 
   if (result.code) {
-    user.value = result.data.rows;
+    // 按角色排序：管理员(3) -> 教师(2) -> 学生(1)
+    user.value = result.data.rows.sort((a, b) => {
+      return b.role - a.role;
+    });
     total.value = result.data.total;
+    // 清空选择状态
+    selectIds.value = [];
+    // 清空表格选择
+    if (tableRef.value) {
+      tableRef.value.clearSelection();
+    }
   }
 }
 
 onMounted(() => {
   search();
+  
+  // 强制显示表格标题
+  setTimeout(() => {
+    const headerElements = document.querySelectorAll('.modern-table .el-table__header-wrapper');
+    headerElements.forEach(el => {
+      el.style.display = 'block';
+      el.style.visibility = 'visible';
+      el.style.opacity = '1';
+      el.style.height = 'auto';
+    });
+    
+    const thElements = document.querySelectorAll('.modern-table .el-table__header th');
+    thElements.forEach(el => {
+      el.style.color = '#ffffff';
+      el.style.background = 'rgba(255, 255, 255, 0.2)';
+      el.style.display = 'table-cell';
+    });
+  }, 100);
 })
 
 const clear = () => {
-  searchUser.value = { name: '', gender: '', date: [], role: 0, subject: '' };
+  searchUser.value = { name: '', gender: '', subject: '', role: '' };
+  tempRole.value = '';
   search();
 }
 
@@ -96,23 +129,23 @@ const deleteById = async (id) => {
 const selectIds = ref([]);
 
 const deleteByIds = () => {
-  ElMessageBox.confirm('是否确认批量删除选中的员工？', '提示', {
+  if (!selectIds.value || selectIds.value.length === 0) {
+    ElMessage.info('请先选择要删除的记录');
+    return;
+  }
+
+  ElMessageBox.confirm(`是否确认批量删除选中的 ${selectIds.value.length} 条记录？`, '提示', {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-
-    if (selectIds.value && selectIds.value.length > 0) {
-      const result = await deleteByIdApi(selectIds.value);
-      if (result.code) {
-        ElMessage.success('批量删除成功');
-        search();
-        selectIds.value = [];
-      } else {
-        ElMessage.error(result.msg);
-      }
+    const result = await deleteByIdApi(selectIds.value);
+    if (result.code) {
+      ElMessage.success('批量删除成功');
+      selectIds.value = []; // 清空选择项
+      search(); // 重新加载数据
     } else {
-      ElMessage.info('您没有选择任何记录');
+      ElMessage.error(result.msg || '批量删除失败');
     }
   }).catch(() => {
     ElMessage.info('已取消批量删除');
@@ -121,6 +154,7 @@ const deleteByIds = () => {
 
 const dialogVisible = ref(false)
 const formLabelWidth = '140px'
+const saveLoading = ref(false)
 
 const formUser = ref({
   name: '',
@@ -133,31 +167,120 @@ const formUser = ref({
 
 const formUserRef = ref();
 
-const dialogTitle = ref('新增' + roleLabel.value)
+const dialogTitle = ref('新增用户')
+
+// 表单验证规则
+const formRules = {
+  username: [
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 2, max: 20, message: '用户名长度应为2-20个字符', trigger: 'blur' }
+  ],
+  name: [
+    { required: true, message: '请输入姓名', trigger: 'blur' },
+    { min: 2, max: 10, message: '姓名长度应为2-10个字符', trigger: 'blur' }
+  ],
+  gender: [
+    { required: true, message: '请选择性别', trigger: 'change' }
+  ],
+  role: [
+    { required: true, message: '请选择角色', trigger: 'change' }
+  ],
+  identifier: [
+    { required: true, message: '请输入用户号', trigger: 'blur' },
+    { min: 5, max: 20, message: '用户号长度应为5-20个字符', trigger: 'blur' }
+  ],
+  subject: [
+    { required: true, message: '请输入教学科目', trigger: 'blur' }
+  ]
+}
 
 const save = async () => {
-  if (!formUserRef.value) { return; }
-  formUserRef.value.validate(async (valid) => {
-    if (valid) {
-      let result;
-      if (formUser.value.id) {
-        result = await updateUserApi(formUser.value);
-      }
-      else {
-        result = await addUserApi(formUser.value);
-      }
-      if (result.code) {
-        ElMessage.success(roleLabel.value + '信息保存成功');
-        dialogVisible.value = false;
-        search();
-      } else {
-        ElMessage.error(result.msg);
-      }
+  console.log('=== save函数被调用 ===');
+  console.log('formUserRef存在:', !!formUserRef.value);
+  console.log('当前表单数据:', JSON.stringify(formUser.value, null, 2));
+  
+  if (saveLoading.value) {
+    console.log('⏳ 正在保存中，忽略重复点击');
+    return;
+  }
+  
+  if (!formUserRef.value) { 
+    console.log('❌ formUserRef不存在，退出');
+    ElMessage.error('表单引用不存在');
+    return; 
+  }
+  
+  // 先检查必填字段
+  const requiredFields = ['username', 'name', 'gender', 'role', 'identifier'];
+  const missingFields = requiredFields.filter(field => !formUser.value[field]);
+  
+  if (missingFields.length > 0) {
+    console.log('❌ 缺少必填字段:', missingFields);
+    ElMessage.error(`请填写必填字段: ${missingFields.join(', ')}`);
+    return;
+  }
+  
+  // 如果是教师角色，检查科目
+  if (formUser.value.role === 2 && !formUser.value.subject) {
+    console.log('❌ 教师角色缺少科目');
+    ElMessage.error('教师角色请填写教学科目');
+    return;
+  }
+  
+  console.log('✅ 基础验证通过，开始表单验证');
+  
+  try {
+    const isValid = await new Promise((resolve) => {
+      formUserRef.value.validate((valid, fields) => {
+        console.log('表单验证结果:', valid);
+        if (!valid) {
+          console.log('验证失败的字段:', fields);
+        }
+        resolve(valid);
+      });
+    });
+    
+         if (isValid) {
+       console.log('✅ 表单验证通过，准备提交');
+       saveLoading.value = true;
+       try {
+         let result;
+         const userData = { ...formUser.value };
+         
+         if (userData.id) {
+           console.log('🔄 执行更新用户');
+           result = await updateUserApi(userData);
+         } else {
+           console.log('➕ 执行新增用户');
+           delete userData.id; // 确保新增时删除id字段
+           result = await addUserApi(userData);
+         }
+         
+         console.log('📝 API返回结果:', result);
+         
+         if (result && result.code) {
+           console.log('✅ 保存成功');
+           ElMessage.success('用户信息保存成功');
+           dialogVisible.value = false;
+           await search();
+         } else {
+           console.log('❌ 保存失败:', result);
+           ElMessage.error(result?.msg || '保存失败，请重试');
+         }
+       } catch (error) {
+         console.error('❌ API调用错误:', error);
+         ElMessage.error(`网络错误: ${error.message || '请检查网络连接'}`);
+       } finally {
+         saveLoading.value = false;
+       }
+    } else {
+      console.log('❌ 表单验证失败');
+      ElMessage.error('请检查并完善表单信息');
     }
-    else {
-      ElMessage.error('表单校验不通过');
-    }
-  });
+  } catch (error) {
+    console.error('❌ 表单验证异常:', error);
+    ElMessage.error('验证失败，请重试');
+  }
 }
 
 const edit = async (id) => {
@@ -165,16 +288,20 @@ const edit = async (id) => {
   if (result.code) {
     formUser.value = result.data;
     dialogVisible.value = true;
-    dialogTitle.value = '修改' + roleLabel.value;
+    dialogTitle.value = '修改用户';
   } else {
     ElMessage.error(result.msg);
   }
 }
 
 const addUser = () => {
+  console.log('=== 开始新增用户 ===');
   dialogVisible.value = true;
-  dialogTitle.value = '新增' + roleLabel.value;
+  dialogTitle.value = '新增用户';
+  
+  // 重置表单数据
   formUser.value = {
+    id: undefined, // 新增时不需要id
     name: '',
     username: '',
     gender: '',
@@ -182,167 +309,1048 @@ const addUser = () => {
     identifier: '',
     subject: ''
   }
-  if (formUserRef.value) {
-    formUserRef.value.resetFields();
-  }
+  
+  console.log('初始化表单数据:', formUser.value);
+  
+  // 延迟重置表单验证，确保表单渲染完成
+  setTimeout(() => {
+    if (formUserRef.value) {
+      console.log('重置表单验证状态');
+      formUserRef.value.resetFields();
+      formUserRef.value.clearValidate();
+    }
+  }, 100);
+}
+
+// 格式化日期，只显示年月日
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 </script>
 
 <template>
-  <h1>{{ roleLabel }}管理</h1>
-  <div class="container">
-    <el-form :inline="true" :model="searchUser" class="demo-form-inline">
-      <el-form-item label="角色">
-        <el-select v-model="tempRole" placeholder="请选择查询角色" clearable>
-          <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
-        </el-select>
-      </el-form-item>
+  <div class="user-management">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h1 class="page-title">
+        <i class="fas fa-users-cog"></i>
+        {{ roleLabel }}管理
+      </h1>
+      <p class="page-subtitle">管理系统中的所有用户信息</p>
+    </div>
 
-      <el-form-item label="姓名">
-        <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable />
-      </el-form-item>
+    <!-- 搜索区域 -->
+    <div class="search-card">
+      <div class="card-header">
+        <i class="fas fa-search"></i>
+        <span>筛选条件</span>
+      </div>
+      <el-form :inline="true" :model="searchUser" class="search-form">
+        <el-form-item label="角色">
+          <el-select v-model="tempRole" placeholder="请选择查询角色" clearable class="form-select">
+            <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item label="性别">
-        <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable>
-          <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
-        </el-select>
-      </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable class="form-input" />
+        </el-form-item>
 
-      <el-form-item label="科目" v-if="role === 2">
-        <el-input v-model="searchUser.subject" placeholder="请输入教学科目" clearable />
-      </el-form-item>
+        <el-form-item label="性别">
+          <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable class="form-select">
+            <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
+          </el-select>
+        </el-form-item>
 
-      <el-form-item>
-        <el-button type="primary" @click="search">查询</el-button>
-        <el-button type="primary" @click="clear">清空</el-button>
-      </el-form-item>
-    </el-form>
+        <el-form-item label="科目" v-if="role === 2">
+          <el-input v-model="searchUser.subject" placeholder="请输入教学科目" clearable class="form-input" />
+        </el-form-item>
+
+        <el-form-item class="form-buttons">
+          <el-button type="primary" @click="search" class="search-btn">
+            <i class="fas fa-search"></i>
+            查询
+          </el-button>
+          <el-button @click="clear" class="clear-btn">
+            <i class="fas fa-redo"></i>
+            重置
+          </el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- 操作按钮区域 -->
+    <div class="action-card">
+      <div class="action-buttons">
+        <el-button type="primary" @click="addUser" class="add-btn">
+          <i class="fas fa-plus"></i>
+          新增{{ roleLabel }}
+        </el-button>
+        <el-button type="danger" @click="deleteByIds" class="delete-btn">
+          <i class="fas fa-trash-alt"></i>
+          批量删除
+        </el-button>
+      </div>
+      <div class="table-info">
+        <span>共 {{ total }} 条记录</span>
+      </div>
+    </div>
+
+    <!-- 数据表格 -->
+    <div class="table-card">
+      <el-table 
+        ref="tableRef"
+        :data="user" 
+        class="modern-table" 
+        :show-header="true" 
+        :header-cell-style="{ background: 'rgba(255, 255, 255, 0.2)', color: '#ffffff', textAlign: 'center' }"
+        :cell-style="{ textAlign: 'center' }"
+        @selection-change="handleSelectionChange">
+        <!-- 多选 -->
+        <el-table-column type="selection" align="center" width="60">
+          <template #header>
+            <span style="color: #ffffff; font-weight: 700;">全选</span>
+          </template>
+        </el-table-column>
+
+        <!-- 用户名 -->
+        <el-table-column prop="username" label="用户名" align="center" min-width="120" show-overflow-tooltip>
+          <template #default="scope">
+            <div class="user-info">
+              <i class="fas fa-user"></i>
+              {{ scope.row.username }}
+            </div>
+          </template>
+        </el-table-column>
+
+        <!-- 姓名 -->
+        <el-table-column prop="name" label="姓名" align="center" min-width="120" show-overflow-tooltip>
+          <template #default="scope">
+            <div class="user-info">
+              <i class="fas fa-signature"></i>
+              {{ scope.row.name }}
+            </div>
+          </template>
+        </el-table-column>
+
+        <!-- 性别 -->
+        <el-table-column label="性别" align="center" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.gender == '1' ? 'primary' : 'danger'" size="small" class="gender-tag">
+              <i :class="scope.row.gender == '1' ? 'fas fa-mars' : 'fas fa-venus'"></i>
+              {{ scope.row.gender == '1' ? '男' : '女' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <!-- 角色 -->
+        <el-table-column label="角色" align="center" width="120">
+          <template #default="scope">
+            <el-tag 
+              :type="scope.row.role == 3 ? 'danger' : scope.row.role == 2 ? 'warning' : 'success'" 
+              size="small" class="role-tag">
+              <i :class="scope.row.role == 3 ? 'fas fa-crown' : scope.row.role == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
+              {{ scope.row.role == 3 ? '管理员' : scope.row.role == 2 ? '教师' : '学生' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <!-- 用户号 -->
+        <el-table-column prop="identifier" label="用户号" align="center" min-width="140">
+          <template #default="scope">
+            <div class="user-info">
+              <i class="fas fa-id-card"></i>
+              {{ scope.row.identifier }}
+            </div>
+          </template>
+        </el-table-column>
+
+        <!-- 科目（仅教师显示） -->
+        <el-table-column v-if="role === 2" prop="subject" label="科目" align="center" width="120">
+          <template #default="scope">
+            <el-tag type="success" size="small" class="subject-tag">
+              <i class="fas fa-book"></i>
+              {{ scope.row.subject }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
+        <!-- 操作按钮 -->
+        <el-table-column label="操作" align="center" width="180">
+          <template #default="scope">
+            <div class="action-buttons-cell">
+              <el-button type="primary" size="small" @click="edit(scope.row.id)" class="edit-btn">
+                <i class="fas fa-edit"></i>
+                编辑
+              </el-button>
+              <el-button type="danger" size="small" @click="deleteById(scope.row.id)" class="delete-btn-small">
+                <i class="fas fa-trash"></i>
+                删除
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <!-- 分页器 -->
+    <div class="pagination-card">
+      <el-pagination 
+        v-model:current-page="currentPage" 
+        v-model:page-size="pageSize"
+        :page-sizes="[5, 10, 20, 50, 75, 100]" 
+        :background="background" 
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="total" 
+        @size-change="handleSizeChange" 
+        @current-change="handleCurrentChange"
+        class="modern-pagination" />
+    </div>
+
+    <!-- 编辑对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="modern-dialog">
+      <el-form :model="formUser" :rules="formRules" ref="formUserRef" label-width="100px" class="dialog-form">
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="formUser.username" placeholder="请输入用户名" clearable>
+            <template #prefix>
+              <i class="fas fa-user"></i>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="formUser.name" placeholder="请输入姓名" clearable>
+            <template #prefix>
+              <i class="fas fa-signature"></i>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item label="性别" prop="gender">
+          <el-select v-model="formUser.gender" placeholder="请选择性别" clearable style="width: 100%">
+            <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value">
+              <i :class="g.value === 1 ? 'fas fa-mars' : 'fas fa-venus'"></i>
+              {{ g.name }}
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+                 <el-form-item label="角色" prop="role">
+           <el-select v-model="formUser.role" placeholder="请选择角色" clearable style="width: 100%">
+             <el-option v-for="r in formRoles" :key="r.value" :label="r.name" :value="r.value">
+               <i :class="r.value == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
+               {{ r.name }}
+             </el-option>
+           </el-select>
+         </el-form-item>
+
+        <el-form-item label="用户号" prop="identifier">
+          <el-input v-model="formUser.identifier" placeholder="请输入用户号" clearable>
+            <template #prefix>
+              <i class="fas fa-id-card"></i>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item 
+          label="科目" 
+          v-if="formUser.role === 2" 
+          prop="subject"
+          :rules="formUser.role === 2 ? formRules.subject : []">
+          <el-input v-model="formUser.subject" placeholder="请输入教学科目" clearable>
+            <template #prefix>
+              <i class="fas fa-book"></i>
+            </template>
+          </el-input>
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="dialogVisible = false" class="cancel-btn">
+            <i class="fas fa-times"></i>
+            取消
+          </el-button>
+          <el-button type="primary" @click="save" :loading="saveLoading" class="confirm-btn">
+            <i class="fas fa-check" v-if="!saveLoading"></i>
+            {{ saveLoading ? '保存中...' : '确认' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
-
-  <div class=container>
-    <el-button type="primary" @click="addUser">新增{{ roleLabel }}</el-button>
-    <el-button type="danger" @click="deleteByIds">批量删除</el-button>
-  </div>
-
-  <div class="container">
-    <el-table :data="user" border style="width: 100%" @selection-change="handleSelectionChange">
-      <!-- 多选 -->
-      <el-table-column type="selection" align="center" />
-
-      <!-- 姓名 -->
-      <el-table-column prop="name" label="姓名" align="center" />
-
-      <!-- 性别 -->
-      <el-table-column label="性别" align="center">
-        <template #default="scope">
-          {{ scope.row.gender == '1' ? '男' : '女' }}
-        </template>
-      </el-table-column>
-
-      <!-- 用户号 -->
-      <el-table-column prop="identifier" :label="`${roleLabel}号`" align="center" />
-
-      <!-- 科目（仅教师显示） -->
-      <el-table-column v-if="role === 2" prop="subject" label="科目" align="center" />
-
-      <!-- 最后操作时间 -->
-      <el-table-column prop="updateTime" label="最后操作时间" align="center" />
-
-      <!-- 操作按钮 -->
-      <el-table-column label="操作" align="center">
-        <template #default="scope">
-          <el-button type="primary" @click="edit(scope.row.id)">编辑</el-button>
-          <el-button type="danger" @click="deleteById(scope.row.id)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-  <div class="container">
-    <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
-      :page-sizes="[5, 10, 20, 50, 75, 100]" :background="background" layout="total, sizes, prev, pager, next, jumper"
-      :total="total" @size-change="handleSizeChange" @current-change="handleCurrentChange" />
-  </div>
-
-  <el-dialog v-model="dialogVisible" :title=dialogTitle>
-    <el-form :model="formUser" ref="formUserRef">
-      <el-form-item label="用户名" :label-width="formLabelWidth">
-        <el-input v-model="formUser.username" :placeholder="`请输入用户名`" clearable />
-      </el-form-item>
-
-      <el-form-item label="姓名" :label-width="formLabelWidth">
-        <el-input v-model="formUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable />
-      </el-form-item>
-
-      <el-form-item label="性别" :label-width="formLabelWidth">
-        <el-select v-model="formUser.gender" placeholder="请选择性别" clearable>
-          <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item label="角色" :label-width="formLabelWidth">
-        <el-select v-model="formUser.role" placeholder="请选择查询角色" clearable>
-          <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item :label="`用户号`" :label-width="formLabelWidth">
-        <el-input v-model="formUser.identifier" placeholder="请输入用户号" clearable />
-      </el-form-item>
-
-      <el-form-item label="科目" v-if="formUser.role === 2" :label-width="formLabelWidth">
-        <el-input v-model="formUser.subject" placeholder="请输入教学科目" clearable />
-      </el-form-item>
-    </el-form>
-
-    <template #footer>
-      <span class="dialog-footer">
-        <el-button @click="dialogVisible = false">Cancel</el-button>
-        <el-button type="primary" @click="save">Confirm</el-button>
-      </span>
-    </template>
-  </el-dialog>
-
-
 </template>
 
-
 <style scoped>
-.container {
-  padding: 10px;
+.user-management {
+  padding: 24px;
+  min-height: 100vh;
 }
 
-.avatar {
-  height: 40px;
+/* 页面标题 */
+.page-header {
+  margin-bottom: 24px;
 }
 
-.avatar-uploader .avatar {
-  width: 78px;
-  height: 78px;
-  display: block;
+.page-title {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.avatar-uploader .el-upload {
-  border: 1px dashed var(--el-border-color);
-  border-radius: 6px;
-  cursor: pointer;
-  position: relative;
+.page-title i {
+  color: #f43f5e;
+  font-size: 0.9em;
+}
+
+.page-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 16px;
+  margin: 0;
+}
+
+/* 卡片通用样式 */
+.search-card,
+.action-card,
+.table-card,
+.pagination-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.search-card:hover,
+.action-card:hover,
+.table-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* 搜索卡片 */
+.search-card {
+  padding: 24px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.card-header i {
+  color: #f43f5e;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+
+.search-form .el-form-item {
+  margin-bottom: 0;
+}
+
+.form-input,
+.form-select {
+  min-width: 200px;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.search-btn,
+.clear-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-btn {
+  background: linear-gradient(135deg, #be123c, #e11d48);
+  border: none;
+  color: white;
+}
+
+.search-btn:hover {
+  background: linear-gradient(135deg, #9f1239, #be123c);
+  transform: translateY(-1px);
+}
+
+.clear-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.clear-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* 操作按钮区域 */
+.action-card {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.add-btn,
+.delete-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.add-btn {
+  background: linear-gradient(135deg, #be123c, #e11d48);
+  border: none;
+  color: white;
+}
+
+.add-btn:hover {
+  background: linear-gradient(135deg, #9f1239, #be123c);
+  transform: translateY(-1px);
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #dc2626, #ef4444);
+  border: none;
+  color: white;
+}
+
+.delete-btn:hover {
+  background: linear-gradient(135deg, #b91c1c, #dc2626);
+  transform: translateY(-1px);
+}
+
+.table-info {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+/* 表格卡片 */
+.table-card {
+  padding: 24px;
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* 确保表格完全填充容器 */
+.modern-table :deep(.el-table) {
+  width: 100% !important;
+}
+
+.modern-table {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
   overflow: hidden;
-  transition: var(--el-transition-duration-fast);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.avatar-uploader .el-upload:hover {
-  border-color: var(--el-color-primary);
+/* 表格标题 - 更清晰可见的设计 */
+.modern-table :deep(.el-table__header-wrapper) {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
+  border-radius: 12px 12px 0 0 !important;
 }
 
-.el-icon.avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 78px;
-  height: 78px;
+.modern-table :deep(.el-table__header) {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
+}
+
+.modern-table :deep(.el-table__header th) {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  padding: 18px 12px !important;
+  border: none !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.modern-table :deep(.el-table__header th .cell) {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+/* 表格数据行 */
+.modern-table :deep(.el-table__body tr) {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-table :deep(.el-table__body tr:nth-child(even)) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.modern-table :deep(.el-table__body tr:hover) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.005) translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.modern-table :deep(.el-table__body td) {
+  border: none !important;
+  color: #ffffff !important;
+  padding: 16px 12px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  font-weight: 500 !important;
+}
+
+.modern-table :deep(.el-table__body td .cell) {
+  text-align: center !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+/* 标签样式优化 */
+.gender-tag,
+.role-tag,
+.subject-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  border: none !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gender-tag i,
+.role-tag i,
+.subject-tag i {
+  font-size: 11px;
+  min-width: 11px;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+/* 自定义标签颜色 - 稍微深一点 */
+.gender-tag.el-tag--primary {
+  background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
+  color: #ffffff !important;
+}
+
+.gender-tag.el-tag--primary:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e3a8a) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(30, 64, 175, 0.3);
+}
+
+.gender-tag.el-tag--danger {
+  background: linear-gradient(135deg, #be123c, #dc2626) !important;
+  color: #ffffff !important;
+}
+
+.gender-tag.el-tag--danger:hover {
+  background: linear-gradient(135deg, #dc2626, #991b1b) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(190, 18, 60, 0.3);
+}
+
+.role-tag.el-tag--danger {
+  background: linear-gradient(135deg, #7c2d12, #9a3412) !important;
+  color: #ffffff !important;
+}
+
+.role-tag.el-tag--danger:hover {
+  background: linear-gradient(135deg, #9a3412, #7c2d12) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(124, 45, 18, 0.3);
+}
+
+.role-tag.el-tag--warning {
+  background: linear-gradient(135deg, #a16207, #ca8a04) !important;
+  color: #ffffff !important;
+}
+
+.role-tag.el-tag--warning:hover {
+  background: linear-gradient(135deg, #ca8a04, #92400e) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(161, 98, 7, 0.3);
+}
+
+.role-tag.el-tag--success {
+  background: linear-gradient(135deg, #166534, #15803d) !important;
+  color: #ffffff !important;
+}
+
+.role-tag.el-tag--success:hover {
+  background: linear-gradient(135deg, #15803d, #14532d) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(22, 101, 52, 0.3);
+}
+
+.subject-tag.el-tag--success {
+  background: linear-gradient(135deg, #166534, #15803d) !important;
+  color: #ffffff !important;
+}
+
+.subject-tag.el-tag--success:hover {
+  background: linear-gradient(135deg, #15803d, #14532d) !important;
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(22, 101, 52, 0.3);
+}
+
+/* 分页器 */
+.pagination-card {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.modern-pagination :deep(.el-pagination) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li) {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  margin: 0 2px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li:hover) {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li.is-active) {
+  background: linear-gradient(135deg, #be123c, #e11d48);
+  color: white;
+  box-shadow: 0 2px 8px rgba(190, 18, 60, 0.3);
+}
+
+/* 对话框样式 */
+.modern-dialog :deep(.el-dialog) {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.modern-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #be123c, #e11d48);
+  color: white;
+  padding: 20px 24px;
+  border-radius: 16px 16px 0 0;
+}
+
+.modern-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-weight: 600;
+}
+
+.dialog-form {
+  padding: 24px;
+}
+
+.dialog-form :deep(.el-form-item__label) {
+  color: #374151;
+  font-weight: 500;
+}
+
+.dialog-form :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #ffffff !important;
+}
+
+.dialog-form :deep(.el-input__inner) {
+  color: #374151 !important;
+  background: #ffffff !important;
+}
+
+.dialog-form :deep(.el-input__inner::placeholder) {
+  color: #9ca3af !important;
+}
+
+.dialog-form :deep(.el-select .el-input__wrapper) {
+  background: #ffffff !important;
+}
+
+.dialog-form :deep(.el-select .el-input__inner) {
+  color: #374151 !important;
+  background: #ffffff !important;
+}
+
+.dialog-footer {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn,
+.confirm-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancel-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.confirm-btn {
+  background: linear-gradient(135deg, #be123c, #e11d48);
+  border: none;
+  color: white;
+}
+
+/* 性能优化 - 硬件加速和减少重绘 */
+.user-management {
+  /* 创建新的堆叠上下文 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.modern-table :deep(.el-table__body tr),
+.search-card,
+.action-card,
+.table-card,
+.pagination-card,
+.gender-tag,
+.role-tag,
+.subject-tag,
+.edit-btn,
+.delete-btn-small,
+.search-btn,
+.clear-btn,
+.add-btn,
+.delete-btn {
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* 减少动画期间的重绘 */
+@media (prefers-reduced-motion: no-preference) {
+  * {
+    scroll-behavior: smooth;
+  }
+}
+
+/* 为有动画的元素预留GPU资源 */
+.modern-table :deep(.el-table__body tr:hover),
+.search-card:hover,
+.action-card:hover,
+.table-card:hover,
+.edit-btn:hover,
+.delete-btn-small:hover {
+  contain: layout style paint;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .table-card {
+    padding: 16px;
+  }
+  
+  .modern-table :deep(.el-table__body td),
+  .modern-table :deep(.el-table__header th) {
+    padding: 12px 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-management {
+    padding: 16px;
+  }
+  
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .form-input,
+  .form-select {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .action-card {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .action-buttons {
+    justify-content: center;
+  }
+  
+  .table-card {
+    padding: 12px;
+    overflow-x: auto;
+  }
+  
+  .modern-table {
+    min-width: 700px;
+  }
+  
+  .modern-table :deep(.el-table__body td),
+  .modern-table :deep(.el-table__header th) {
+    padding: 10px 6px;
+  }
+}
+
+/* Element Plus 组件样式覆盖 */
+:deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+}
+
+:deep(.el-input__inner) {
+  color: white;
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:deep(.el-select .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+:deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+:deep(.el-tag) {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* 强制显示表格标题 - 多重选择器确保生效 */
+.modern-table :deep(.el-table thead),
+.modern-table :deep(.el-table__header thead),
+.modern-table :deep(thead) {
+  color: #ffffff !important;
+  display: table-header-group !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.modern-table :deep(.el-table thead th),
+.modern-table :deep(.el-table__header thead th),
+.modern-table :deep(thead th),
+.modern-table :deep(th) {
+  color: #ffffff !important;
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
+  display: table-cell !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-weight: 700 !important;
+  padding: 18px 12px !important;
+  border: none !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.modern-table :deep(.el-table thead th div),
+.modern-table :deep(.el-table__header thead th div),
+.modern-table :deep(thead th div),
+.modern-table :deep(th div),
+.modern-table :deep(.cell) {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.modern-table :deep(.el-table thead th span),
+.modern-table :deep(.el-table__header thead th span),
+.modern-table :deep(thead th span),
+.modern-table :deep(th span) {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* 确保表格结构完整 */
+.modern-table :deep(.el-table) {
+  display: table !important;
+  width: 100% !important;
+}
+
+.modern-table :deep(.el-table__header-wrapper) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+  overflow: visible !important;
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
+  min-height: 56px !important;
+  border-radius: 12px 12px 0 0 !important;
+}
+
+/* 表格数据行样式 - 与上面的样式保持一致 */
+/* 注意：这里的样式已在上面定义，删除重复定义以避免冲突 */
+
+.modern-table :deep(.el-table__body td) {
+  border: none !important;
+  color: #ffffff !important;
+  padding: 16px 12px !important;
+  text-align: center !important;
+  vertical-align: middle !important;
+  height: 60px !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+  font-weight: 500 !important;
+}
+
+.modern-table :deep(.el-table__body td .cell) {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.modern-table :deep(.el-table__header th .cell) {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  height: 100% !important;
+  width: 100% !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
   text-align: center;
-  border-radius: 10px;
-  /* 添加灰色的虚线边框 */
-  border: 1px dashed var(--el-border-color);
+  font-weight: 500;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.user-info i {
+  color: rgba(244, 63, 94, 0.8);
+  font-size: 13px;
+  min-width: 13px;
+  flex-shrink: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.action-buttons-cell {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  flex-wrap: nowrap;
+  min-width: 160px;
+}
+
+.edit-btn,
+.delete-btn-small {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 68px;
+  justify-content: center;
+  height: 32px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.edit-btn {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  border: none;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.edit-btn:hover {
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.delete-btn-small {
+  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  border: none;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.delete-btn-small:hover {
+  background: linear-gradient(135deg, #b91c1c, #991b1b);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 </style>

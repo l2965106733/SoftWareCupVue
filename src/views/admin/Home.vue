@@ -1,11 +1,773 @@
 <script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
+const adminName = ref('')
+
+// 系统统计数据
+const stats = ref({
+    totalUsers: 1248,
+    teacherCount: 89,
+    studentCount: 1159,
+    resourceCount: 342
+})
+
+// 最近活动数据
+const recentActivities = ref([
+    {
+        id: 1,
+        icon: 'fas fa-user-plus',
+        title: '新增用户',
+        description: '新注册教师账户：张老师',
+        time: '1小时前'
+    },
+    {
+        id: 2,
+        icon: 'fas fa-cog',
+        title: '系统维护',
+        description: '完成数据库优化和清理',
+        time: '3小时前'
+    },
+    {
+        id: 3,
+        icon: 'fas fa-upload',
+        title: '资源更新',
+        description: '批量导入新的教学资源',
+        time: '6小时前'
+    },
+    {
+        id: 4,
+        icon: 'fas fa-chart-bar',
+        title: '生成报告',
+        description: '生成本月系统使用统计报告',
+        time: '1天前'
+    }
+])
+
+onMounted(() => {
+    // 获取管理员信息
+    const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+    if (loginUser && loginUser.name) {
+        adminName.value = loginUser.name
+    }
+})
+
+// 导航方法
+const goToUser = () => {
+    router.push('/admin/user')
+}
+
+const goToResource = () => {
+    router.push('/admin/resource')
+}
+
+const goToOverallStats = () => {
+    router.push('/admin/overallstats')
+}
+
+const goToStudentStats = () => {
+    router.push('/admin/studentstats')
+}
+
+const goToTeacherStats = () => {
+    router.push('/admin/teacherstats')
+}
 </script>
 
 <template>
-首页
+    <div class="admin-home">
+        <!-- 欢迎区域 -->
+        <div class="welcome-section">
+            <div class="welcome-content">
+                <h1 class="welcome-title">
+                    <i class="fas fa-user-shield welcome-icon"></i>
+                    欢迎回来，{{ adminName }}管理员！
+                </h1>
+                <p class="welcome-subtitle">掌控全局，管理系统，为教育事业保驾护航</p>
+            </div>
+            <div class="welcome-decoration">
+                <div class="floating-element element-1"></div>
+                <div class="floating-element element-2"></div>
+                <div class="floating-element element-3"></div>
+            </div>
+        </div>
+
+        <!-- 快捷操作区域 -->
+        <div class="quick-actions">
+            <h2 class="section-title">
+                <i class="fas fa-bolt"></i>
+                快捷操作
+            </h2>
+            <div class="actions-grid">
+                <div class="action-card" @click="goToUser">
+                    <div class="card-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="card-title">用户管理</h3>
+                    <p class="card-desc">管理教师和学生账户信息</p>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <div class="action-card" @click="goToResource">
+                    <div class="card-icon">
+                        <i class="fas fa-folder-open"></i>
+                    </div>
+                    <h3 class="card-title">资源管理</h3>
+                    <p class="card-desc">管理系统教学资源</p>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <div class="action-card" @click="goToOverallStats">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-pie"></i>
+                    </div>
+                    <h3 class="card-title">总体统计</h3>
+                    <p class="card-desc">查看系统整体运行情况</p>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <div class="action-card" @click="goToTeacherStats">
+                    <div class="card-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3 class="card-title">教师统计</h3>
+                    <p class="card-desc">查看教师教学数据分析</p>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统统计 -->
+        <div class="system-stats">
+            <h2 class="section-title">
+                <i class="fas fa-chart-line"></i>
+                系统概览
+            </h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">{{ stats.totalUsers }}</h3>
+                        <p class="stat-label">总用户数</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">{{ stats.teacherCount }}</h3>
+                        <p class="stat-label">教师数量</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">{{ stats.studentCount }}</h3>
+                        <p class="stat-label">学生数量</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-folder"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 class="stat-number">{{ stats.resourceCount }}</h3>
+                        <p class="stat-label">资源数量</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 系统状态 -->
+        <div class="system-status">
+            <h2 class="section-title">
+                <i class="fas fa-server"></i>
+                系统状态
+            </h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-indicator online"></div>
+                    <div class="status-content">
+                        <h4 class="status-title">系统运行</h4>
+                        <p class="status-desc">正常运行中</p>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-indicator online"></div>
+                    <div class="status-content">
+                        <h4 class="status-title">数据库</h4>
+                        <p class="status-desc">连接正常</p>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-indicator warning"></div>
+                    <div class="status-content">
+                        <h4 class="status-title">存储空间</h4>
+                        <p class="status-desc">使用率 78%</p>
+                    </div>
+                </div>
+
+                <div class="status-card">
+                    <div class="status-indicator online"></div>
+                    <div class="status-content">
+                        <h4 class="status-title">网络状态</h4>
+                        <p class="status-desc">连接稳定</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 最近活动 -->
+        <div class="recent-activities">
+            <h2 class="section-title">
+                <i class="fas fa-clock"></i>
+                最近活动
+            </h2>
+            <div class="activities-list">
+                <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
+                    <div class="activity-icon">
+                        <i :class="activity.icon"></i>
+                    </div>
+                    <div class="activity-content">
+                        <h4 class="activity-title">{{ activity.title }}</h4>
+                        <p class="activity-desc">{{ activity.description }}</p>
+                        <span class="activity-time">{{ activity.time }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <style scoped>
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
+.admin-home {
+    min-height: 100%;
+    animation: page-fade-in 0.8s ease-out;
+}
+
+@keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 欢迎区域 */
+.welcome-section {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    padding: clamp(24px, 4vw, 48px);
+    margin-bottom: clamp(24px, 4vw, 32px);
+    overflow: hidden;
+    animation: welcome-slide-up 1s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes welcome-slide-up {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.welcome-content {
+    position: relative;
+    z-index: 2;
+}
+
+.welcome-title {
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 clamp(12px, 2vw, 16px) 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: clamp(8px, 2vw, 16px);
+    animation: title-glow 3s ease-in-out infinite alternate;
+}
+
+.welcome-icon {
+    font-size: clamp(28px, 5vw, 40px);
+    animation: icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes icon-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.welcome-subtitle {
+    font-size: clamp(14px, 2.5vw, 18px);
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.welcome-decoration {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.floating-element {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    animation: float 6s ease-in-out infinite;
+}
+
+.element-1 {
+    width: 80px;
+    height: 80px;
+    top: 20%;
+    right: 10%;
+    animation-delay: 0s;
+}
+
+.element-2 {
+    width: 60px;
+    height: 60px;
+    top: 60%;
+    right: 20%;
+    animation-delay: 2s;
+}
+
+.element-3 {
+    width: 40px;
+    height: 40px;
+    top: 40%;
+    right: 5%;
+    animation-delay: 4s;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* 通用区域标题 */
+.section-title {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(16px, 3vw, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    animation: section-fade-in 0.8s ease-out;
+}
+
+@keyframes section-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+/* 快捷操作区域 */
+.quick-actions {
+    margin-bottom: clamp(24px, 4vw, 32px);
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: clamp(16px, 3vw, 24px);
+}
+
+.action-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: clamp(20px, 4vw, 32px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    animation: card-slide-up 0.8s ease-out;
+}
+
+@keyframes card-slide-up {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.action-card:hover {
+    transform: translateY(-8px);
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+}
+
+.card-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
+}
+
+.card-icon i {
+    font-size: 24px;
+    color: #fff;
+}
+
+.action-card:hover .card-icon {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+.card-title {
+    font-size: clamp(16px, 2.5vw, 20px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(8px, 1.5vw, 12px) 0;
+    word-break: break-word;
+}
+
+.card-desc {
+    font-size: clamp(13px, 2vw, 14px);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.card-arrow {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.card-arrow i {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.action-card:hover .card-arrow {
+    opacity: 1;
+    transform: translateX(4px);
+}
+
+/* 系统统计 */
+.system-stats {
+    margin-bottom: clamp(24px, 4vw, 32px);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(16px, 3vw, 20px);
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: clamp(16px, 3vw, 24px);
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 2vw, 16px);
+    transition: all 0.3s ease;
+    animation: stat-fade-in 0.8s ease-out;
+}
+
+@keyframes stat-fade-in {
+    0% { opacity: 0; transform: scale(0.9); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.stat-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-4px);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stat-icon i {
+    font-size: 20px;
+    color: #fff;
+}
+
+.stat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-number {
+    font-size: clamp(20px, 3vw, 28px);
+    font-weight: 700;
+    color: #fff;
+    margin: 0 0 4px 0;
+    word-break: break-word;
+}
+
+.stat-label {
+    font-size: clamp(12px, 2vw, 14px);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    word-break: break-word;
+}
+
+/* 系统状态 */
+.system-status {
+    margin-bottom: clamp(24px, 4vw, 32px);
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(16px, 3vw, 20px);
+}
+
+.status-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: clamp(16px, 3vw, 20px);
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 2vw, 16px);
+    transition: all 0.3s ease;
+    animation: status-fade-in 0.8s ease-out;
+}
+
+@keyframes status-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+.status-card:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-indicator.online {
+    background: #4ade80;
+    box-shadow: 0 0 8px rgba(74, 222, 128, 0.5);
+}
+
+.status-indicator.warning {
+    background: #fbbf24;
+    box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.status-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.status-title {
+    font-size: clamp(14px, 2.5vw, 16px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 4px 0;
+    word-break: break-word;
+}
+
+.status-desc {
+    font-size: clamp(12px, 2vw, 13px);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    word-break: break-word;
+}
+
+/* 最近活动 */
+.recent-activities {
+    margin-bottom: clamp(24px, 4vw, 32px);
+}
+
+.activities-list {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: clamp(16px, 3vw, 24px);
+    animation: activities-fade-in 0.8s ease-out;
+}
+
+@keyframes activities-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.activity-item {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(12px, 2vw, 16px);
+    padding: clamp(12px, 2vw, 16px) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: clamp(12px, 2vw, 16px);
+    margin: 0 -16px;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activity-icon i {
+    font-size: 16px;
+    color: #fff;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-size: clamp(14px, 2.5vw, 16px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(4px, 1vw, 6px) 0;
+    word-break: break-word;
+}
+
+.activity-desc {
+    font-size: clamp(12px, 2vw, 14px);
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 clamp(4px, 1vw, 6px) 0;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+.activity-time {
+    font-size: clamp(11px, 1.8vw, 12px);
+    color: rgba(255, 255, 255, 0.5);
+    word-break: break-word;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .welcome-title {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .activity-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .activity-icon {
+        align-self: flex-start;
+    }
+}
+
+@media (max-width: 360px) {
+    .welcome-section {
+        padding: 16px;
+    }
+    
+    .action-card {
+        padding: 16px;
+    }
+    
+    .stat-card {
+        padding: 12px;
+    }
+    
+    .status-card {
+        padding: 12px;
+    }
+    
+    .activities-list {
+        padding: 12px;
+    }
+}
 </style>

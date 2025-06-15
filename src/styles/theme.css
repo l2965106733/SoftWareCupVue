@@ -1,16 +1,16 @@
 :root {
-    --student-color: #2563eb;
-    --teacher-color: #f59e42;
-    --admin-color: #10b981;
+    --student-color: #1e40af;
+    --teacher-color: #7c3aed;
+    --admin-color: #e11d48;
     --card-radius: 20px;
     --card-shadow: 0 6px 32px rgba(0, 0, 0, 0.12);
     --transition: 0.28s cubic-bezier(.4, 0, .2, 1);
     --bg-light: #f4f6fa;
     --text-main: #222;
     --text-sub: #6b7280;
-    --gradient-blue: linear-gradient(135deg, #2563eb 0%, #60a5fa 100%);
-    --gradient-orange: linear-gradient(135deg, #f59e42 0%, #fbbf24 100%);
-    --gradient-green: linear-gradient(135deg, #10b981 0%, #6ee7b7 100%);
+    --gradient-blue: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+    --gradient-purple: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
+    --gradient-red: linear-gradient(135deg, #be123c 0%, #e11d48 50%, #f43f5e 100%);
     --glass-blur: blur(8px);
 }
 
@@ -62,7 +62,7 @@
 }
 
 .button:hover {
-    background: var(--gradient-orange);
+    background: var(--gradient-purple);
     color: #fff;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.13);
     filter: brightness(1.05);
@@ -79,7 +79,7 @@
 
 .link:hover {
     text-decoration: underline;
-    color: var(--admin-color);
+    color: var(--teacher-color);
 }
 
 .glass {

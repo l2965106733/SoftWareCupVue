@@ -15,10 +15,23 @@ const disableScroll = computed(() => {
   const noScrollRoutes = ['/', '/register', '/reset']
   return noScrollRoutes.includes(route.path) || route.path.startsWith('/reset')
 })
+
+// 计算当前系统类型，用于设置背景色
+const currentSystem = computed(() => {
+  if (route.path.startsWith('/student')) {
+    return 'student'
+  } else if (route.path.startsWith('/teacher')) {
+    return 'teacher'
+  } else if (route.path.startsWith('/admin')) {
+    return 'admin'
+  } else {
+    return 'public'
+  }
+})
 </script>
 
 <template>
-  <div id="app" :class="{ 'no-scroll': disableScroll }">
+  <div id="app" :class="{ 'no-scroll': disableScroll, [`system-${currentSystem}`]: true }">
     <!-- 全局页眉 - 只在登录相关页面显示 -->
     <header v-if="showHeader" class="global-header">
       <div class="header-content">
@@ -52,7 +65,27 @@ const disableScroll = computed(() => {
 
 #app {
   min-height: 100vh;
-  background: var(--gradient-blue);
+  transition: background 0.5s ease;
+}
+
+/* 公共页面背景（登录、注册、找回密码） */
+#app.system-public {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+}
+
+/* 学生系统背景 */
+#app.system-student {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+}
+
+/* 教师系统背景 */
+#app.system-teacher {
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
+}
+
+/* 管理员系统背景 */
+#app.system-admin {
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 50%, #f43f5e 100%);
 }
 
 /* 禁用滚动的样式 */

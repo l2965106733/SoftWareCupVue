@@ -132,23 +132,25 @@ const backToLogin = () => {
 #container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
-  padding: 20px;
+  padding: 90px 20px 20px 20px;
+  width: 100%;
 }
 
 .register-form {
-  width: 400px;
+  width: 370px;
   background: rgba(255,255,255,0.92);
   padding: 36px 32px 28px 32px;
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.13);
   position: relative;
   backdrop-filter: blur(6px);
+  margin-top: 90px;
 }
 
 .access-denied {
-  width: 400px;
+  width: 370px;
   background: rgba(255,255,255,0.92);
   padding: 40px 32px;
   border-radius: 20px;
@@ -156,6 +158,7 @@ const backToLogin = () => {
   position: relative;
   backdrop-filter: blur(6px);
   text-align: center;
+  margin-top: 90px;
 }
 
 .denied-content {
@@ -166,7 +169,7 @@ const backToLogin = () => {
 
 .denied-icon {
   font-size: 48px;
-  color: #ff7b6c;
+  color: #e11d48;
   margin-bottom: 20px;
   animation: icon-pulse 2s ease-in-out infinite;
 }
@@ -224,8 +227,8 @@ const backToLogin = () => {
 
 .button-group {
   display: flex;
-  gap: 16px;
-  justify-content: center;
+  gap: 12px;
+  justify-content: space-between;
   margin-top: 24px;
 }
 
@@ -250,12 +253,12 @@ const backToLogin = () => {
 }
 
 .submit-btn {
-  background: rgb(70, 161, 253);
+  background: linear-gradient(135deg, #be123c 0%, #e11d48 100%);
   color: #fff;
 }
 
 .submit-btn:hover {
-  background: rgb(9, 227, 71);
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
   transform: translateY(-1px);
 }
 </style> 

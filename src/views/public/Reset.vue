@@ -122,19 +122,21 @@ const back = () => {
 #container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
-  padding: 20px;
+  padding: 90px 20px 20px 20px;
+  width: 100%;
 }
 
 .reset-form {
-  width: 400px;
+  width: 370px;
   background: rgba(255,255,255,0.92);
-  padding: 40px 36px 32px 36px;
+  padding: 36px 32px 28px 32px;
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.13);
   position: relative;
   backdrop-filter: blur(6px);
+  margin-top: 90px;
 }
 
 .page-transition {
@@ -166,8 +168,8 @@ const back = () => {
 
 .button-group {
   display: flex;
-  gap: 16px;
-  justify-content: center;
+  gap: 12px;
+  justify-content: space-between;
   margin-top: 24px;
 }
 
@@ -192,12 +194,12 @@ const back = () => {
 }
 
 .confirm-btn {
-  background:rgb(78, 167, 255);
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
   color: #fff;
 }
 
 .confirm-btn:hover {
-  background:rgb(65, 251, 90);
+  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
   transform: translateY(-1px);
 }
 </style>
