@@ -7,7 +7,7 @@ const searchUser = ref({ name: '', gender: '', subject: '', role: '' })
 
 const genders = ref([{ name: '男', value: 1 }, { name: '女', value: 2 }])
 
-const roles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 }, { name: '管理员', value: 3 }])
+const roles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 }])
 
 // 用于表单的角色选项（不包含管理员）
 const formRoles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 }])
@@ -18,7 +18,7 @@ const user = ref([{
   password: '',          // 加密后的密码
   name: '',              // 姓名
   gender: '',            // 性别，可为 '男' / '女' / ''
-  role: 0,             // 角色，可为 '学生' / '教师' / '管理员'
+  role: 0,             // 角色，可为 '学生' / '教师' 
   identifier: '',        // 学号/教师号/管理员号
   subject: '',           // 教师教学科目（仅教师）
   createTime: '',        // 注册时间（字符串）
@@ -323,14 +323,14 @@ const addUser = () => {
 }
 
 // 格式化日期，只显示年月日
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
+// const formatDate = (dateString) => {
+//   if (!dateString) return '';
+//   const date = new Date(dateString);
+//   const year = date.getFullYear();
+//   const month = String(date.getMonth() + 1).padStart(2, '0');
+//   const day = String(date.getDate()).padStart(2, '0');
+//   return `${year}-${month}-${day}`;
+// }
 </script>
 
 <template>

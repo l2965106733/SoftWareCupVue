@@ -52,10 +52,13 @@ const currentSystem = computed(() => {
 
     <!-- 主要内容区域 -->
     <main class="main-content" :class="{ 'with-header': showHeader, 'no-scroll': disableScroll }">
-      <transition name="page-transition" mode="out-in">
-        <RouterView />
-      </transition>
+      <router-view v-slot="{ Component }">
+        <transition name="page-transition" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
+
   </div>
 </template>
 
@@ -105,16 +108,17 @@ const currentSystem = computed(() => {
   left: 0;
   right: 0;
   z-index: 1000;
-  animation: header-slide-down 0.8s cubic-bezier(.4,0,.2,1);
+  animation: header-slide-down 0.8s cubic-bezier(.4, 0, .2, 1);
 }
 
 @keyframes header-slide-down {
-  0% { 
-    opacity: 0; 
+  0% {
+    opacity: 0;
     transform: translateY(-20px);
   }
-  100% { 
-    opacity: 1; 
+
+  100% {
+    opacity: 1;
     transform: translateY(0);
   }
 }
@@ -141,7 +145,7 @@ const currentSystem = computed(() => {
   margin: 0;
   display: flex;
   align-items: center;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   animation: title-glow 3s ease-in-out infinite alternate;
 }
 
@@ -152,18 +156,29 @@ const currentSystem = computed(() => {
 }
 
 @keyframes title-glow {
-  0% { 
-    text-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 20px rgba(255,255,255,0.3);
+  0% {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 20px rgba(255, 255, 255, 0.3);
   }
-  100% { 
-    text-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 30px rgba(255,255,255,0.5);
+
+  100% {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 0 0 30px rgba(255, 255, 255, 0.5);
   }
 }
 
 @keyframes icon-rotate {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-5deg); }
-  75% { transform: rotate(5deg); }
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-5deg);
+  }
+
+  75% {
+    transform: rotate(5deg);
+  }
 }
 
 .header-right {
@@ -186,20 +201,33 @@ const currentSystem = computed(() => {
 }
 
 @keyframes startup-pulse {
-  0%, 100% { 
+
+  0%,
+  100% {
     opacity: 0.9;
     transform: scale(1);
   }
-  50% { 
+
+  50% {
     opacity: 1;
     transform: scale(1.05);
   }
 }
 
 @keyframes rocket-fly {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  25% { transform: translateY(-3px) rotate(-5deg); }
-  75% { transform: translateY(3px) rotate(5deg); }
+
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  25% {
+    transform: translateY(-3px) rotate(-5deg);
+  }
+
+  75% {
+    transform: translateY(3px) rotate(5deg);
+  }
 }
 
 .main-content {
@@ -217,17 +245,20 @@ const currentSystem = computed(() => {
 }
 
 /* 针对学生系统等内部页面，不需要居中 */
-.main-content > * {
+.main-content>* {
   width: 100%;
 }
 
-.page-transition-enter-active, .page-transition-leave-active {
-  transition: all 0.7s cubic-bezier(.4,0,.2,1);
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.7s cubic-bezier(.4, 0, .2, 1);
 }
+
 .page-transition-enter-from {
   opacity: 0;
   transform: translateY(40px) scale(0.98);
 }
+
 .page-transition-leave-to {
   opacity: 0;
   transform: translateY(-20px) scale(1.02);
@@ -238,15 +269,15 @@ const currentSystem = computed(() => {
   .header-content {
     padding: 0 20px;
   }
-  
+
   .system-title {
     font-size: 20px;
   }
-  
+
   .title-icon {
     font-size: 24px;
   }
-  
+
   .startup-text {
     font-size: 16px;
   }
@@ -256,11 +287,11 @@ const currentSystem = computed(() => {
   .header-content {
     padding: 0 16px;
   }
-  
+
   .system-title {
     font-size: 18px;
   }
-  
+
   .startup-text {
     font-size: 14px;
   }

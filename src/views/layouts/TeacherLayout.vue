@@ -76,7 +76,7 @@ const logOut = () => {
                     </router-link>
                     <router-link to="/teacher/resource" class="nav-item" active-class="active">
                         <i class="fas fa-book-open nav-icon"></i>
-                        <span class="nav-text">资源管理</span>
+                        <span class="nav-text">备课管理</span>
                     </router-link>
                     <router-link to="/teacher/practise" class="nav-item" active-class="active">
                         <i class="fas fa-tasks nav-icon"></i>
