@@ -199,4 +199,39 @@ public class StudentServiceImpl implements StudentService {
             }
         }
     }
+
+    // ==================== 评分系统相关方法 ====================
+
+    @Override
+    public void submitRating(Integer questionId, Integer rating) {
+        StudentQuestion question = new StudentQuestion();
+        question.setId(questionId);
+        question.setRating(rating);
+        question.setUpdatedTime(LocalDateTime.now());
+        studentQuestionMapper.updateById(question);
+    }
+
+    @Override
+    public Integer getRating(Integer questionId) {
+        StudentQuestion question = studentQuestionMapper.selectById(questionId);
+        return question != null ? question.getRating() : null;
+    }
+
+    @Override
+    public List<StudentQuestion> getRatingHistory(Integer studentId) {
+        // 获取学生所有已评分的问题
+        return studentQuestionMapper.getRatedQuestionsByStudentId(studentId);
+    }
+
+    @Override
+    public Map<String, Object> getRatingStats(Integer studentId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        stats.put("totalRatings", studentQuestionMapper.getTotalRatingsCount(studentId));       // 总评分数
+        stats.put("avgRating", studentQuestionMapper.getAverageRatingByStudent(studentId));     // 平均评分
+        stats.put("ratingDistribution", studentQuestionMapper.getRatingDistribution(studentId)); // 评分分布
+        stats.put("recentRatings", studentQuestionMapper.getRecentRatedQuestions(studentId));   // 最近评分
+        
+        return stats;
+    }
 } 

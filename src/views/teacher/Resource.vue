@@ -176,8 +176,24 @@ const aiDialogVisible = ref(false)
 
 // 获取当前登录教师ID
 const getCurrentTeacherId = () => {
-  const loginUser = JSON.parse(localStorage.getItem('loginUser'))
-  return loginUser?.id
+  console.log('🔐 检查localStorage中的登录用户信息...')
+  const loginUserStr = localStorage.getItem('loginUser')
+  console.log('📱 localStorage中的原始数据:', loginUserStr)
+  
+  if (!loginUserStr) {
+    console.warn('❌ localStorage中没有找到loginUser')
+    return null
+  }
+  
+  try {
+    const loginUser = JSON.parse(loginUserStr)
+    console.log('👤 解析后的用户信息:', loginUser)
+    console.log('🆔 用户ID:', loginUser?.id)
+    return loginUser?.id
+  } catch (error) {
+    console.error('💥 解析localStorage数据失败:', error)
+    return null
+  }
 }
 
 // 加载资源列表
@@ -241,8 +257,28 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
+// 下载文件
+const handleDownload = (file) => {
+  if (!file.url) {
+    ElMessage.warning('文件链接不存在')
+    return
+  }
+  
+  // 创建下载链接
+  const link = document.createElement('a')
+  link.href = file.url
+  link.download = file.name
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  
+  ElMessage.success(`开始下载：${file.name}`)
+}
+
 // 页面加载时获取资源列表
 onMounted(() => {
+  console.log('🚀 页面已挂载，开始加载资源列表...')
   loadResourceList()
 })
 </script>
@@ -287,37 +323,40 @@ onMounted(() => {
           
           <!-- 上传区域 -->
           <div class="upload-area">
-            <el-upload v-model:file-list="teachingFileList" action="/api/upload" :before-upload="beforeUpload"
-              :on-success="handleSuccess" :on-preview="handlePreview" :on-remove="handleRemove" list-type="text">
-              <el-button type="primary">
-                <el-icon><Upload /></el-icon>
-                上传文件
-              </el-button>
-              <template #tip>
-                <div class="el-upload__tip">
-                  支持上传课程资料，多文件，最大100MB
-                </div>
-              </template>
-            </el-upload>
+            <div class="upload-controls">
+              <el-upload
+                v-model:file-list="teachingFileList"
+                action="/api/upload"
+                :before-upload="beforeUpload"
+                :on-success="handleSuccess"
+                :on-preview="handlePreview"
+                :on-remove="handleRemove"
+                :show-file-list="false"
+              >
+                <el-button type="primary">
+                  <el-icon><Upload /></el-icon>
+                  上传文件
+                </el-button>
+              </el-upload>
+              <span class="upload-tip">支持上传课程资料，多文件，最大100MB</span>
+            </div>
           </div>
           
           <!-- 资源列表 -->
           <div v-if="teachingFileList.length > 0" class="resource-list">
             <h4>📋 资源列表</h4>
             <div v-for="file in teachingFileList" :key="file.uid" class="resource-item">
-              <div class="resource-info">
-                <div class="resource-name">
-                  <el-icon><Document /></el-icon>
-                  {{ file.name }}
-                </div>
-                <div class="resource-meta">
-                  <span v-if="file.size">大小: {{ formatFileSize(file.size) }}</span>
-                  <span v-if="file.uploadTime">上传时间: {{ file.uploadTime }}</span>
-                  <span v-if="file.downloadCount">下载: {{ file.downloadCount }}次</span>
-                </div>
+              <div class="resource-name">
+                <el-icon><Document /></el-icon>
+                {{ file.name }}
+              </div>
+              <div class="resource-meta">
+                <span v-if="file.size">大小: {{ formatFileSize(file.size) }}</span>
+                <span v-if="file.uploadTime">上传时间: {{ file.uploadTime }}</span>
               </div>
               <div class="resource-actions">
-                <el-button size="small" @click="handlePreview(file)">预览</el-button>
+                <el-button size="small" type="info" @click="handlePreview(file)">预览</el-button>
+                <el-button size="small" type="success" @click="handleDownload(file)">下载</el-button>
                 <el-button size="small" type="primary" @click="editResource(file)">编辑</el-button>
                 <el-button size="small" type="danger" @click="handleRemove(file)">删除</el-button>
               </div>
@@ -411,6 +450,18 @@ onMounted(() => {
   border-bottom: 1px solid #eee;
 }
 
+.upload-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #666;
+  line-height: 1.4;
+}
+
 .resource-list {
   margin-top: 20px;
 }
@@ -423,26 +474,34 @@ onMounted(() => {
 
 .resource-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 10px;
+  flex-direction: column;
+  padding: 16px;
+  margin-bottom: 16px;
   background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  border: 2px solid #e9ecef;
+  transition: all 0.3s ease;
 }
 
-.resource-info {
-  flex: 1;
+.resource-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
+  transform: translateY(-2px);
 }
 
 .resource-name {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 500;
+  gap: 10px;
+  font-weight: 600;
   color: #333;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.resource-name .el-icon {
+  font-size: 20px;
+  color: #409eff;
 }
 
 .resource-meta {
@@ -450,10 +509,19 @@ onMounted(() => {
   gap: 15px;
   font-size: 12px;
   color: #666;
+  margin-bottom: 12px;
 }
 
 .resource-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.resource-actions .el-button {
+  flex: 1;
+  min-width: 45px;
+  font-size: 12px;
+  padding: 4px 8px;
 }
 </style>

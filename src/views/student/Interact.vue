@@ -7,7 +7,10 @@ import {
   getQuestionDetailApi, 
   rateAnswerApi, 
   getInteractStatsApi,
-  getTeacherIdApi 
+  getTeacherIdApi,
+  submitRatingApi,
+  getRatingApi,
+  getRatingStatsApi
 } from '@/api/student'
 
 // 过滤状态
@@ -22,11 +25,27 @@ const interactStats = ref({
   avgResponseTime: 0
 })
 
+// 评分统计数据
+const ratingStats = ref({
+  totalRatings: 0,
+  avgRating: 0,
+  ratingDistribution: {
+    1: 0, 2: 0, 3: 0, 4: 0, 5: 0
+  }
+})
+
+
+
 // 表单数据
 const newQuestion = ref({
   type: '',
   title: '',
   content: ''
+})
+
+// 评分表单数据
+const ratingForm = ref({
+  rating: 0
 })
 
 // 提交状态
@@ -255,7 +274,17 @@ const viewQuestion = async (question) => {
         ...question,
         ...result.data
       }
-      currentRating.value = question.rating || 0
+      
+      // 加载该问题的评分信息
+      const ratingData = await loadQuestionRating(question.id)
+      if (ratingData) {
+        currentQuestion.value.rating = ratingData
+        ratingForm.value.rating = ratingData
+      } else {
+        ratingForm.value.rating = 0
+      }
+      
+      currentRating.value = ratingForm.value.rating
       showQuestionDialog.value = true
     }
   } catch (error) {
@@ -263,31 +292,102 @@ const viewQuestion = async (question) => {
   }
 }
 
-// 评价回答
+// 使用新评分系统提交评分
 const submitRating = async () => {
-  if (currentRating.value === 0) {
+  if (ratingForm.value.rating === 0) {
     ElMessage.warning('请选择评分')
     return
   }
   
   try {
-    const ratingData = {
-      questionId: currentQuestion.value.id,
-      rating: currentRating.value
-    }
-    
-    const result = await rateAnswerApi(ratingData)
+    const result = await submitRatingApi(currentQuestion.value.id, ratingForm.value.rating)
     if (result.code === 1) {
       ElMessage.success('评价提交成功，感谢您的反馈')
-      showQuestionDialog.value = false
-      loadQuestions() // 重新加载问题列表
-      loadInteractStats() // 重新加载统计数据
+      // 立即更新当前问题的评分状态
+      currentQuestion.value = {
+        ...currentQuestion.value,
+        rating: ratingForm.value.rating
+      }
+      // 更新问题列表中对应的问题
+      const questionIndex = questionList.value.findIndex(q => q.id === currentQuestion.value.id)
+      if (questionIndex !== -1) {
+        questionList.value[questionIndex].rating = ratingForm.value.rating
+      }
+      // 重置评分表单
+      ratingForm.value = {
+        rating: 0
+      }
+      currentRating.value = ratingForm.value.rating
+      // 重新加载数据
+      loadQuestions()
+      loadInteractStats()
+      loadRatingStats()
     } else {
       ElMessage.error(result.msg || '评价失败')
     }
   } catch (error) {
     ElMessage.error('评价失败，请重试')
   }
+}
+
+// 加载评分统计数据
+const loadRatingStats = async () => {
+  try {
+    const studentId = getCurrentStudentId()
+    if (!studentId) return
+    
+    const result = await getRatingStatsApi(studentId)
+    if (result.code === 1) {
+      ratingStats.value = result.data
+    }
+  } catch (error) {
+    console.error('加载评分统计失败：', error)
+  }
+}
+
+
+
+// 获取特定问题的评分
+const loadQuestionRating = async (questionId) => {
+  try {
+    const result = await getRatingApi(questionId)
+    if (result.code === 1 && result.data) {
+      return result.data
+    }
+    return null
+  } catch (error) {
+    console.error('获取问题评分失败：', error)
+    return null
+  }
+}
+
+// 重置评分
+const resetRating = () => {
+  ElMessageBox.confirm(
+    '确定要重置评分吗？这会清除您的当前评分。',
+    '确认重置',
+    {
+      confirmButtonText: '确定重置',
+      cancelButtonText: '取消',
+      type: 'warning',
+    }
+  ).then(() => {
+    // 重置评分表单
+    ratingForm.value = {
+      rating: 0
+    }
+    currentRating.value = 0
+    // 同时重置当前问题的评分状态（仅在本地，不提交到服务器）
+    if (currentQuestion.value) {
+      currentQuestion.value = {
+        ...currentQuestion.value,
+        rating: 0
+      }
+    }
+    ElMessage.success('评分已重置，您可以重新选择评分')
+  }).catch(() => {
+    // 用户取消操作
+  })
 }
 
 // 复制代码
@@ -304,6 +404,7 @@ onMounted(() => {
   console.log('学生互动模块初始化')
   loadQuestions()
   loadInteractStats()
+  loadRatingStats()
 })
 </script>
 
@@ -362,6 +463,19 @@ onMounted(() => {
               </div>
               <div class="card-icon">
                 <el-icon><Star /></el-icon>
+              </div>
+            </div>
+          </el-card>
+
+          <el-card shadow="hover" class="stat-card">
+            <div class="card-content">
+              <div class="card-info">
+                <div class="card-title">评分次数</div>
+                <div class="card-value">{{ ratingStats.totalRatings }}</div>
+                <div class="card-desc">已评价</div>
+              </div>
+              <div class="card-icon">
+                <el-icon><Medal /></el-icon>
               </div>
             </div>
           </el-card>
@@ -568,24 +682,45 @@ onMounted(() => {
           <h5>评价回答质量：</h5>
           <div class="rating-controls">
             <el-rate 
-              v-model="currentRating" 
-              :disabled="currentQuestion.rating > 0"
+              v-model="ratingForm.rating" 
+              :disabled="currentQuestion.rating && currentQuestion.rating > 0"
               size="large"
               show-text
               :texts="['很差', '较差', '一般', '较好', '很好']"
+              @change="currentRating = ratingForm.rating"
             />
-            <el-button 
-              v-if="currentQuestion.rating === 0" 
-              type="primary" 
-              size="small" 
-              @click="submitRating"
-              style="margin-left: 16px"
-            >
-              提交评价
-            </el-button>
-            <span v-else class="rated-text">已评价</span>
+            
+
+            
+            <div v-if="!currentQuestion.rating || currentQuestion.rating === 0" class="rating-buttons">
+              <el-button 
+                type="primary" 
+                size="small" 
+                @click="submitRating"
+                :disabled="ratingForm.rating === 0"
+              >
+                <el-icon><Check /></el-icon>
+                确认评价
+              </el-button>
+              <el-button 
+                size="small" 
+                @click="resetRating"
+              >
+                <el-icon><RefreshLeft /></el-icon>
+                重置
+              </el-button>
+            </div>
+            <div v-else class="rated-info">
+              <span class="rated-text">
+                <el-icon><CircleCheck /></el-icon>
+                已评价 {{ currentQuestion.rating }} 分
+              </span>
+
+            </div>
           </div>
         </div>
+
+
       </div>
 
       <div v-else class="waiting-section">
@@ -600,6 +735,8 @@ onMounted(() => {
       </div>
     </template>
   </el-dialog>
+
+
 </template>
 
 <style scoped>
@@ -795,6 +932,33 @@ onMounted(() => {
   border-left: 4px solid #409eff;
 }
 
+/* 新增评分相关样式 */
+
+.rating-reason {
+  margin: 12px 0;
+}
+
+.rating-reason-input {
+  width: 100%;
+}
+
+.rating-reason-display {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #666;
+}
+
+.rated-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+
 .teacher-info {
   display: flex;
   align-items: center;
@@ -884,14 +1048,26 @@ onMounted(() => {
 
 .rating-controls {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rating-buttons {
+  display: flex;
+  gap: 8px;
   align-items: center;
 }
 
 .rated-text {
   color: #67c23a;
   font-size: 14px;
-  margin-left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
 }
+
+
 
 .waiting-section {
   text-align: center;

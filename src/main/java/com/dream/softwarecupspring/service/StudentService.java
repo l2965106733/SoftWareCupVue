@@ -81,4 +81,26 @@ public interface StudentService {
      * 获取互动统计
      */
     Map<String, Object> getInteractStats(Integer studentId);
+
+    // ==================== 评分系统相关方法 ====================
+
+    /**
+     * 提交评分（只包含rating分数）
+     */
+    void submitRating(Integer questionId, Integer rating);
+
+    /**
+     * 获取特定问题的评分
+     */
+    Integer getRating(Integer questionId);
+
+    /**
+     * 获取学生的评分历史
+     */
+    List<StudentQuestion> getRatingHistory(Integer studentId);
+
+    /**
+     * 获取学生评分统计
+     */
+    Map<String, Object> getRatingStats(Integer studentId);
 } 

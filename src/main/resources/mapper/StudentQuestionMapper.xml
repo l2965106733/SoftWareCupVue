@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.dream.softwarecupspring.mapper.StudentQuestionMapper">
+
+    <!-- 基本的resultMap -->
+    <resultMap id="BaseResultMap" type="com.dream.softwarecupspring.pojo.StudentQuestion">
+        <id column="id" property="id"/>
+        <result column="student_id" property="studentId"/>
+        <result column="teacher_id" property="teacherId"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="type" property="type"/>
+        <result column="status" property="status"/>
+        <result column="answer" property="answer"/>
+        <result column="rating" property="rating"/>
+        <result column="created_time" property="createdTime"/>
+        <result column="answered_time" property="answeredTime"/>
+        <result column="updated_time" property="updatedTime"/>
+        <result column="student_name" property="studentName"/>
+        <result column="teacher_name" property="teacherName"/>
+    </resultMap>
+
+    <!-- 插入学生问题 -->
+    <insert id="insert" parameterType="com.dream.softwarecupspring.pojo.StudentQuestion">
+        INSERT INTO student_questions (student_id, teacher_id, title, content, type, status, created_time, updated_time)
+        VALUES (#{studentId}, #{teacherId}, #{title}, #{content}, #{type}, #{status}, #{createdTime}, #{updatedTime})
+    </insert>
+
+    <!-- 根据ID更新学生问题 -->
+    <update id="updateById" parameterType="com.dream.softwarecupspring.pojo.StudentQuestion">
+        UPDATE student_questions
+        <set>
+            <if test="answer != null">answer = #{answer},</if>
+            <if test="rating != null">rating = #{rating},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="answeredTime != null">answered_time = #{answeredTime},</if>
+            <if test="updatedTime != null">updated_time = #{updatedTime}</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <!-- 根据ID查询学生问题 -->
+    <select id="selectById" parameterType="int" resultMap="BaseResultMap">
+        SELECT sq.*, s.name as student_name, t.name as teacher_name
+        FROM student_questions sq
+        LEFT JOIN students s ON sq.student_id = s.id
+        LEFT JOIN teachers t ON sq.teacher_id = t.id
+        WHERE sq.id = #{id}
+    </select>
+
+    <!-- 根据学生ID获取问题列表 -->
+    <select id="getQuestionsByStudentId" parameterType="int" resultMap="BaseResultMap">
+        SELECT sq.*, s.name as student_name, t.name as teacher_name
+        FROM student_questions sq
+        LEFT JOIN students s ON sq.student_id = s.id
+        LEFT JOIN teachers t ON sq.teacher_id = t.id
+        WHERE sq.student_id = #{studentId}
+        ORDER BY sq.created_time DESC
+    </select>
+
+    <!-- 获取学生总提问数 -->
+    <select id="getTotalQuestionsCount" parameterType="int" resultType="int">
+        SELECT COUNT(*) FROM student_questions WHERE student_id = #{studentId}
+    </select>
+
+    <!-- 获取学生已回答问题数 -->
+    <select id="getAnsweredQuestionsCount" parameterType="int" resultType="int">
+        SELECT COUNT(*) FROM student_questions WHERE student_id = #{studentId} AND status = 1
+    </select>
+
+    <!-- 获取学生待回答问题数 -->
+    <select id="getPendingQuestionsCount" parameterType="int" resultType="int">
+        SELECT COUNT(*) FROM student_questions WHERE student_id = #{studentId} AND status = 0
+    </select>
+
+    <!-- 获取学生问题平均评分 -->
+    <select id="getAverageRating" parameterType="int" resultType="double">
+        SELECT AVG(rating) FROM student_questions WHERE student_id = #{studentId} AND rating IS NOT NULL
+    </select>
+
+    <!-- 按类型统计问题数 -->
+    <select id="getQuestionsByType" parameterType="int" resultType="map">
+        SELECT type, COUNT(*) as count
+        FROM student_questions
+        WHERE student_id = #{studentId}
+        GROUP BY type
+    </select>
+
+    <!-- 获取最近问题 -->
+    <select id="getRecentQuestions" parameterType="int" resultMap="BaseResultMap">
+        SELECT sq.*, s.name as student_name, t.name as teacher_name
+        FROM student_questions sq
+        LEFT JOIN students s ON sq.student_id = s.id
+        LEFT JOIN teachers t ON sq.teacher_id = t.id
+        WHERE sq.student_id = #{studentId}
+        ORDER BY sq.created_time DESC
+        LIMIT 10
+    </select>
+
+    <!-- 获取学生所有已评分的问题 -->
+    <select id="getRatedQuestionsByStudentId" parameterType="int" resultMap="BaseResultMap">
+        SELECT sq.*, s.name as student_name, t.name as teacher_name
+        FROM student_questions sq
+        LEFT JOIN students s ON sq.student_id = s.id
+        LEFT JOIN teachers t ON sq.teacher_id = t.id
+        WHERE sq.student_id = #{studentId} AND sq.rating IS NOT NULL
+        ORDER BY sq.updated_time DESC
+    </select>
+
+    <!-- 获取学生总评分数 -->
+    <select id="getTotalRatingsCount" parameterType="int" resultType="int">
+        SELECT COUNT(*) FROM student_questions WHERE student_id = #{studentId} AND rating IS NOT NULL
+    </select>
+
+    <!-- 获取学生平均评分 -->
+    <select id="getAverageRatingByStudent" parameterType="int" resultType="double">
+        SELECT AVG(rating) FROM student_questions WHERE student_id = #{studentId} AND rating IS NOT NULL
+    </select>
+
+    <!-- 获取学生评分分布 -->
+    <select id="getRatingDistribution" parameterType="int" resultType="map">
+        SELECT rating, COUNT(*) as count
+        FROM student_questions
+        WHERE student_id = #{studentId} AND rating IS NOT NULL
+        GROUP BY rating
+        ORDER BY rating
+    </select>
+
+    <!-- 获取学生最近评分的问题 -->
+    <select id="getRecentRatedQuestions" parameterType="int" resultMap="BaseResultMap">
+        SELECT sq.*, s.name as student_name, t.name as teacher_name
+        FROM student_questions sq
+        LEFT JOIN students s ON sq.student_id = s.id
+        LEFT JOIN teachers t ON sq.teacher_id = t.id
+        WHERE sq.student_id = #{studentId} AND sq.rating IS NOT NULL
+        ORDER BY sq.updated_time DESC
+        LIMIT 10
+    </select>
+
+</mapper> 

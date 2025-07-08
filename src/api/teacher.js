@@ -4,7 +4,7 @@ export const getTeachingPlanApi = (remark, fileUrls) => request.post("/teacher/t
 
 export const getQuestionApi = (data) => request.post("/teacher/question", data);
 
-export const getAnswerApi = (data) => request.post("/teacher/answer", data);
+export const getAnswerApi = (data) => request.post("/teacher/answer", { question: data });
 
 export const saveQuestionApi = (data) => request.post("/teacher/questions", data);
 
@@ -23,6 +23,14 @@ export const getStudentSubmissionsApi = (homeworkId) => request.get(`/teacher/su
 export const gradeHomeworkApi = (data) => request.post("/teacher/homeworkGrade", data);
 
 export const getHomeworkStatsApi = (teacherId) => request.get(`/teacher/homeworkStats/${teacherId}`);
+
+// 数据分析相关API
+export const getTeacherOverviewApi = (teacherId) => request.get(`/teacher/overview/${teacherId}`);
+export const getStudentListApi = (teacherId) => request.get(`/teacher/students/${teacherId}`);
+export const getResourceStatsApi = (teacherId) => request.get(`/teacher/resourceStats/${teacherId}`);
+export const getInteractStatsApi = (teacherId) => request.get(`/teacher/interactStats/${teacherId}`);
+export const getStudentProgressApi = (teacherId, params) => request.get(`/teacher/studentProgress/${teacherId}`, { params });
+export const getScoreDistributionApi = (teacherId, params) => request.get(`/teacher/scoreDistribution/${teacherId}`, { params });
 
 export const uploadResourceApi = (data) => request.post("/teacher/resourceUpload", data);
 

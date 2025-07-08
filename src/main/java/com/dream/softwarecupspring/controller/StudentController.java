@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/student")
@@ -32,15 +33,63 @@ public class StudentController {
     }
 
     /**
-     * 获取学生学习统计数据
+     * 获取学生学习统计数据（支持参数）
      */
     @GetMapping("/stats/{studentId}")
-    public Result getStudyStats(@PathVariable Integer studentId) {
+    public Result getStudyStats(@PathVariable Integer studentId, 
+                               @RequestParam(required = false) String period,
+                               @RequestParam(required = false) String type) {
         try {
-            Map<String, Object> stats = studentService.getStudyStats(studentId);
+            Map<String, Object> params = new HashMap<>();
+            if (period != null) params.put("period", period);
+            if (type != null) params.put("type", type);
+            
+            Map<String, Object> stats = studentService.getStudyStats(studentId, params);
             return Result.success(stats);
         } catch (Exception e) {
             return Result.error("获取学习统计失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取学生学习详细记录
+     */
+    @GetMapping("/studyRecords/{studentId}")
+    public Result getStudyRecords(@PathVariable Integer studentId,
+                                 @RequestParam(required = false) String type,
+                                 @RequestParam(required = false) String period,
+                                 @RequestParam(required = false, defaultValue = "1") Integer page,
+                                 @RequestParam(required = false, defaultValue = "20") Integer size) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            if (type != null) params.put("type", type);
+            if (period != null) params.put("period", period);
+            params.put("page", page);
+            params.put("size", size);
+            
+            Map<String, Object> records = studentService.getStudyRecords(studentId, params);
+            return Result.success(records);
+        } catch (Exception e) {
+            return Result.error("获取学习记录失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 导出学习报告
+     */
+    @GetMapping("/exportReport/{studentId}")
+    public Result exportStudyReport(@PathVariable Integer studentId,
+                                   @RequestParam(required = false) String format,
+                                   @RequestParam(required = false) String period) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            if (format != null) params.put("format", format);
+            if (period != null) params.put("period", period);
+            
+            Map<String, Object> report = studentService.generateStudyReport(studentId, params);
+            return Result.success(report);
+        } catch (Exception e) {
+            return Result.error("导出学习报告失败：" + e.getMessage());
         }
     }
 
@@ -203,6 +252,62 @@ public class StudentController {
             return Result.success(stats);
         } catch (Exception e) {
             return Result.error("获取互动统计失败：" + e.getMessage());
+        }
+    }
+
+    // ==================== 评分系统相关接口 ====================
+
+    /**
+     * 提交评分（只包含rating分数）
+     */
+    @PostMapping("/rating/submit")
+    public Result submitRating(@RequestBody Map<String, Object> ratingData) {
+        try {
+            Integer questionId = (Integer) ratingData.get("questionId");
+            Integer rating = (Integer) ratingData.get("rating");
+            studentService.submitRating(questionId, rating);
+            return Result.success("评分提交成功");
+        } catch (Exception e) {
+            return Result.error("提交评分失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取特定问题的评分
+     */
+    @GetMapping("/rating/{questionId}")
+    public Result getRating(@PathVariable Integer questionId) {
+        try {
+            Integer rating = studentService.getRating(questionId);
+            return Result.success(rating);
+        } catch (Exception e) {
+            return Result.error("获取评分失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取学生的评分历史
+     */
+    @GetMapping("/rating/history/{studentId}")
+    public Result getRatingHistory(@PathVariable Integer studentId) {
+        try {
+            List<StudentQuestion> ratingHistory = studentService.getRatingHistory(studentId);
+            return Result.success(ratingHistory);
+        } catch (Exception e) {
+            return Result.error("获取评分历史失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取学生评分统计
+     */
+    @GetMapping("/rating/stats/{studentId}")
+    public Result getRatingStats(@PathVariable Integer studentId) {
+        try {
+            Map<String, Object> stats = studentService.getRatingStats(studentId);
+            return Result.success(stats);
+        } catch (Exception e) {
+            return Result.error("获取评分统计失败：" + e.getMessage());
         }
     }
 } 

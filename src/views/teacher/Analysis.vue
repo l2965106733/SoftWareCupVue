@@ -1,17 +1,36 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getHomeworkStatsApi } from '@/api/teacher'
+import { 
+  getHomeworkStatsApi,
+  getTeacherOverviewApi,
+  getStudentListApi,
+  getResourceStatsApi,
+  getInteractStatsApi,
+  getStudentProgressApi,
+  getScoreDistributionApi
+} from '@/api/teacher'
 
 // 概览数据 - 从API获取真实数据
-const totalStudents = ref(156)
-const newStudentsWeek = ref(8)
-const homeworkRate = ref(87)
-const homeworkTrend = ref(5)
-const avgScore = ref(82.5)
-const scoreTrend = ref(-1.2)
-const activeRate = ref(73)
-const activeIncrease = ref(12)
+const overviewData = ref({
+  totalStudents: 0,
+  newStudentsWeek: 0,
+  homeworkRate: 0,
+  homeworkTrend: 0,
+  avgScore: 0,
+  scoreTrend: 0,
+  activeRate: 0,
+  activeIncrease: 0
+})
+
+// 加载状态
+const loading = ref({
+  overview: false,
+  homework: false,
+  students: false,
+  resources: false,
+  interact: false
+})
 
 // 作业统计数据
 const homeworkStats = ref({
@@ -41,74 +60,27 @@ const sortBy = ref('name')
 const currentPage = ref(1)
 const pageSize = ref(20)
 
-// 模拟学生数据
-const studentData = ref([
-  {
-    id: 1,
-    name: '张三',
-    studentId: '2022001',
-    progress: 85,
-    avgScore: 88,
-    homeworkCount: 15,
-    totalHomework: 18,
-    lastActive: '2024-01-15 14:30'
-  },
-  {
-    id: 2,
-    name: '李四',
-    studentId: '2022002',
-    progress: 72,
-    avgScore: 75,
-    homeworkCount: 13,
-    totalHomework: 18,
-    lastActive: '2024-01-15 10:15'
-  },
-  {
-    id: 3,
-    name: '王五',
-    studentId: '2022003',
-    progress: 95,
-    avgScore: 92,
-    homeworkCount: 18,
-    totalHomework: 18,
-    lastActive: '2024-01-15 16:45'
-  },
-  {
-    id: 4,
-    name: '赵六',
-    studentId: '2022004',
-    progress: 68,
-    avgScore: 70,
-    homeworkCount: 12,
-    totalHomework: 18,
-    lastActive: '2024-01-14 09:20'
-  }
-])
+// 学生数据 - 从API获取
+const studentData = ref([])
 
-// 预警数据
-const warnings = ref([
-  {
-    id: 1,
-    level: 'high',
-    title: '作业完成率下降',
-    description: '5名学生连续3次未提交作业',
-    time: '2小时前'
-  },
-  {
-    id: 2,
-    level: 'medium',
-    title: '学习进度异常',
-    description: '张三学习进度停滞超过一周',
-    time: '1天前'
-  },
-  {
-    id: 3,
-    level: 'low',
-    title: '互动参与度低',
-    description: '本周课堂互动次数下降20%',
-    time: '2天前'
-  }
-])
+// 资源统计数据
+const resourceStats = ref({
+  totalResources: 0,
+  weeklyUploads: 0,
+  viewCount: 0,
+  downloadCount: 0,
+  popularResources: []
+})
+
+// 互动统计数据
+const interactStats = ref({
+  totalQuestions: 0,
+  answeredQuestions: 0,
+  pendingQuestions: 0,
+  avgRating: 0,
+  avgResponseTime: 0,
+  recentQuestions: []
+})
 
 // 计算属性
 const filteredStudentData = computed(() => {
@@ -189,19 +161,6 @@ const generateReport = (type) => {
   ElMessage.success(`开始生成${reportTypes[type]}`)
 }
 
-const handleWarning = (warning) => {
-  ElMessageBox.confirm(`确定要处理"${warning.title}"这个预警吗？`, '处理预警', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning',
-  }).then(() => {
-    warnings.value = warnings.value.filter(w => w.id !== warning.id)
-    ElMessage.success('预警已处理')
-  }).catch(() => {
-    // 取消处理
-  })
-}
-
 const handleSizeChange = (val) => {
   pageSize.value = val
 }
@@ -210,34 +169,150 @@ const handleCurrentChange = (val) => {
   currentPage.value = val
 }
 
+// 获取当前登录教师ID
+const getCurrentTeacherId = () => {
+  const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+  return loginUser?.id
+}
+
+// 加载概览数据
+const loadOverviewData = async () => {
+  loading.value.overview = true
+  try {
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) {
+      ElMessage.warning('请先登录')
+      return
+    }
+    
+    const result = await getTeacherOverviewApi(teacherId)
+    if (result.code === 1) {
+      overviewData.value = result.data
+    } else {
+      ElMessage.error(result.msg || '获取概览数据失败')
+    }
+  } catch (error) {
+    console.error('获取概览数据失败:', error)
+    ElMessage.error('获取概览数据失败')
+  } finally {
+    loading.value.overview = false
+  }
+}
+
 // 获取作业统计数据
 const loadHomeworkStats = async () => {
+  loading.value.homework = true
   try {
-    // 假设当前教师ID为1，实际应该从用户信息中获取
-    const teacherId = 1 // 这里应该从登录用户信息中获取
-    const result = await getHomeworkStatsApi(teacherId)
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) return
     
+    const result = await getHomeworkStatsApi(teacherId)
     if (result.code === 1) {
       homeworkStats.value = result.data
-      
-      // 更新概览数据
-      homeworkRate.value = Math.round(homeworkStats.value.submitRate)
-      
-      // 可以根据统计数据更新其他概览指标
       console.log('作业统计数据加载成功:', homeworkStats.value)
     } else {
-      ElMessage.error(result.msg || '获取统计数据失败')
+      ElMessage.error(result.msg || '获取作业统计失败')
     }
   } catch (error) {
     console.error('获取作业统计失败:', error)
-    ElMessage.error('获取统计数据失败')
+    ElMessage.error('获取作业统计失败')
+  } finally {
+    loading.value.homework = false
   }
+}
+
+// 加载学生列表数据
+const loadStudentData = async () => {
+  loading.value.students = true
+  try {
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) return
+    
+    const result = await getStudentListApi(teacherId)
+    if (result.code === 1) {
+      studentData.value = result.data || []
+      console.log('学生数据加载成功:', studentData.value)
+    } else {
+      ElMessage.error(result.msg || '获取学生数据失败')
+  }
+  } catch (error) {
+    console.error('获取学生数据失败:', error)
+    ElMessage.error('获取学生数据失败')
+  } finally {
+    loading.value.students = false
+  }
+}
+
+// 加载资源统计数据
+const loadResourceStats = async () => {
+  loading.value.resources = true
+  try {
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) return
+    
+    const result = await getResourceStatsApi(teacherId)
+    if (result.code === 1) {
+      resourceStats.value = result.data
+      console.log('资源统计数据加载成功:', resourceStats.value)
+    } else {
+      ElMessage.error(result.msg || '获取资源统计失败')
+    }
+  } catch (error) {
+    console.error('获取资源统计失败:', error)
+    ElMessage.error('获取资源统计失败')
+  } finally {
+    loading.value.resources = false
+  }
+}
+
+// 加载互动统计数据
+const loadInteractStats = async () => {
+  loading.value.interact = true
+  try {
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) return
+    
+    const result = await getInteractStatsApi(teacherId)
+    if (result.code === 1) {
+      interactStats.value = result.data
+      console.log('互动统计数据加载成功:', interactStats.value)
+    } else {
+      ElMessage.error(result.msg || '获取互动统计失败')
+    }
+  } catch (error) {
+    console.error('获取互动统计失败:', error)
+    ElMessage.error('获取互动统计失败')
+  } finally {
+    loading.value.interact = false
+  }
+}
+
+
+
+// 加载所有数据
+const loadAllData = async () => {
+  const teacherId = getCurrentTeacherId()
+  if (!teacherId) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  
+  console.log('开始加载教师数据分析，教师ID:', teacherId)
+  
+  // 并行加载所有数据
+  await Promise.all([
+    loadOverviewData(),
+    loadHomeworkStats(),
+    loadStudentData(),
+    loadResourceStats(),
+    loadInteractStats()
+  ])
 }
 
 // 初始化
 onMounted(() => {
-  // 加载作业统计数据
-  loadHomeworkStats()
+  // 加载所有统计数据
+  loadAllData()
   
   // 这里可以初始化图表
   console.log('初始化数据分析图表')
@@ -252,12 +327,12 @@ onMounted(() => {
       <!-- 顶部概览卡片 -->
       <div class="overview-section">
         <div class="overview-cards">
-          <el-card shadow="hover" class="overview-card">
+          <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">总学生数</div>
-                <div class="card-value">{{ totalStudents }}</div>
-                <div class="card-change positive">+{{ newStudentsWeek }} 本周新增</div>
+                <div class="card-value">{{ overviewData.totalStudents }}</div>
+                <div class="card-change positive">+{{ overviewData.newStudentsWeek }} 本周新增</div>
               </div>
               <div class="card-icon">
                 <el-icon><User /></el-icon>
@@ -265,13 +340,13 @@ onMounted(() => {
             </div>
           </el-card>
 
-          <el-card shadow="hover" class="overview-card">
+          <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">作业完成率</div>
-                <div class="card-value">{{ homeworkRate }}%</div>
-                <div class="card-change" :class="homeworkTrend > 0 ? 'positive' : 'negative'">
-                  {{ homeworkTrend > 0 ? '+' : '' }}{{ homeworkTrend }}% 较上周
+                <div class="card-value">{{ overviewData.homeworkRate }}%</div>
+                <div class="card-change" :class="overviewData.homeworkTrend > 0 ? 'positive' : 'negative'">
+                  {{ overviewData.homeworkTrend > 0 ? '+' : '' }}{{ overviewData.homeworkTrend }}% 较上周
                 </div>
               </div>
               <div class="card-icon">
@@ -280,13 +355,13 @@ onMounted(() => {
             </div>
           </el-card>
 
-          <el-card shadow="hover" class="overview-card">
+          <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">平均分</div>
-                <div class="card-value">{{ avgScore }}</div>
-                <div class="card-change" :class="scoreTrend > 0 ? 'positive' : 'negative'">
-                  {{ scoreTrend > 0 ? '+' : '' }}{{ scoreTrend }} 较上次
+                <div class="card-value">{{ overviewData.avgScore }}</div>
+                <div class="card-change" :class="overviewData.scoreTrend > 0 ? 'positive' : 'negative'">
+                  {{ overviewData.scoreTrend > 0 ? '+' : '' }}{{ overviewData.scoreTrend }} 较上次
                 </div>
               </div>
               <div class="card-icon">
@@ -295,12 +370,12 @@ onMounted(() => {
             </div>
           </el-card>
 
-          <el-card shadow="hover" class="overview-card">
+          <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">活跃度</div>
-                <div class="card-value">{{ activeRate }}%</div>
-                <div class="card-change positive">+{{ activeIncrease }}% 本周</div>
+                <div class="card-value">{{ overviewData.activeRate }}%</div>
+                <div class="card-change positive">+{{ overviewData.activeIncrease }}% 本周</div>
               </div>
               <div class="card-icon">
                 <el-icon><ChatLineRound /></el-icon>
@@ -312,7 +387,7 @@ onMounted(() => {
 
       <!-- 作业统计专区 -->
       <div class="homework-stats-section">
-        <el-card shadow="hover">
+        <el-card shadow="hover" v-loading="loading.homework">
           <div class="card-header">
             <h4>
               <el-icon><DataAnalysis /></el-icon>
@@ -381,6 +456,115 @@ onMounted(() => {
                 <div class="homework-stats">
                   <span>提交: {{ homework.submitted_count }}/{{ homework.total_students }}</span>
                   <span>已批改: {{ homework.graded_count }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 资源统计专区 -->
+      <div class="resource-stats-section">
+        <el-card shadow="hover" v-loading="loading.resources">
+          <div class="card-header">
+            <h4>
+              <el-icon><Folder /></el-icon>
+              资源统计概览
+            </h4>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ resourceStats.totalResources }}</div>
+              <div class="stat-label">总资源数</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ resourceStats.weeklyUploads }}</div>
+              <div class="stat-label">本周上传</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ resourceStats.viewCount }}</div>
+              <div class="stat-label">总浏览量</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ resourceStats.downloadCount }}</div>
+              <div class="stat-label">总下载量</div>
+            </div>
+          </div>
+
+          <!-- 热门资源 -->
+          <div class="popular-resources" v-if="resourceStats.popularResources?.length > 0">
+            <h5>热门资源</h5>
+            <div class="resource-list">
+              <div 
+                v-for="resource in resourceStats.popularResources.slice(0, 5)" 
+                :key="resource.id"
+                class="resource-item"
+              >
+                <div class="resource-name">{{ resource.fileName }}</div>
+                <div class="resource-stats">
+                  <span>浏览: {{ resource.viewCount }}</span>
+                  <span>下载: {{ resource.downloadCount }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 互动统计专区 -->
+      <div class="interact-stats-section">
+        <el-card shadow="hover" v-loading="loading.interact">
+          <div class="card-header">
+            <h4>
+              <el-icon><ChatLineSquare /></el-icon>
+              师生互动统计
+            </h4>
+          </div>
+          
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-value">{{ interactStats.totalQuestions }}</div>
+              <div class="stat-label">总提问数</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ interactStats.answeredQuestions }}</div>
+              <div class="stat-label">已回答</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ interactStats.pendingQuestions }}</div>
+              <div class="stat-label">待回答</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ interactStats.avgRating?.toFixed(1) || 0 }}</div>
+              <div class="stat-label">平均评分</div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-value">{{ interactStats.avgResponseTime?.toFixed(1) || 0 }}h</div>
+              <div class="stat-label">平均响应时间</div>
+            </div>
+          </div>
+
+          <!-- 最近问题 -->
+          <div class="recent-questions" v-if="interactStats.recentQuestions?.length > 0">
+            <h5>最近问题</h5>
+            <div class="question-list">
+              <div 
+                v-for="question in interactStats.recentQuestions.slice(0, 3)" 
+                :key="question.id"
+                class="question-item"
+              >
+                <div class="question-title">{{ question.title }}</div>
+                <div class="question-info">
+                  <span>{{ question.studentName }}</span>
+                  <span>{{ question.createdTime }}</span>
                 </div>
               </div>
             </div>
@@ -474,7 +658,7 @@ onMounted(() => {
 
       <!-- 详细数据表格 -->
       <div class="table-section">
-        <el-card shadow="hover">
+        <el-card shadow="hover" v-loading="loading.students">
           <div class="table-header">
             <h4>
               <el-icon><List /></el-icon>
@@ -626,26 +810,6 @@ onMounted(() => {
             <el-icon><Setting /></el-icon>
             <span>自定义报告</span>
             <el-icon class="arrow"><ArrowRight /></el-icon>
-          </div>
-        </div>
-      </el-card>
-
-      <!-- 预警提醒 -->
-      <el-card style="margin-top: 20px" shadow="hover">
-        <h4>
-          <el-icon><Warning /></el-icon>
-          预警提醒
-        </h4>
-        <div class="warning-list">
-          <div v-for="warning in warnings" :key="warning.id" class="warning-item" :class="warning.level">
-            <div class="warning-content">
-              <div class="warning-title">{{ warning.title }}</div>
-              <div class="warning-desc">{{ warning.description }}</div>
-              <div class="warning-time">{{ warning.time }}</div>
-            </div>
-            <el-button type="text" size="small" @click="handleWarning(warning)">
-              处理
-            </el-button>
           </div>
         </div>
       </el-card>
@@ -953,6 +1117,60 @@ onMounted(() => {
   color: #666;
 }
 
+/* 资源统计专区 */
+.resource-stats-section {
+  margin-top: 20px;
+}
+
+.popular-resources,
+.recent-questions {
+  margin-top: 20px;
+}
+
+.popular-resources h5,
+.recent-questions h5 {
+  font-size: 14px;
+  color: #2c3e50;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.resource-list,
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resource-item,
+.question-item {
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #409eff;
+}
+
+.resource-name,
+.question-title {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.resource-stats,
+.question-info {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+}
+
+/* 互动统计专区 */
+.interact-stats-section {
+  margin-top: 20px;
+}
+
 /* 表格区域 */
 .table-section {
   flex: 1;
@@ -1041,60 +1259,7 @@ h4 {
   color: #999;
 }
 
-/* 预警列表 */
-.warning-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  max-height: 300px;
-  overflow-y: auto;
-}
 
-.warning-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid;
-}
-
-.warning-item.high {
-  background: #fef0f0;
-  border-left-color: #f56c6c;
-}
-
-.warning-item.medium {
-  background: #fdf6ec;
-  border-left-color: #e6a23c;
-}
-
-.warning-item.low {
-  background: #f0f9ff;
-  border-left-color: #409eff;
-}
-
-.warning-content {
-  flex: 1;
-}
-
-.warning-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.warning-desc {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.warning-time {
-  font-size: 12px;
-  color: #999;
-}
 
 /* 响应式 */
 @media (max-width: 1400px) {

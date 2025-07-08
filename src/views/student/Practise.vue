@@ -47,11 +47,11 @@ const filteredHomework = computed(() => {
   return homeworkList.value.filter(hw => {
     switch (filterStatus.value) {
       case 'pending':
-        return hw.status === 'pending' || hw.status === 'draft'
+        return hw.status === 0  // 草稿状态
       case 'submitted':
-        return hw.status === 'submitted'
+        return hw.status === 1  // 已提交
       case 'graded':
-        return hw.status === 'graded'
+        return hw.status === 2  // 已批改
       default:
         return true
     }
@@ -61,20 +61,18 @@ const filteredHomework = computed(() => {
 // 状态相关方法
 const getStatusType = (status) => {
   const types = {
-    pending: 'warning',
-    draft: 'info', 
-    submitted: 'primary',
-    graded: 'success'
+    0: 'warning',   // 未提交(草稿)
+    1: 'primary',   // 已提交
+    2: 'success'    // 已批改
   }
   return types[status] || 'info'
 }
 
 const getStatusText = (status) => {
   const texts = {
-    pending: '待完成',
-    draft: '草稿',
-    submitted: '已提交',
-    graded: '已批改'
+    0: '草稿',      // 未提交
+    1: '已提交',    // 已提交
+    2: '已批改'     // 已批改
   }
   return texts[status] || '未知'
 }
@@ -154,6 +152,15 @@ const getQuestionTypeName = (type) => {
   return names[type] || '未知'
 }
 
+const getAnswerPlaceholder = (type) => {
+  const placeholders = {
+    choice: '请输入选择的答案，如：A 或 B...',
+    short: '请输入答案...',
+    code: '请输入代码...'
+  }
+  return placeholders[type] || '请输入答案...'
+}
+
 // 加载作业列表
 const loadHomeworkList = async () => {
   try {
@@ -163,17 +170,18 @@ const loadHomeworkList = async () => {
     const result = await getHomeworkListApi(studentId)
     if (result.code === 1 && result.data && Array.isArray(result.data)) {
       homeworkList.value = result.data.map(item => ({
-        id: item.id,
-        title: item.title || '未命名作业',
+        id: item.student_homework_id,               // 学生作业记录ID
+        homeworkId: item.homework_id,               // 真正的作业ID
+        title: item.homework_title || '未命名作业',
         description: item.description || '暂无描述',
-        deadline: item.deadline,
-        status: item.status || 'pending',
-        score: item.score || 0,
-        totalScore: item.totalScore || 0,
+        deadline: item.homework_end_time,           // 截止时间
+        status: item.status !== undefined ? item.status : 0,  // 默认为0（草稿状态）
+        score: item.score || 0,                     // 学生得分
+        totalScore: item.homework_total_score || 0, // 作业总分
         feedback: item.feedback || '',
         teacherName: item.teacherName || item.teacher_name || '未知教师',
-        createdTime: item.createdTime,
-        timeLeft: formatTimeLeft(item.deadline)
+        createdTime: item.created_time || item.homework_start_time, // 创建时间
+        timeLeft: formatTimeLeft(item.homework_end_time) // 剩余时间计算
       }))
     } else {
       console.warn('作业数据格式不正确：', result)
@@ -193,13 +201,22 @@ const loadHomeworkStats = async () => {
     
     const result = await getHomeworkStatsApi(studentId)
     if (result.code === 1) {
+      const data = result.data || {}
+      
+      // 从学生角度：已完成 = 已提交，待完成 = 未提交
+      const totalHomework = data.totalHomework || 0
+      const submittedHomework = data.submittedHomework || 0
+      const gradedHomework = data.gradedHomework || 0
+      
       homeworkStats.value = {
-        totalHomework: result.data.totalHomework || 0,
-        completedHomework: result.data.completedHomework || 0,
-        pendingHomework: result.data.pendingHomework || 0,
-        averageScore: result.data.averageScore || 0,
-        overallProgress: result.data.overallProgress || 0
+        totalHomework: totalHomework,
+        completedHomework: submittedHomework,                 // 已完成 = 已提交作业数
+        pendingHomework: Math.max(0, totalHomework - submittedHomework), // 待完成 = 总数 - 已提交
+        averageScore: data.avgScore || 0,                     // 平均分
+        overallProgress: totalHomework > 0 ? Math.round((submittedHomework / totalHomework) * 100) : 0 // 整体进度基于提交率
       }
+      
+      console.log('作业统计数据:', homeworkStats.value) // 调试日志
     }
   } catch (error) {
     console.error('加载作业统计失败：', error)
@@ -209,11 +226,11 @@ const loadHomeworkStats = async () => {
 // 开始作业
 const startHomework = async (homework) => {
   try {
-    const result = await getHomeworkDetailApi(homework.id)
+    const result = await getHomeworkDetailApi(homework.homeworkId)  // 使用真正的作业ID
     if (result.code === 1) {
       currentHomework.value = {
         ...homework,
-        questions: result.data.questions || []
+        questions: result.data || []  // 直接使用返回的数组
       }
       
       // 初始化答案对象
@@ -229,11 +246,6 @@ const startHomework = async (homework) => {
   }
 }
 
-// 继续作业（草稿）
-const continueHomework = (homework) => {
-  startHomework(homework)
-}
-
 // 查看作业（已提交/已批改）
 const viewHomework = (homework) => {
   startHomework(homework)
@@ -244,9 +256,11 @@ const saveDraft = async () => {
   try {
     const studentId = getCurrentStudentId()
     const draftData = {
-      studentId: studentId,
-      homeworkId: currentHomework.value.id,
-      answers: currentAnswers.value
+      id: currentHomework.value.id,                    // 学生作业记录ID
+      homeworkId: currentHomework.value.homeworkId,    // 作业ID
+      studentId: studentId,                            // 学生ID
+      status: 0,                                       // 0:未提交(草稿状态)
+      answers: currentAnswers.value                    // 学生答案
     }
     
     const result = await saveHomeworkDraftApi(draftData)
@@ -288,9 +302,11 @@ const doSubmit = async () => {
   try {
     const studentId = getCurrentStudentId()
     const submitData = {
-      studentId: studentId,
-      homeworkId: currentHomework.value.id,
-      answers: currentAnswers.value
+      id: currentHomework.value.id,                    // 学生作业记录ID
+      homeworkId: currentHomework.value.homeworkId,    // 作业ID
+      studentId: studentId,                            // 学生ID
+      status: 1,                                       // 1:已提交
+      answers: currentAnswers.value                    // 学生答案
     }
     
     const result = await submitHomeworkApi(submitData)
@@ -433,7 +449,7 @@ onMounted(() => {
                   {{ getStatusText(homework.status) }}
                 </el-tag>
                 
-                <div v-if="homework.status === 'graded'" class="score-display">
+                <div v-if="homework.status === 2" class="score-display">
                   <span 
                     class="score" 
                     :class="getScoreClass(homework.score, homework.totalScore)"
@@ -446,7 +462,7 @@ onMounted(() => {
             
             <div class="homework-actions">
               <el-button 
-                v-if="homework.status === 'pending'" 
+                v-if="homework.status === 0" 
                 type="primary" 
                 @click="startHomework(homework)"
               >
@@ -455,16 +471,7 @@ onMounted(() => {
               </el-button>
               
               <el-button 
-                v-if="homework.status === 'draft'" 
-                type="warning" 
-                @click="continueHomework(homework)"
-              >
-                <el-icon><EditPen /></el-icon>
-                继续作业
-              </el-button>
-              
-              <el-button 
-                v-if="homework.status === 'submitted' || homework.status === 'graded'" 
+                v-if="homework.status === 1 || homework.status === 2" 
                 type="info" 
                 @click="viewHomework(homework)"
               >
@@ -514,40 +521,20 @@ onMounted(() => {
             </div>
             
             <div class="answer-section">
-              <div v-if="question.type === 'choice'" class="choice-answer">
-                <el-radio-group 
-                  v-model="currentAnswers[question.id]"
-                  :disabled="currentHomework.status === 'submitted' || currentHomework.status === 'graded'"
-                >
-                  <el-radio 
-                    v-for="option in question.options" 
-                    :key="option.key"
-                    :value="option.key"
-                    class="choice-option"
-                  >
-                    {{ option.key }}. {{ option.value }}
-                  </el-radio>
-                </el-radio-group>
-              </div>
-              
-              <div v-else class="text-answer">
+              <div class="text-answer">
                 <el-input
                   v-model="currentAnswers[question.id]"
                   type="textarea"
-                  :rows="question.type === 'code' ? 8 : 4"
-                  :placeholder="question.type === 'code' ? '请输入代码...' : '请输入答案...'"
-                  :disabled="currentHomework.status === 'submitted' || currentHomework.status === 'graded'"
+                  :rows="question.type === 'code' ? 8 : (question.type === 'choice' ? 2 : 4)"
+                  :placeholder="getAnswerPlaceholder(question.type)"
+                  :disabled="currentHomework.status === 1 || currentHomework.status === 2"
                 />
               </div>
               
-              <!-- 显示学生已提交的答案（查看模式） -->
-              <div v-if="(currentHomework.status === 'submitted' || currentHomework.status === 'graded') && question.studentAnswer" class="submitted-answer">
-                <h5>我的答案：</h5>
-                <div class="answer-content">{{ question.studentAnswer }}</div>
-              </div>
+
               
               <!-- 显示得分（已批改） -->
-              <div v-if="currentHomework.status === 'graded' && question.score !== undefined" class="question-score-display">
+              <div v-if="currentHomework.status === 2 && question.score !== undefined" class="question-score-display">
                 <span class="score-label">得分：</span>
                 <span 
                   class="score-value" 
@@ -566,7 +553,7 @@ onMounted(() => {
           <el-button @click="showHomeworkDialog = false">关闭</el-button>
           
           <el-button 
-            v-if="currentHomework?.status === 'pending' || currentHomework?.status === 'draft'" 
+            v-if="currentHomework?.status === 0" 
             type="info" 
             @click="saveDraft"
           >
@@ -574,7 +561,7 @@ onMounted(() => {
           </el-button>
           
           <el-button 
-            v-if="currentHomework?.status === 'pending' || currentHomework?.status === 'draft'" 
+            v-if="currentHomework?.status === 0" 
             type="primary" 
             @click="submitHomework"
           >
@@ -811,16 +798,7 @@ onMounted(() => {
   border-left: 4px solid #409eff;
 }
 
-.choice-option {
-  display: block;
-  margin-bottom: 8px;
-  padding: 8px;
-  border-radius: 4px;
-}
 
-.choice-option:hover {
-  background: #f0f8ff;
-}
 
 .submitted-answer {
   margin-top: 16px;

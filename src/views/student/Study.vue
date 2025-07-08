@@ -1,7 +1,7 @@
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi } from '@/api/student'
+import { getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi, exportStudyReportApi } from '@/api/student'
 
 // 对话框
 const showCoursewareDialog = ref(false)
@@ -18,6 +18,14 @@ const fileUpload = ref(null)
 // 课件数据
 const coursewareList = ref([])
 
+// 学习时长跟踪相关
+const studyTimer = ref({})          // 存储每个资源的计时器
+const studyStartTime = ref({})      // 存储学习开始时间
+const studySessionTime = ref({})    // 存储本次学习会话时间
+const activeStudyResources = ref(new Set()) // 当前正在学习的资源
+const pausedStudyResources = ref(new Set()) // 暂停的学习资源
+const realTimeStudyTime = ref({})   // 实时学习时长显示
+
 // AI对话历史
 const chatHistory = ref([
   {
@@ -33,26 +41,267 @@ const chatHistory = ref([
 const totalCourseware = ref(0)
 const studiedCourseware = ref(0)
 const aiQuestions = ref(0)
+const totalStudyTime = ref(0)      // 总学习时长（分钟）
+const todayStudyTime = ref(0)      // 今日学习时长（分钟）
 
-// 方法
+// 学习统计详情对话框
+const showStatsDialog = ref(false)
+const todayStudyResources = ref(0)
+const todayAiQuestions = ref(0)
+const resourceProgress = ref([])
+const knowledgeStats = ref([])
+
+// 获取进度条颜色
+const getProgressColor = (percentage) => {
+  if (percentage >= 80) return '#67c23a'
+  if (percentage >= 60) return '#e6a23c'
+  return '#f56c6c'
+}
+
+// 显示学习统计详情
+const showStudyStatsDetail = async () => {
+  showStatsDialog.value = true
+  await loadDetailedStats()
+}
+
+// 加载详细统计数据
+const loadDetailedStats = async () => {
+  try {
+    const studentId = getCurrentStudentId()
+    if (!studentId) return
+    
+    // 加载今日统计数据
+    const todayResult = await getStudyStatsApi(studentId, { period: 'today' })
+    if (todayResult.code === 1) {
+      todayStudyResources.value = todayResult.data.studyResources || 0
+      todayAiQuestions.value = todayResult.data.aiQuestions || 0
+    }
+    
+    // 加载学习进度数据
+    const progressResult = await getStudyRecordsApi(studentId, { type: 'progress' })
+    if (progressResult.code === 1) {
+      resourceProgress.value = progressResult.data.map(item => ({
+        id: item.resourceId,
+        name: item.resourceName,
+        progress: Math.round(item.progress || 0),
+        studyTime: Math.floor((item.studyDuration || 0) / 60),
+        lastStudyTime: item.lastStudyTime || '暂无'
+      }))
+    }
+    
+    // 加载知识点掌握数据
+    const knowledgeResult = await getStudyStatsApi(studentId, { type: 'knowledge' })
+    if (knowledgeResult.code === 1) {
+      knowledgeStats.value = knowledgeResult.data.knowledgeStats || []
+    }
+    
+    console.log('详细统计数据加载成功')
+  } catch (error) {
+    console.error('加载详细统计数据失败:', error)
+  }
+}
+
+// 导出学习报告
+const exportStudyReport = async () => {
+  try {
+    const studentId = getCurrentStudentId()
+    if (!studentId) return
+    
+    ElMessage.info('学习报告生成中...')
+    
+    // 调用后端API生成学习报告
+    const result = await exportStudyReportApi(studentId, { 
+      format: 'pdf',
+      period: 'all' 
+    })
+    
+    if (result.code === 1) {
+      // 如果后端返回下载链接
+      if (result.data.downloadUrl) {
+        const link = document.createElement('a')
+        link.href = result.data.downloadUrl
+        link.download = result.data.fileName || `学习报告_${new Date().toLocaleDateString()}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        ElMessage.success('学习报告下载成功')
+      } 
+      // 如果后端返回文件流
+      else if (result.data.fileData) {
+        const blob = new Blob([result.data.fileData], { type: 'application/pdf' })
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `学习报告_${new Date().toLocaleDateString()}.pdf`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        ElMessage.success('学习报告下载成功')
+      } else {
+        ElMessage.success('学习报告已生成')
+      }
+    } else {
+      ElMessage.error(result.msg || '生成失败')
+    }
+  } catch (error) {
+    console.error('导出学习报告失败:', error)
+    ElMessage.error('导出失败，请重试')
+  }
+}
+
+// 学习时长跟踪方法
+const startStudyTimer = (resourceId) => {
+  const now = Date.now()
+  studyStartTime.value[resourceId] = now
+  studySessionTime.value[resourceId] = 0
+  activeStudyResources.value.add(resourceId)
+  
+  // 每30秒记录一次学习进度
+  studyTimer.value[resourceId] = setInterval(() => {
+    updateStudyProgress(resourceId)
+  }, 30000) // 30秒间隔
+  
+  console.log(`开始学习资源 ${resourceId}，计时器已启动`)
+}
+
+const stopStudyTimer = async (resourceId) => {
+  if (studyTimer.value[resourceId]) {
+    clearInterval(studyTimer.value[resourceId])
+    delete studyTimer.value[resourceId]
+  }
+  
+  activeStudyResources.value.delete(resourceId)
+  
+  // 记录最终的学习时长
+  await updateStudyProgress(resourceId, true)
+  
+  // 清理相关数据
+  delete studyStartTime.value[resourceId]
+  delete studySessionTime.value[resourceId]
+  
+  console.log(`停止学习资源 ${resourceId}，数据已保存`)
+}
+
+const updateStudyProgress = async (resourceId, isEnd = false, action = 'update') => {
+  const studentId = getCurrentStudentId()
+  if (!studentId || !studyStartTime.value[resourceId]) return
+  
+  const currentTime = Date.now()
+  const sessionDuration = Math.floor((currentTime - studyStartTime.value[resourceId]) / 1000)
+  
+  try {
+    await recordStudyBehaviorApi({
+      studentId: studentId,
+      resourceId: resourceId,
+      action: isEnd ? 'end_study' : 'update_progress',
+      sessionDuration: sessionDuration,
+      studyStatus: isEnd ? 2 : 1, // 1-学习中, 2-本次学习结束
+      timestamp: new Date().toISOString()
+    })
+    
+    // 如果不是结束，重置开始时间用于下一个间隔
+    if (!isEnd) {
+      studyStartTime.value[resourceId] = Date.now()
+    }
+    
+    console.log(`更新学习进度: 资源${resourceId}, 时长${sessionDuration}秒, 结束:${isEnd}, 动作:${action}`)
+  } catch (error) {
+    console.error('更新学习进度失败:', error)
+  }
+}
+
+// 停止所有学习计时器
+const stopAllStudyTimers = async () => {
+  const promises = Array.from(activeStudyResources.value).map(resourceId => 
+    stopStudyTimer(resourceId)
+  )
+  await Promise.all(promises)
+}
+
+// 获取资源名称
+const getResourceName = (resourceId) => {
+  const resource = coursewareList.value.find(item => item.id === resourceId)
+  return resource ? resource.title : `资源 ${resourceId}`
+}
+
+// 格式化实时学习时长
+const formatRealTimeStudyTime = (resourceId) => {
+  const time = realTimeStudyTime.value[resourceId] || 0
+  return formatStudyTime(time)
+}
+
+// 暂停学习计时器
+const pauseStudyTimer = async (resourceId) => {
+  if (studyTimer.value[resourceId]) {
+    clearInterval(studyTimer.value[resourceId])
+    delete studyTimer.value[resourceId]
+    pausedStudyResources.value.add(resourceId)
+    
+    // 记录暂停
+    await updateStudyProgress(resourceId, false, 'pause')
+    
+    ElMessage.info(`已暂停学习: ${getResourceName(resourceId)}`)
+  }
+}
+
+// 恢复学习计时器
+const resumeStudyTimer = (resourceId) => {
+  if (pausedStudyResources.value.has(resourceId)) {
+    pausedStudyResources.value.delete(resourceId)
+    
+    // 重新开始计时
+    studyStartTime.value[resourceId] = Date.now()
+    studyTimer.value[resourceId] = setInterval(() => {
+      updateStudyProgress(resourceId)
+    }, 30000)
+    
+    ElMessage.success(`已恢复学习: ${getResourceName(resourceId)}`)
+  }
+}
+
+// 更新实时学习时长显示
+const updateRealTimeDisplay = () => {
+  const now = Date.now()
+  activeStudyResources.value.forEach(resourceId => {
+    if (studyStartTime.value[resourceId] && !pausedStudyResources.value.has(resourceId)) {
+      const elapsed = Math.floor((now - studyStartTime.value[resourceId]) / 1000)
+      realTimeStudyTime.value[resourceId] = elapsed
+    }
+  })
+}
+
+// 开始实时时长显示更新
+const startRealTimeDisplay = () => {
+  setInterval(updateRealTimeDisplay, 1000) // 每秒更新一次
+}
+
+// 增强的课件预览方法
 const handlePreview = async (courseware) => {
   if (!courseware.url) return ElMessage.warning('文件未就绪')
   
-  // 记录学习行为
+  const studentId = getCurrentStudentId()
+  const resourceId = courseware.id
+  
   try {
-    const studentId = getCurrentStudentId()
-    if (studentId) {
-      await recordStudyBehaviorApi({
-        studentId: studentId,
-        resourceId: courseware.id,
-        studyStatus: 1 // 已查看
-      })
-      
-      // 更新本地统计（可选，主要依赖后端统计）
-      loadStudyStats()
-    }
+    // 记录开始学习
+    await recordStudyBehaviorApi({
+      studentId: studentId,
+      resourceId: resourceId,
+      action: 'start_study',
+      studyStatus: 1, // 开始学习
+      timestamp: new Date().toISOString()
+    })
+    
+    // 开始计时
+    startStudyTimer(resourceId)
+    
+    // 更新本地统计
+    await loadStudyStats()
+    
+    ElMessage.success(`开始学习: ${courseware.title}`)
   } catch (error) {
-    console.error('记录学习行为失败：', error)
+    console.error('记录学习开始失败:', error)
   }
   
   const url = courseware.url.toLowerCase()
@@ -63,15 +312,82 @@ const handlePreview = async (courseware) => {
     url.endsWith('.xls') || url.endsWith('.xlsx')
   ) {
     const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(courseware.url)}`
-    window.open(officeUrl, '_blank')
+    
+    // 监听窗口关闭事件
+    const studyWindow = window.open(officeUrl, '_blank')
+    monitorStudyWindow(studyWindow, resourceId)
   } else {
-    window.open(courseware.url, '_blank') // 其它如 PDF 直接打开
+    const studyWindow = window.open(courseware.url, '_blank')
+    monitorStudyWindow(studyWindow, resourceId)
   }
 }
 
-const downloadCourseware = (courseware) => {
-  ElMessage.success(`开始下载：${courseware.title}`)
-  // 这里实现下载逻辑
+// 监听学习窗口
+const monitorStudyWindow = (studyWindow, resourceId) => {
+  if (!studyWindow) return
+  
+  // 定期检查窗口是否关闭
+  const checkWindowClosed = setInterval(() => {
+    if (studyWindow.closed) {
+      clearInterval(checkWindowClosed)
+      stopStudyTimer(resourceId)
+      ElMessage.info('学习窗口已关闭，学习时长已记录')
+    }
+  }, 1000)
+  
+  // 5分钟后自动停止检查（防止内存泄漏）
+  setTimeout(() => {
+    clearInterval(checkWindowClosed)
+  }, 5 * 60 * 1000)
+}
+
+const downloadCourseware = async (courseware) => {
+  if (!courseware.url) {
+    ElMessage.warning('文件链接无效，无法下载')
+    return
+  }
+
+  const studentId = getCurrentStudentId()
+  if (!studentId) {
+    ElMessage.error('用户信息无效')
+    return
+  }
+
+  try {
+    // 记录下载行为到后端
+    await recordStudyBehaviorApi({
+      studentId: studentId,
+      resourceId: courseware.id,
+      action: 'download',
+      studyStatus: 3, // 3-下载行为
+      timestamp: new Date().toISOString()
+    })
+
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = courseware.url
+    link.download = courseware.title || '课件文件'
+    
+    // 处理跨域下载
+    if (courseware.url.startsWith('http') && !courseware.url.includes(window.location.hostname)) {
+      // 跨域文件，在新窗口打开
+      window.open(courseware.url, '_blank')
+      ElMessage.success(`开始下载：${courseware.title}`)
+    } else {
+      // 同域文件，直接下载
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      ElMessage.success(`开始下载：${courseware.title}`)
+    }
+
+    // 更新本地统计
+    await loadStudyStats()
+    
+  } catch (error) {
+    console.error('下载失败:', error)
+    ElMessage.error('下载失败，请重试')
+  }
 }
 
 const handleFileSelect = (file, fileList) => {
@@ -129,7 +445,8 @@ const sendMessage = async () => {
   aiTyping.value = true
   
   try {
-    const result = await getChatApi({question: userMessage.content,fileUrl: selectedFile.value?.url})
+    // const result = await getChatApi({question: userMessage.content,fileUrl: selectedFile.value?.url})
+    const result = await getChatApi({question: userMessage.content,fileUrls: selectedFile.value?.url})
     if (result.code === 1 && Array.isArray(result.data)) {
       // 添加AI回复消息
       const aiMessage = {
@@ -148,12 +465,14 @@ const sendMessage = async () => {
         if (studentId) {
           await recordAiQuestionApi({
             studentId: studentId,
-            questionContent: userMessage.content,
-            aiResponse: result.data.join('\n')
+            question: userMessage.content,
+            answer: result.data.join('\n'),
+            category: detectQuestionCategory(userMessage.content), // 自动检测问题分类
+            satisfaction: null // 初始无评分
           })
         }
       } catch (error) {
-        console.error('记录AI提问失败：', error)
+        console.error('记录AI提问失败:', error)
       }
       
       // 更新统计数据
@@ -172,6 +491,27 @@ const sendMessage = async () => {
   }
 }
 
+// 检测问题分类
+const detectQuestionCategory = (question) => {
+  const categories = {
+    'java': ['java', 'class', 'object', 'method', 'interface', '类', '对象', '方法', '接口'],
+    'vue': ['vue', 'component', 'router', 'vuex', '组件', '路由', '状态管理'],
+    'database': ['sql', 'mysql', 'database', '数据库', '查询', '表'],
+    'frontend': ['html', 'css', 'javascript', 'js', '前端', '样式', '脚本'],
+    'other': []
+  }
+  
+  const lowerQuestion = question.toLowerCase()
+  
+  for (const [category, keywords] of Object.entries(categories)) {
+    if (keywords.some(keyword => lowerQuestion.includes(keyword))) {
+      return category
+    }
+  }
+  
+  return 'other'
+}
+
 const generateAIResponse = (question) => {
   const responses = [
     `关于"${question}"这个问题，我来为你详细解答：\n\n这是一个很好的问题。根据我的理解，主要涉及以下几个方面：\n\n1. 基础概念理解\n2. 实际应用场景\n3. 最佳实践建议\n\n希望这个回答对你有帮助！如果还有疑问，欢迎继续提问。`,
@@ -182,7 +522,11 @@ const generateAIResponse = (question) => {
 }
 
 const formatFileSize = (bytes) => {
-  if (bytes === 0) return '0 B'
+  // 处理空值和无效值
+  if (!bytes || bytes === null || bytes === undefined || isNaN(bytes) || bytes <= 0) {
+    return '未知大小'
+  }
+  
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -192,6 +536,19 @@ const formatFileSize = (bytes) => {
 const scrollToBottom = () => {
   if (chatMessages.value) {
     chatMessages.value.scrollTop = chatMessages.value.scrollHeight
+  }
+}
+
+// 格式化学习时长显示
+const formatStudyTime = (seconds) => {
+  if (seconds < 60) {
+    return `${seconds}秒`
+  } else if (seconds < 3600) {
+    return `${Math.floor(seconds / 60)}分钟`
+  } else {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    return `${hours}小时${minutes}分钟`
   }
 }
 
@@ -210,17 +567,25 @@ const loadCoursewareList = async () => {
     const result = await getCoursewareListApi(studentId)
     if (result.code === 1) {
       coursewareList.value = result.data.map(item => ({
-        id: item.id,
-        title: item.resourceName,
-        type: item.resourceType,
-        teacher: item.teacherName,
-        uploadTime: item.uploadTime,
-        size: formatFileSize(item.fileSize),
-        url: item.resourceUrl
+        id: item.id || 0,
+        title: item.resource_name || item.resourceName || '未命名课件',
+        type: item.resource_type || item.resourceType || 'file',
+        teacher: item.name || '未知教师',
+        uploadTime: item.upload_time || item.uploadTime || '未知时间',
+        size: formatFileSize(item.file_size || item.fileSize),
+        url: item.resource_url || item.resourceUrl || '',
+        studyProgress: item.study_progress || item.studyProgress || 0, // 学习进度
+        lastStudyTime: item.last_study_time || item.lastStudyTime || '暂无'       // 最后学习时间
       }))
+      
+      console.log('课件列表加载成功:', coursewareList.value) // 调试日志
+    } else {
+      console.log('课件列表API响应:', result)
+      ElMessage.warning('暂无课件数据')
     }
   } catch (error) {
-    console.error('加载课件列表失败：', error)
+    console.error('加载课件列表失败:', error)
+    ElMessage.error('加载课件列表失败，请刷新重试')
   }
 }
 
@@ -232,12 +597,38 @@ const loadStudyStats = async () => {
     
     const result = await getStudyStatsApi(studentId)
     if (result.code === 1) {
-      totalCourseware.value = result.data.totalCourseware || 0
-      studiedCourseware.value = result.data.studiedCourseware || 0
-      aiQuestions.value = result.data.aiQuestions || 0
+      const data = result.data
+      totalCourseware.value = data.totalCourseware || 0
+      studiedCourseware.value = data.studiedCourseware || 0
+      aiQuestions.value = data.aiQuestions || 0
+      totalStudyTime.value = Math.floor((data.totalStudyTime || 0) / 60) // 转换为分钟
+      todayStudyTime.value = Math.floor((data.todayStudyTime || 0) / 60) // 转换为分钟
     }
   } catch (error) {
-    console.error('加载学习统计失败：', error)
+    console.error('加载学习统计失败:', error)
+  }
+}
+
+// 页面可见性变化监听
+const handleVisibilityChange = () => {
+  if (document.hidden) {
+    // 页面隐藏时暂停所有计时器
+    Object.keys(studyTimer.value).forEach(resourceId => {
+      if (studyTimer.value[resourceId]) {
+        clearInterval(studyTimer.value[resourceId])
+        updateStudyProgress(parseInt(resourceId))
+      }
+    })
+  } else {
+    // 页面显示时恢复计时器
+    activeStudyResources.value.forEach(resourceId => {
+      if (!studyTimer.value[resourceId]) {
+        studyStartTime.value[resourceId] = Date.now()
+        studyTimer.value[resourceId] = setInterval(() => {
+          updateStudyProgress(resourceId)
+        }, 30000)
+      }
+    })
   }
 }
 
@@ -247,6 +638,23 @@ onMounted(() => {
   loadCoursewareList()
   loadStudyStats()
   scrollToBottom()
+  
+  // 启动实时学习时长显示
+  startRealTimeDisplay()
+  
+  // 监听页面可见性变化
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  
+  // 监听页面刷新和关闭
+  window.addEventListener('beforeunload', stopAllStudyTimers)
+})
+
+// 清理
+onBeforeUnmount(() => {
+  console.log('学习模块清理...')
+  stopAllStudyTimers()
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('beforeunload', stopAllStudyTimers)
 })
 </script>
 
@@ -356,13 +764,57 @@ onMounted(() => {
 
     <!-- 右侧内容区域 -->
     <div class="right-panel">
+      <!-- 学习计时器 -->
+      <div class="study-timer-section" v-if="activeStudyResources.size > 0">
+        <el-card shadow="hover">
+          <div class="timer-header">
+            <h4>
+              <el-icon><Timer /></el-icon>
+              正在学习
+            </h4>
+            <el-button type="danger" size="small" @click="stopAllStudyTimers">
+              <el-icon><VideoStop /></el-icon>
+              全部停止
+            </el-button>
+          </div>
+          <div class="active-timers">
+            <div 
+              v-for="resourceId in Array.from(activeStudyResources)" 
+              :key="resourceId" 
+              class="timer-item"
+            >
+              <div class="timer-info">
+                <div class="resource-title">{{ getResourceName(resourceId) }}</div>
+                <div class="timer-display">{{ formatRealTimeStudyTime(resourceId) }}</div>
+              </div>
+              <div class="timer-actions">
+                <el-button type="warning" size="small" @click="pauseStudyTimer(resourceId)">
+                  <el-icon><VideoPause /></el-icon>
+                  暂停
+                </el-button>
+                <el-button type="danger" size="small" @click="stopStudyTimer(resourceId)">
+                  <el-icon><VideoStop /></el-icon>
+                  停止
+                </el-button>
+              </div>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
       <!-- 学习统计 -->
       <div class="stats-section">
         <el-card shadow="hover">
-          <h4>
-            <el-icon><DataAnalysis /></el-icon>
-            学习统计
-          </h4>
+          <div class="card-header">
+            <h4>
+              <el-icon><DataAnalysis /></el-icon>
+              学习统计
+            </h4>
+            <el-button type="primary" size="small" @click="showStudyStatsDetail">
+              <el-icon><View /></el-icon>
+              查看详情
+            </el-button>
+          </div>
           <div class="study-stats">
             <div class="stat-item">
               <div class="stat-value">{{ totalCourseware }}</div>
@@ -375,6 +827,14 @@ onMounted(() => {
             <div class="stat-item">
               <div class="stat-value">{{ aiQuestions }}</div>
               <div class="stat-label">AI提问数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ totalStudyTime }}分钟</div>
+              <div class="stat-label">总学习时长</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ todayStudyTime }}分钟</div>
+              <div class="stat-label">今日学习</div>
             </div>
           </div>
         </el-card>
@@ -405,6 +865,8 @@ onMounted(() => {
                     <span class="teacher-name">发布教师：{{ courseware.teacher }}</span>
                     <span class="upload-time">上传时间：{{ courseware.uploadTime }}</span>
                     <span class="file-size">文件大小：{{ courseware.size }}</span>
+                    <span class="study-progress">学习进度：{{ courseware.studyProgress }}%</span>
+                    <span class="last-study-time">最后学习：{{ courseware.lastStudyTime }}</span>
                   </div>
                 </div>
               </div>
@@ -420,6 +882,82 @@ onMounted(() => {
         </el-card>
       </div>
     </div>
+
+    <!-- 学习统计详情对话框 -->
+    <el-dialog v-model="showStatsDialog" title="学习统计详情" width="800px">
+      <div class="stats-detail">
+        <!-- 今日学习概况 -->
+        <div class="stats-section">
+          <h4>今日学习概况</h4>
+          <div class="today-stats">
+            <div class="stat-card">
+              <div class="stat-number">{{ todayStudyTime }}</div>
+              <div class="stat-desc">今日学习时长（分钟）</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">{{ todayStudyResources }}</div>
+              <div class="stat-desc">今日学习资源数</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-number">{{ todayAiQuestions }}</div>
+              <div class="stat-desc">今日AI提问数</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 学习时长趋势 -->
+        <div class="stats-section">
+          <h4>近7天学习时长趋势</h4>
+          <div class="chart-container">
+            <div class="chart-placeholder">
+              <el-icon><TrendCharts /></el-icon>
+              <p>学习时长趋势图</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 学习资源进度 -->
+        <div class="stats-section">
+          <h4>学习资源进度</h4>
+          <div class="resource-progress">
+            <div v-for="item in resourceProgress" :key="item.id" class="progress-item">
+              <div class="progress-info">
+                <span class="resource-name">{{ item.name }}</span>
+                <span class="progress-percent">{{ item.progress }}%</span>
+              </div>
+              <el-progress :percentage="item.progress" :stroke-width="8" />
+              <div class="progress-time">
+                学习时长: {{ item.studyTime }}分钟 | 最后学习: {{ item.lastStudyTime }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 知识点掌握分析 -->
+        <div class="stats-section">
+          <h4>知识点掌握分析</h4>
+          <div class="knowledge-analysis">
+            <div v-for="category in knowledgeStats" :key="category.name" class="knowledge-item">
+              <div class="knowledge-header">
+                <span class="category-name">{{ category.name }}</span>
+                <span class="mastery-rate">掌握率: {{ category.masteryRate }}%</span>
+              </div>
+              <el-progress :percentage="category.masteryRate" :color="getProgressColor(category.masteryRate)" />
+              <div class="knowledge-details">
+                <span>已学习: {{ category.studied }}</span>
+                <span>未学习: {{ category.notStudied }}</span>
+                <span>需复习: {{ category.needReview }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <template #footer>
+        <el-button @click="showStatsDialog = false">关闭</el-button>
+        <el-button type="primary" @click="exportStudyReport">导出学习报告</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -670,27 +1208,36 @@ h4 {
 
 .study-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .stat-item {
   text-align: center;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
 }
 
 .stat-value {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  color: white;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #666;
+  font-size: 13px;
+  opacity: 0.9;
+  color: white;
 }
 
 /* 课件列表 */
@@ -744,9 +1291,24 @@ h4 {
 .courseware-meta {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  font-size: 11px;
+  gap: 4px;
+  font-size: 12px;
   color: #666;
+  margin-top: 8px;
+}
+
+.courseware-meta span {
+  padding: 2px 0;
+}
+
+.study-progress {
+  color: #409eff !important;
+  font-weight: 500;
+}
+
+.last-study-time {
+  color: #67c23a !important;
+  font-weight: 500;
 }
 
 .courseware-actions {
@@ -795,5 +1357,253 @@ h4 {
   .courseware-actions {
     justify-content: center;
   }
+}
+
+/* 学习统计区域样式 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.card-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 统计详情对话框样式 */
+.stats-detail {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.stats-section {
+  margin-bottom: 30px;
+}
+
+.stats-section h4 {
+  margin-bottom: 15px;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.stat-desc {
+  font-size: 14px;
+  opacity: 0.9;
+  color: white;
+}
+
+.chart-container {
+  height: 200px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #e0e0e0;
+}
+
+.chart-placeholder {
+  text-align: center;
+  color: #999;
+}
+
+.chart-placeholder .el-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: #ddd;
+}
+
+.chart-placeholder p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.resource-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.progress-item {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #409eff;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.resource-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.progress-percent {
+  font-size: 14px;
+  font-weight: 600;
+  color: #409eff;
+}
+
+.progress-time {
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.knowledge-analysis {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.knowledge-item {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #67c23a;
+}
+
+.knowledge-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.category-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.mastery-rate {
+  font-size: 14px;
+  font-weight: 600;
+  color: #67c23a;
+}
+
+.knowledge-details {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #666;
+  margin-top: 8px;
+}
+
+.knowledge-details span {
+  padding: 2px 6px;
+  background: #e9ecef;
+  border-radius: 4px;
+}
+
+/* 学习计时器样式 */
+.study-timer-section {
+  margin-bottom: 24px;
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.timer-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.active-timers {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.timer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.resource-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.timer-display {
+  font-size: 18px;
+  font-weight: 600;
+  color: #409eff;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.timer-actions .el-button {
+  padding: 6px 12px;
 }
 </style>

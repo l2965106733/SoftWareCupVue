@@ -1,10 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getQuestionApi,saveQuestionApi,publishHomeworkApi,getHomeworkListApi,getHomeworkDetailApi,getStudentSubmissionsApi,gradeHomeworkApi } from '@/api/teacher'
 
 const questions = ref([])
-const idCounter = ref(1)
+const tempIdCounter = ref(-1) // 临时ID计数器，从-1开始递减
 
 const homeworkTitle = ref('')
 const timeRange = ref([])
@@ -13,6 +13,16 @@ const timeRange = ref([])
 const showAIDialogVisible = ref(false)
 const isGenerating = ref(false)
 const aiFormRef = ref()
+
+// 保存题目按钮状态
+const isSaving = ref(false)
+const hasSavedInCurrentSession = ref(false)
+
+// 计算保存按钮是否应该禁用
+const isSaveButtonDisabled = computed(() => {
+  const hasUnsavedQuestions = questions.value.filter(q => q.id < 0).length > 0
+  return questions.value.length === 0 || isSaving.value || (hasSavedInCurrentSession.value && !hasUnsavedQuestions)
+})
 
 // AI表单数据
 const aiFormData = ref({
@@ -56,7 +66,16 @@ const handleAIGenerate = async () => {
     
     const result = await getQuestionApi(aiFormData.value)
     if (result.code === 1 && Array.isArray(result.data)) {
-      questions.value = result.data
+      // AI生成的题目给临时ID
+      questions.value = result.data.map(q => {
+        const { id, ...questionWithoutId } = q
+        return {
+          ...questionWithoutId,
+          id: tempIdCounter.value-- // 临时ID，负数
+        }
+      })
+      // 重置保存状态，允许重新保存
+      hasSavedInCurrentSession.value = false
       ElMessage.success('AI成功生成了题目！')
     } else {
       ElMessage.error(result.msg || '生成失败')
@@ -83,15 +102,18 @@ const handleAIGenerate = async () => {
 // 人工出题
 const handleManualAdd = () => {
   const newQuestion = {
-    id: idCounter.value++,
+    id: tempIdCounter.value--, // 临时ID，负数
     content: '',
     answer: '',
     explain: '',
     type: 'choice',
     score: 5
+    // 临时ID为负数，保存后会获得真实的正数数据库ID
   }
   
   questions.value.push(newQuestion)
+  // 重置保存状态，允许重新保存
+  hasSavedInCurrentSession.value = false
   ElMessage.success('已添加新题目，请填写内容')
 }
 
@@ -153,17 +175,89 @@ const saveQuestions = async () => {
     return
   }
   
+    // 过滤出未保存的题目（临时ID为负数）
+    const unsavedQuestions = questions.value.filter(q => q.id < 0)
+    
+    if (unsavedQuestions.length === 0) {
+      ElMessage.info('所有题目已保存，无需重复保存')
+      return
+    }
+  
+  // 设置保存状态
+  isSaving.value = true
+  
   try {
     ElMessage.info('正在保存题目...')
     // 这里调用后端API保存题目
-    const result = await saveQuestionApi(questions.value)
+    
+        console.log('准备保存的题目:', unsavedQuestions)
+    
+    const result = await saveQuestionApi(unsavedQuestions)
+    console.log('后端返回的完整结果:', result)
+    
     if (result.code === 1) {
-    ElMessage.success('题目保存成功！')
+      // 保存成功后，用真实ID替换临时ID
+      console.log('保存成功，返回的数据类型:', typeof result.data)
+      console.log('返回的数据内容:', result.data)
+      console.log('是否为数组:', Array.isArray(result.data))
+      
+      if (result.data) {
+        if (Array.isArray(result.data)) {
+          // 如果返回的是数组
+          console.log('处理数组数据，长度:', result.data.length)
+          result.data.forEach((savedQuestion, index) => {
+            console.log(`处理第${index + 1}个保存的题目:`, savedQuestion)
+            const tempId = unsavedQuestions[index].id
+            const questionIndex = questions.value.findIndex(q => q.id === tempId)
+            if (questionIndex !== -1) {
+              console.log(`替换题目: 临时ID ${tempId} → 真实ID ${savedQuestion.id}`)
+              questions.value[questionIndex] = savedQuestion
+            }
+          })
+        } else {
+          // 如果返回的不是数组，可能是单个对象或其他结构
+          console.log('返回的不是数组，尝试其他处理方式')
+          console.log('数据结构:', result.data)
+          
+          // 检查是否有 questions 字段
+          if (result.data.questions && Array.isArray(result.data.questions)) {
+            console.log('找到 questions 字段，处理数据')
+            result.data.questions.forEach((savedQuestion, index) => {
+              const tempId = unsavedQuestions[index].id
+              const questionIndex = questions.value.findIndex(q => q.id === tempId)
+              if (questionIndex !== -1) {
+                console.log(`替换题目: 临时ID ${tempId} → 真实ID ${savedQuestion.id}`)
+                questions.value[questionIndex] = savedQuestion
+              }
+            })
+          } else {
+            console.log('无法识别的数据结构，请检查后端返回格式')
+          }
+        }
+        
+        console.log('更新后的questions:', questions.value)
+        
+        // 检查每个题目的ID情况
+        questions.value.forEach((q, index) => {
+          console.log(`题目${index + 1}: id=${q.id}, 类型=${typeof q.id}, 是否已保存=${q.id > 0}`)
+        })
+        
+        // 检查发布按钮状态
+        const hasUnsaved = questions.value.some(q => !q.id || q.id <= 0)
+        console.log('发布按钮禁用状态:', hasUnsaved)
+        console.log('是否可以发布:', !hasUnsaved && homeworkTitle.value)
+      }
+      ElMessage.success('题目保存成功！')
+      // 标记本次会话已保存
+      hasSavedInCurrentSession.value = true
     } else {
       ElMessage.error(result.msg || '保存失败')
     }
   } catch (error) {
     ElMessage.error('保存失败，请重试')
+  } finally {
+    // 重置保存状态
+    isSaving.value = false
   }
 }
 
@@ -175,6 +269,8 @@ const clearQuestions = () => {
     type: 'warning',
   }).then(() => {
     questions.value = []
+    // 重置保存状态
+    hasSavedInCurrentSession.value = false
     ElMessage.success('已清空所有题目')
   }).catch(() => {
     // 取消清空
@@ -205,19 +301,26 @@ const publishHomework = async () => {
   }
   
   try {
+    // 检查题目是否已保存（ID为正数表示已保存）
+    const unsavedQuestions = questions.value.filter(q => !q.id || q.id <= 0)
+    if (unsavedQuestions.length > 0) {
+      ElMessage.warning('请先保存题目，再发布作业')
+      return
+    }
+    
     ElMessage.info('正在发布作业...')
     
-    // 从前端questions数组中提取题目IDs和计算总分
+    // 使用已保存题目的真实ID
     const questionIds = questions.value.map(q => q.id)
     const totalScore = questions.value.reduce((sum, q) => sum + q.score, 0)
     
     const result = await publishHomeworkApi({
       title: homeworkTitle.value,
       teacherId: getCurrentTeacherId(),
-              startTime: timeRange.value[0],
-        endTime: timeRange.value[1],
-              questionIds: questionIds,
-        totalScore: totalScore
+      startTime: timeRange.value[0],
+      endTime: timeRange.value[1],
+      questionIds: questionIds,  // 使用真实的题目ID
+      totalScore: totalScore
     })
     
     if (result.code === 1) {
@@ -229,6 +332,9 @@ const publishHomework = async () => {
     // 重置表单
     homeworkTitle.value = ''
     timeRange.value = []
+    questions.value = []
+    // 重置保存状态
+    hasSavedInCurrentSession.value = false
     } else {
       ElMessage.error(result.msg || '发布失败')
     }
@@ -421,6 +527,8 @@ const getScoreClass = (score, totalScore) => {
   if (percentage >= 70) return 'average'
   return 'poor'
 }
+
+
 </script>
 
 <template>
@@ -455,13 +563,18 @@ const getScoreClass = (score, totalScore) => {
             <h3>题目编辑区</h3>
             <div class="header-actions">
               <el-button 
-                type="success" 
+                :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'" 
                 size="small" 
                 @click="saveQuestions"
-                :disabled="questions.length === 0"
+                :disabled="isSaveButtonDisabled"
+                :loading="isSaving"
               >
                 <el-icon><Check /></el-icon>
-                保存题目
+                {{ 
+                  isSaving ? '保存中...' : 
+                  hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? '已保存' : 
+                  '保存题目' 
+                }}
               </el-button>
               <el-button 
                 type="warning" 
@@ -485,7 +598,11 @@ const getScoreClass = (score, totalScore) => {
             <div v-for="(q, index) in questions" :key="q.id" class="question-block">
               <div class="question-header">
                 <h4>题目 {{ index + 1 }}</h4>
-                <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
+                <div>
+                  <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
+                  <el-tag v-if="q.id && q.id > 0" type="success" size="small" style="margin-left: 8px">已保存</el-tag>
+                  <el-tag v-else type="warning" size="small" style="margin-left: 8px">未保存</el-tag>
+                </div>
               </div>
               
               <el-form label-width="60px">
@@ -594,11 +711,40 @@ const getScoreClass = (score, totalScore) => {
           type="success" 
           block 
           @click="publishHomework"
-          :disabled="questions.length === 0 || !homeworkTitle"
+          :disabled="questions.length === 0 || !homeworkTitle || questions.some(q => !q.id || q.id <= 0)"
         >
           <el-icon><Upload /></el-icon>
           发布作业
         </el-button>
+        <div v-if="questions.length > 0 && questions.some(q => !q.id || q.id <= 0)" class="form-tips" style="margin-top: 8px; text-align: center;">
+          💡 请先保存题目再发布作业
+        </div>
+        
+        <!-- 调试信息 -->
+        <div class="debug-info" style="margin-top: 10px; font-size: 12px; color: #666; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
+          <p><strong>调试信息：</strong></p>
+          <p>题目数量: {{ questions.length }}</p>
+          <p>作业标题: {{ homeworkTitle || '未填写' }}</p>
+          <p>时间范围: {{ timeRange && timeRange.length === 2 ? '已选择' : '未选择' }}</p>
+          <p>保存状态: {{ hasSavedInCurrentSession ? '✅已保存' : '❌未保存' }}</p>
+          <p>保存按钮状态: {{ 
+            isSaving ? '🔄保存中' : 
+            questions.filter(q => q.id < 0).length === 0 && hasSavedInCurrentSession ? '🔒已禁用' : 
+            '✅可用'
+          }}</p>
+          <p v-if="questions.length > 0">题目保存状态:</p>
+          <ul v-if="questions.length > 0" style="margin: 0; padding-left: 20px;">
+            <li v-for="(q, index) in questions" :key="q.id">
+              题目{{ index + 1 }}: ID={{ q.id }} {{ q.id > 0 ? '✅已保存' : '❌未保存' }}
+            </li>
+          </ul>
+          <p style="margin-top: 8px;"><strong>发布状态: {{ 
+            questions.length === 0 ? '❌没有题目' : 
+            !homeworkTitle ? '❌未填写标题' : 
+            questions.some(q => !q.id || q.id <= 0) ? '❌有题目未保存' : 
+            '✅可以发布'
+          }}</strong></p>
+        </div>
       </el-card>
 
       <!-- 预览区域 -->
@@ -625,7 +771,7 @@ const getScoreClass = (score, totalScore) => {
           <el-icon><Clock /></el-icon>
           发布记录
         </h4>
-        <el-table :data="history" size="small" stripe>
+        <el-table :data="history" size="small" stripe :row-key="row => row.id">
           <el-table-column prop="title" label="作业名称" />
           <el-table-column prop="publishTime" label="发布时间" />
           <el-table-column prop="status" label="状态">
@@ -733,7 +879,7 @@ const getScoreClass = (score, totalScore) => {
 
         <!-- 题目列表 -->
         <el-tab-pane label="题目内容">
-          <div v-for="(question, index) in homeworkQuestions" :key="question.id" class="question-detail">
+          <div v-for="(question, index) in homeworkQuestions" :key="question.id || `detail-${index}`" class="question-detail">
             <el-card shadow="hover" style="margin-bottom: 15px">
               <div class="question-header">
                 <h4>第{{ index + 1 }}题</h4>
@@ -770,7 +916,7 @@ const getScoreClass = (score, totalScore) => {
             </el-col>
           </el-row>
 
-          <el-table :data="studentSubmissions" border stripe>
+          <el-table :data="studentSubmissions" border stripe :row-key="row => row.id || row.studentId">
             <el-table-column prop="studentName" label="学生姓名" />
             <el-table-column prop="status" label="提交状态">
               <template #default="scope">
@@ -846,7 +992,7 @@ const getScoreClass = (score, totalScore) => {
         <div class="questions-grade">
           <div 
             v-for="(question, index) in currentGradeQuestions" 
-            :key="question.id" 
+            :key="question.id || `grade-${index}`" 
             class="grade-question-item"
           >
             <el-card shadow="hover" style="margin-bottom: 20px">
