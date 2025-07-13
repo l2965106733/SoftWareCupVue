@@ -4,7 +4,6 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeachingPlanApi, uploadResourceApi, getResourceListApi, deleteResourceApi, updateResourceApi } from '@/api/teacher'
 import axios from 'axios'
 
-const savePlan = () => ElMessage.success('保存成功（其实还没做，此处应调用API）')
 const clearPlan = () => {
   teachingPlan.value = ''
   ElMessage.success('已清空')
@@ -156,16 +155,111 @@ const generateTeachingPlan = async () => {
 
   try {
     const res = await getTeachingPlanApi(aiRemark.value, uploadedUrls)
-    if (res.code === 1 && Array.isArray(res.data)) {
+    if (res.code === 1) {
+      // 如果返回的是docx文件URL
+      if (res.data && typeof res.data === 'string' && res.data.endsWith('.docx')) {
+        ElMessage.success('教学计划文档生成成功，正在解析内容...')
+        await parseDocxContent(res.data)
+      } 
+      // 如果返回的是数组（原来的格式）
+      else if (Array.isArray(res.data)) {
       teachingPlan.value = res.data
       ElMessage.success('AI 教学结构生成成功')
+      }
+      // 如果返回的是对象包含docx URL
+      else if (res.data && res.data.docxUrl) {
+        ElMessage.success('教学计划文档生成成功，正在解析内容...')
+        await parseDocxContent(res.data.docxUrl)
+      }
+      else {
+        ElMessage.error('返回数据格式不正确')
+      }
+      
       aiFiles.value = [] 
     } else {
       ElMessage.error(res.msg || '生成失败')
     }
   } catch (e) {
+    console.error('生成教学计划失败:', e)
     ElMessage.error('网络错误，生成失败')
   }
+}
+
+// 解析docx文件内容
+const parseDocxContent = async (docxUrl) => {
+  try {
+    // 方案1：尝试使用mammoth.js解析docx
+    if (window.mammoth) {
+      const response = await fetch(docxUrl)
+      const arrayBuffer = await response.arrayBuffer()
+      
+      const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+      const htmlContent = result.value
+      
+      // 将HTML内容转换为教学计划结构
+      const planStructure = parseHtmlToTeachingPlan(htmlContent)
+      if (planStructure && planStructure.length > 0) {
+        teachingPlan.value = planStructure
+        ElMessage.success('教学计划内容解析成功')
+      } else {
+        // 如果解析失败，提供下载链接
+        showDocxDownload(docxUrl)
+      }
+    } else {
+      // 如果没有mammoth.js，直接提供下载
+      showDocxDownload(docxUrl)
+    }
+  } catch (error) {
+    console.error('解析docx文件失败:', error)
+    ElMessage.warning('无法解析文档内容，为您提供下载链接')
+    showDocxDownload(docxUrl)
+  }
+}
+
+// 将HTML内容转换为教学计划结构
+const parseHtmlToTeachingPlan = (htmlContent) => {
+  try {
+    const tempDiv = document.createElement('div')
+    tempDiv.innerHTML = htmlContent
+    
+    const plans = []
+    const headings = tempDiv.querySelectorAll('h1, h2, h3, h4')
+    
+    headings.forEach((heading, index) => {
+      let nextSibling = heading.nextElementSibling
+      let content = ''
+      
+      // 收集标题下的内容直到下一个标题
+      while (nextSibling && !nextSibling.matches('h1, h2, h3, h4')) {
+        content += nextSibling.textContent + '\n'
+        nextSibling = nextSibling.nextElementSibling
+      }
+      
+      plans.push({
+        title: heading.textContent.trim(),
+        summary: content.trim() || '详细内容请查看完整文档',
+        duration: `第${index + 1}讲`,
+        practice: false
+      })
+    })
+    
+    return plans.length > 0 ? plans : null
+  } catch (error) {
+    console.error('解析HTML内容失败:', error)
+    return null
+  }
+}
+
+// 显示docx下载链接
+const showDocxDownload = (docxUrl) => {
+  teachingPlan.value = [{
+    title: '📄 教学计划文档已生成',
+    summary: '点击下方链接下载完整的教学计划文档',
+    duration: '文档下载',
+    practice: false,
+    downloadUrl: docxUrl
+  }]
+  ElMessage.info('教学计划文档已准备就绪，请点击下载')
 }
 const editLesson = (index) => {
   ElMessage.info(`第 ${index + 1} 节编辑功能开发中...`)
@@ -276,6 +370,22 @@ const handleDownload = (file) => {
   ElMessage.success(`开始下载：${file.name}`)
 }
 
+// 下载教学计划文档
+const downloadTeachingPlan = (docxUrl) => {
+  if (!docxUrl) {
+    ElMessage.warning('下载链接不存在')
+    return
+  }
+  const link = document.createElement('a')
+  link.href = docxUrl
+  link.download = '教学计划.docx' // 可以自定义下载文件名
+  link.target = '_blank'
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  ElMessage.success('开始下载教学计划文档...')
+}
+
 // 页面加载时获取资源列表
 onMounted(() => {
   console.log('🚀 页面已挂载，开始加载资源列表...')
@@ -290,7 +400,6 @@ onMounted(() => {
     <div class="top-toolbar">
 
       <el-button type="success" @click="aiDialogVisible = true">🧠 AI生成教学内容</el-button>
-      <el-button type="warning" @click="savePlan">💾 保存计划</el-button>
       <el-button type="danger" @click="clearPlan">🧹 清空</el-button>
     </div>
 
@@ -304,9 +413,22 @@ onMounted(() => {
               <el-timeline-item v-for="(item, index) in teachingPlan" :key="index" :timestamp="item.duration || '待设定'">
                 <div class="lesson-block">
                   <strong>第{{ index + 1 }}讲：{{ item.title }}</strong>
-                  <el-button link type="primary" @click="editLesson(index)">编辑</el-button>
+                  <el-button link type="primary" @click="editLesson(index)" v-if="!item.downloadUrl">编辑</el-button>
+                  
+                  <!-- 如果有下载链接，显示下载按钮 -->
+                  <el-button type="success" @click="downloadTeachingPlan(item.downloadUrl)" v-if="item.downloadUrl">
+                    <el-icon><Download /></el-icon>
+                    下载完整文档
+                  </el-button>
+                  
                   <p><strong>摘要：</strong>{{ item.summary }}</p>
-                  <p v-if="!item.practice">❌ 无练习题（请前往“作业模块”添加）</p>
+                  <p v-if="!item.practice && !item.downloadUrl">❌ 无练习题（请前往"作业模块"添加）</p>
+                  
+                  <!-- 如果有下载链接，显示额外信息 -->
+                  <div v-if="item.downloadUrl" class="download-info">
+                    <p>📄 完整的教学计划已生成为Word文档</p>
+                    <p>💡 包含详细的教学目标、重点难点、教学方法等内容</p>
+                  </div>
                 </div>
               </el-timeline-item>
             </el-timeline>
@@ -441,6 +563,25 @@ onMounted(() => {
 
 .lesson-block p {
   margin: 5px 0;
+}
+
+/* 下载信息样式 */
+.download-info {
+  background: linear-gradient(135deg, #e3f2fd 0%, #f1f8e9 100%);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border-left: 4px solid #4caf50;
+  margin-top: 10px;
+}
+
+.download-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.download-info p:first-child {
+  font-weight: 600;
 }
 
 /* 资源管理样式 */

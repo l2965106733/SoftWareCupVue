@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getAnswerApi, getStudentQuestionsApi, sendStudentAnswerApi } from '@/api/teacher'
+import { getAnswerApi, getStudentQuestionsApi, sendStudentAnswerApi, getStudentRatingsApi } from '@/api/teacher'
 
 // 筛选和搜索
 const filterType = ref('all')
@@ -9,6 +9,9 @@ const searchKeyword = ref('')
 
 // 学生提问列表
 const questions = ref([])
+
+// 学生评分列表
+const ratings = ref([])
 
 const loadingMap = ref({}) // 控制每条问题的 AI 加载状态
 
@@ -42,23 +45,74 @@ const responseRate = computed(() => {
   return Math.round((answeredCount.value / questions.value.length) * 100)
 })
 
+// 评分统计
+const averageRating = computed(() => {
+  if (ratings.value.length === 0) return 0
+  const total = ratings.value.reduce((sum, r) => sum + r.rating, 0)
+  return (total / ratings.value.length).toFixed(1)
+})
 
+const positiveRatingCount = computed(() => ratings.value.filter(r => r.rating >= 4).length)
+const neutralRatingCount = computed(() => ratings.value.filter(r => r.rating === 3).length)
+const negativeRatingCount = computed(() => ratings.value.filter(r => r.rating <= 2).length)
+
+// 获取评分星级显示
+const getRatingStars = (rating) => {
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating)
+}
+
+// 获取评分颜色
+const getRatingColor = (rating) => {
+  if (rating >= 4) return '#67c23a'
+  if (rating === 3) return '#e6a23c'
+  return '#f56c6c'
+}
+
+// 获取评分文本
+const getRatingText = (rating) => {
+  if (rating >= 4) return '满意'
+  if (rating === 3) return '一般'
+  return '不满意'
+}
+
+// 加载学生评分列表
+const loadRatings = async () => {
+  try {
+    const teacherId = getCurrentTeacherId()
+    if (!teacherId) return
+    
+    const result = await getStudentRatingsApi(teacherId)
+    if (result.code === 1) {
+      ratings.value = result.data.map(item => ({
+        id: item.id,
+        studentId: item.studentId,
+        studentName: item.studentName,
+        question: item.question,
+        rating: item.rating,
+        createTime: item.createdTime,
+      }))
+    }
+  } catch (error) {
+    console.error('加载评分列表失败：', error)
+  }
+}
 
 // AI 生成回答
 const generateAIAnswer = async (q) => {
   loadingMap.value[q.id] = true
   
   try {
-    const result = await getAnswerApi(q.question)
-    if (result.code === 1 && Array.isArray(result.data)) {
-      q.answer = result.data
+    const result = await getAnswerApi({
+      type: q.type,  // 使用问题的具体类型，如java、vue等
+      question: q.question      // 学生的问题内容
+    })
+    
+    if (result.code === 1 && result.data) {
+      q.answer = result.data  // 直接使用返回的字符串
       ElMessage.success('AI回答生成成功，请检查后发送')
     } else {
       ElMessage.error(result.msg || '生成失败')
     }
-
-    // q.answer = aiAnswer
-    ElMessage.success('AI回答生成成功，请检查后发送')
   } catch (error) {
     ElMessage.error('AI生成回答失败，请重试')
   } finally {
@@ -91,23 +145,43 @@ const loadQuestions = async () => {
   try {
     const teacherId = getCurrentTeacherId()
     if (!teacherId) return
-    
-    const result = await getStudentQuestionsApi(teacherId)
-    if (result.code === 1) {
-      questions.value = result.data.map(item => ({
-        id: item.id,
-        name: item.studentName,
-        question: item.content,        // 问题详情（包含所有内容）
-        answer: item.answer || '',
-        answered: item.status === 1,
-        createTime: item.createdTime,
-        title: item.title
-      }))
+
+    // 并发获取问答和评分
+    const [questionsRes, ratingsRes] = await Promise.all([
+      getStudentQuestionsApi(teacherId),
+      getStudentRatingsApi(teacherId)
+    ])
+
+    let ratingsMap = {}
+    if (ratingsRes.code === 1 && Array.isArray(ratingsRes.data)) {
+      ratingsRes.data.forEach(r => {
+        ratingsMap[r.id] = r
+      })
+    }
+
+    if (questionsRes.code === 1 && Array.isArray(questionsRes.data)) {
+      questions.value = questionsRes.data.map(item => {
+        const ratingObj = ratingsMap[item.id]
+        return {
+          id: item.id,
+          name: item.studentName,
+          question: item.content || item.title || '',
+          answer: item.answer || '',
+          answered: item.status === 1,
+          createTime: item.createdTime,
+          title: item.title,
+          type: item.type,
+          // 合并评分
+          rating: ratingObj ? Number(ratingObj.rating) : undefined,
+          ratingTime: ratingObj ? ratingObj.createdTime : undefined
+        }
+      })
     }
   } catch (error) {
-    console.error('加载问题列表失败：', error)
+    console.error('加载问题列表或评分失败：', error)
   }
 }
+
 
 
 
@@ -148,6 +222,7 @@ const sendAnswer = async (q) => {
 // 页面加载时获取数据
 onMounted(() => {
   loadQuestions()
+  loadRatings()
 })
 </script>
 
@@ -202,6 +277,7 @@ onMounted(() => {
           </div>
           
           <div class="panel-content">
+            <!-- 问答统计 -->
             <div class="stats-horizontal">
               <div class="stat-item">
                 <div class="stat-value">{{ questions.length }}</div>
@@ -220,12 +296,42 @@ onMounted(() => {
                 <div class="stat-label">回答率</div>
               </div>
             </div>
+
+            <el-divider style="margin: 18px 0 12px 0;" />
+
+            <!-- 评分统计优化 -->
+            <div class="rating-stats-row">
+              <div class="avg-rating-block">
+                <span class="avg-value">{{ averageRating }}</span>
+                <span class="avg-stars" :style="{ color: getRatingColor(Math.round(averageRating)) }">
+                  {{ getRatingStars(Math.round(averageRating)) }}
+                </span>
+                <span class="avg-label">平均评分</span>
+              </div>
+              <div class="rating-bars-block">
+                <div class="rating-bar">
+                  <span>满意</span>
+                  <el-progress :percentage="ratings.length > 0 ? Math.round((positiveRatingCount / ratings.length) * 100) : 0" :color="'#67c23a'" :stroke-width="8" />
+                  <span>{{ positiveRatingCount }}</span>
+                </div>
+                <div class="rating-bar">
+                  <span>一般</span>
+                  <el-progress :percentage="ratings.length > 0 ? Math.round((neutralRatingCount / ratings.length) * 100) : 0" :color="'#e6a23c'" :stroke-width="8" />
+                  <span>{{ neutralRatingCount }}</span>
+                </div>
+                <div class="rating-bar">
+                  <span>不满意</span>
+                  <el-progress :percentage="ratings.length > 0 ? Math.round((negativeRatingCount / ratings.length) * 100) : 0" :color="'#f56c6c'" :stroke-width="8" />
+                  <span>{{ negativeRatingCount }}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </el-card>
       </div>
     </div>
 
-    <!-- 下方区域：问题列表铺满 -->
+    <!-- 下方区域：标签页切换 -->
     <div class="content-section">
       <el-card shadow="hover">
         <template v-if="filteredQuestions.length === 0">
@@ -254,14 +360,24 @@ onMounted(() => {
                 </el-tag>
               </div>
             </div>
-
             <div class="question-content">
               <div class="question-text">
                 <el-icon><QuestionFilled /></el-icon>
                 <span>{{ q.question }}</span>
               </div>
             </div>
-
+            <!-- 评分展示 -->
+            <div class="question-rating" v-if="q.rating !== undefined && q.rating !== null">
+              <span class="rating-stars" :style="{ color: getRatingColor(q.rating) }">
+                {{ getRatingStars(q.rating) }}
+              </span>
+              <span class="rating-label">{{ getRatingText(q.rating) }}</span>
+              <span class="rating-time">{{ q.ratingTime }}</span>
+            </div>
+            <div class="question-rating no-rating" v-else>
+              暂无评分
+            </div>
+            <!-- 其余操作按钮等内容保持不变 -->
             <div class="answer-section">
               <el-form label-width="60px">
                 <el-form-item label="回答">
@@ -276,7 +392,6 @@ onMounted(() => {
                   />
                 </el-form-item>
               </el-form>
-              
               <div class="action-buttons">
                 <div class="left-actions">
                   <el-button
@@ -289,7 +404,6 @@ onMounted(() => {
                     <el-icon><MagicStick /></el-icon>
                     AI生成回答
                   </el-button>
-                  
                   <el-button
                     type="info"
                     size="small"
@@ -301,7 +415,6 @@ onMounted(() => {
                     重新编辑
                   </el-button>
                 </div>
-                
                 <div class="right-actions">
                   <el-button
                     type="success"
@@ -315,7 +428,6 @@ onMounted(() => {
                 </div>
               </div>
             </div>
-            
             <el-divider />
           </div>
         </template>
@@ -339,7 +451,7 @@ onMounted(() => {
   display: flex;
   gap: 24px;
   flex-shrink: 0;
-  height: 140px;
+  height: 200px;
 }
 
 .control-panel {
@@ -544,7 +656,71 @@ onMounted(() => {
   color: #666;
 }
 
+/* 评分统计样式 */
+.rating-stats {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+}
 
+.rating-overview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.avg-rating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.avg-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #409eff;
+}
+
+.avg-stars {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.rating-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rating-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.rating-bar span:first-child {
+  width: 40px;
+  color: #666;
+}
+
+.rating-bar span:last-child {
+  width: 20px;
+  text-align: right;
+  color: #666;
+}
+
+.rating-bar :deep(.el-progress) {
+  flex: 1;
+}
+
+.rating-bar :deep(.el-progress-bar__outer) {
+  background-color: #f0f0f0;
+}
 
 /* 空状态 */
 .empty-hint {
@@ -612,6 +788,52 @@ h4 {
   border-color: #e8e8e8 !important;
 }
 
+/* 标签页样式 */
+.interact-tabs {
+  margin-top: 16px;
+}
+
+.interact-tabs :deep(.el-tabs__header) {
+  margin-bottom: 24px;
+}
+
+.interact-tabs :deep(.el-tabs__item) {
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 24px;
+}
+
+/* 问题评分展示样式（简洁） */
+.question-rating {
+  margin: 8px 0 0 0;
+  font-size: 14px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.rating-stars {
+  font-size: 16px;
+  font-weight: bold;
+}
+.rating-label {
+  font-size: 13px;
+  color: #666;
+}
+.rating-comment {
+  color: #409eff;
+  font-style: italic;
+}
+.rating-time {
+  font-size: 12px;
+  color: #bbb;
+  margin-left: 8px;
+}
+.no-rating {
+  color: #ccc;
+  font-size: 13px;
+}
+
 /* 响应式 */
 @media (max-width: 1400px) {
   .interact-layout {
@@ -655,6 +877,74 @@ h4 {
   .stats-horizontal {
     flex-direction: column;
     gap: 8px;
+  }
+  
+  .rating-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .rating-display {
+    align-self: flex-end;
+  }
+}
+
+/* 评分统计样式优化 */
+.rating-stats-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  margin-top: 8px;
+}
+
+.avg-rating-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+  margin-right: 24px;
+}
+
+.avg-value {
+  font-size: 32px;
+  font-weight: bold;
+  color: #409eff;
+  line-height: 1;
+}
+
+.avg-stars {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 4px 0;
+}
+
+.avg-label {
+  font-size: 13px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.rating-bars-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 180px;
+}
+
+@media (max-width: 900px) {
+  .rating-stats-row {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  .avg-rating-block {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-width: 0;
+    margin-right: 0;
+    gap: 12px;
   }
 }
 </style>

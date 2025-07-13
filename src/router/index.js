@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 
 const routes = [
   { path: '/', name: 'Login', component: () => import('@/views/public/Login.vue') },
@@ -59,8 +60,6 @@ const routes = [
           { path: 'home', name: 'AdminHome', component: () => import('@/views/admin/Home.vue') },
           { path: 'user', name: 'AdminUser', component: () => import('@/views/admin/User.vue') },
           { path: 'resource', name: 'AdminResource', component: () => import('@/views/admin/Resource.vue') },
-          { path: 'teacherstats', name: 'AdminTeacherStats', component: () => import('@/views/admin/TeacherStats.vue') },
-          { path: 'studentstats', name: 'AdminStudentStats', component: () => import('@/views/admin/StudentStats.vue') },
           { path: 'overallstats', name: 'AdminOverallStats', component: () => import('@/views/admin/OverallStats.vue') }
         ]
       }
@@ -78,6 +77,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+  const token = loginUser?.token
+
+  // 如果没有 token 并且要访问的不是登录页，就强制跳转回登录
+  if (!token && to.path !== '/') {
+    ElMessage.warning('请先登录')
+    next('/')
+  } else {
+    next()
+  }
 })
 
 export default router

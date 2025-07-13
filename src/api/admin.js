@@ -10,3 +10,36 @@ export const updateUserApi = (user) => request.put("/admin/user",user)
 
 export const addUserApi = (user) => request.post("/admin/user",user)
 
+// 资源管理相关API
+export const getAllResourcesApi = () => request.get("/admin/resource");
+
+export const deleteResourceApi = (resourceId) => request.delete(`/admin/resource/${resourceId}`);
+
+export const updateResourceApi = (data) => request.put("/admin/resource/update", data);
+
+export const getResourceStatsApi = () => request.get("/admin/resource/stats");
+
+// ==================== 系统总体统计相关API ====================
+
+// 1. 获取系统概览数据
+export const getSystemOverviewApi = () => request.get("/admin/systemOverview");
+
+// 2. 获取用户活跃度数据
+export const getUserActivityApi = () => request.get("/admin/userActivity");
+
+// 3. 获取系统使用情况
+export const getSystemUsageApi = () => request.get("/admin/systemUsage");
+
+// 4. 获取系统健康状态
+export const getSystemHealthApi = () => request.get("/admin/systemHealth");
+
+// 5. 获取用户活跃度趋势
+export const getUserActivityTrendApi = (params) => request.get('/admin/userActivityTrend', { params });
+
+// ==================== 管理员首页专用接口 ====================
+
+// 获取最近活动记录（管理员首页专用）
+export const getRecentActivitiesApi = () => request.get("/admin/recentActivities");
+
+
+

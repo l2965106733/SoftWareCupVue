@@ -5,7 +5,6 @@ import {
   submitQuestionApi, 
   getMyQuestionsApi, 
   getQuestionDetailApi, 
-  rateAnswerApi, 
   getInteractStatsApi,
   getTeacherIdApi,
   submitRatingApi,
@@ -85,26 +84,24 @@ const filteredQuestions = computed(() => {
 
 // 状态相关方法
 const getTypeColor = (type) => {
-  const colors = {
-    java: 'warning',
-    vue: 'success',
-    database: 'primary',
-    frontend: 'info',
-    other: ''
-  }
-  return colors[type] || ''
+  // 根据类型名称动态分配颜色
+  if (!type) return 'info'
+  
+  const typeLower = type.toLowerCase()
+  
+  // 根据类型名称特征分配颜色
+  if (typeLower.includes('java') || typeLower.includes('编程')) return 'warning'
+  if (typeLower.includes('vue') || typeLower.includes('前端')) return 'success'
+  if (typeLower.includes('database') || typeLower.includes('数据库')) return 'primary'
+  if (typeLower.includes('spring') || typeLower.includes('框架')) return 'danger'
+  if (typeLower.includes('html') || typeLower.includes('css')) return 'info'
+  
+  // 默认颜色
+  return 'info'
 }
 
-const getTypeName = (type) => {
-  const names = {
-    java: 'Java编程',
-    vue: 'Vue框架',
-    database: '数据库',
-    frontend: '前端技术',
-    other: '其他问题'
-  }
-  return names[type] || '未知'
-}
+
+
 
 const getStatusType = (status) => {
   return status === 1 ? 'success' : 'warning'
@@ -498,13 +495,13 @@ onMounted(() => {
 
           <el-form @submit.prevent="submitQuestion" class="question-form">
             <el-form-item label="问题类型：">
-              <el-select v-model="newQuestion.type" placeholder="选择问题类型" style="width: 200px">
-                <el-option label="Java编程" value="java" />
-                <el-option label="Vue框架" value="vue" />
-                <el-option label="数据库" value="database" />
-                <el-option label="前端技术" value="frontend" />
-                <el-option label="其他问题" value="other" />
-              </el-select>
+              <el-input
+                v-model="newQuestion.type"
+                placeholder="请输入问题类型，如：java、vue、database、frontend、other等"
+                style="width: 400px"
+                maxlength="50"
+                show-word-limit
+              />
             </el-form-item>
 
             <el-form-item label="问题标题：">
@@ -574,9 +571,9 @@ onMounted(() => {
                   <div class="question-title-row">
                     <h4>{{ question.title }}</h4>
                     <div class="question-meta">
-                      <el-tag :type="getTypeColor(question.type)" size="small">
-                        {{ getTypeName(question.type) }}
-                      </el-tag>
+                              <el-tag :type="getTypeColor(question.type)" size="small">
+          {{ question.type }}
+        </el-tag>
                       <el-tag :type="getStatusType(question.status)" size="small">
                         {{ getStatusText(question.status) }}
                       </el-tag>
@@ -642,7 +639,7 @@ onMounted(() => {
         <el-descriptions :column="2" border>
           <el-descriptions-item label="问题类型">
             <el-tag :type="getTypeColor(currentQuestion.type)" size="small">
-              {{ getTypeName(currentQuestion.type) }}
+              {{ currentQuestion.type }}
             </el-tag>
           </el-descriptions-item>
           <el-descriptions-item label="提问时间">

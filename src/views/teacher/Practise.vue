@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getQuestionApi,saveQuestionApi,publishHomeworkApi,getHomeworkListApi,getHomeworkDetailApi,getStudentSubmissionsApi,gradeHomeworkApi } from '@/api/teacher'
+import { getQuestionApi,saveQuestionApi,publishHomeworkApi,getHomeworkListApi,getStudentSubmissionsApi,gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi } from '@/api/teacher'
 
 const questions = ref([])
 const tempIdCounter = ref(-1) // 临时ID计数器，从-1开始递减
@@ -66,11 +66,21 @@ const handleAIGenerate = async () => {
     
     const result = await getQuestionApi(aiFormData.value)
     if (result.code === 1 && Array.isArray(result.data)) {
-      // AI生成的题目给临时ID
+      // AI生成的题目给临时ID，并自动设置分值
       questions.value = result.data.map(q => {
         const { id, ...questionWithoutId } = q
+        
+        // 根据题型自动设置分值（与人工出题逻辑一致）
+        const defaultScores = {
+          choice: 5,
+          short: 15,
+          code: 25
+        }
+        const score = defaultScores[q.type] || 10
+        
         return {
           ...questionWithoutId,
+          score: score,  // 自动设置分值
           id: tempIdCounter.value-- // 临时ID，负数
         }
       })
@@ -380,7 +390,7 @@ const loadHomeworkHistory = async () => {
       history.value = result.data.map(item => ({
         id: item.id,
         title: item.title,
-        publishTime: item.createTime,
+        publishTime: item.createdTime,
         status: item.status
       }))
     }
@@ -405,7 +415,7 @@ const viewDetail = async (row) => {
     currentHomework.value = row
     detailDialogVisible.value = true
     
-    // 调用API获取作业详细信息
+    // 调用API获取作业详细信息（只查题目和标准答案）
     const [detailResult, submissionsResult] = await Promise.all([
       getHomeworkDetailApi(row.id),
       getStudentSubmissionsApi(row.id)
@@ -467,17 +477,16 @@ const gradeHomework = async (submission) => {
     currentSubmission.value = submission
     gradeDialogVisible.value = true
     
-    // 获取作业详情和学生答案
-    const detailResult = await getHomeworkDetailApi(submission.homeworkId)
+    // 获取作业详情和学生答案（新接口）
+    const detailResult = await getHomeworkDetailWithAnswerApi(submission.homeworkId, submission.studentId)
     if (detailResult.code === 1) {
       currentGradeQuestions.value = detailResult.data || []
-      
-      // 初始化评分对象
+      // 初始化评分对象，绑定 score 字段
       gradeScores.value = {}
       currentGradeQuestions.value.forEach(question => {
-        gradeScores.value[question.id] = question.studentScore || 0
+        // 兼容后端返回的 score（实际得分）和 questionScore（题目分值）
+        gradeScores.value[question.id] = question.score || 0
       })
-      
       gradeFeedback.value = submission.feedback || ''
     } else {
       ElMessage.error('获取作业详情失败')
@@ -494,7 +503,9 @@ const submitGrade = async () => {
     const totalScore = Object.values(gradeScores.value).reduce((sum, score) => sum + (parseInt(score) || 0), 0)
     
     const gradeData = {
-      studentHomeworkId: currentSubmission.value.id,
+      homeworkId: currentHomework.value.id,  // 使用作业ID，不是提交记录ID
+      submissionId: currentSubmission.value.id,  // 添加提交记录ID
+      studentId: currentSubmission.value.studentId,  // 添加学生ID
       scores: gradeScores.value,
       totalScore: totalScore,
       feedback: gradeFeedback.value
@@ -886,10 +897,18 @@ const getScoreClass = (score, totalScore) => {
                 <div>
                   <el-tag :type="getTypeColor(question.type)" size="small">{{ getTypeName(question.type) }}</el-tag>
                   <el-tag type="info" size="small" style="margin-left: 8px">{{ question.score }}分</el-tag>
-  </div>
+                </div>
               </div>
               <div class="question-content">
                 <p>{{ question.content }}</p>
+              </div>
+              <div class="question-answer" style="margin-top: 8px;">
+                <strong>标准答案：</strong>
+                <div style="white-space: pre-wrap; color: #409eff;">{{ question.answer || '暂无' }}</div>
+              </div>
+              <div class="question-explain" style="margin-top: 8px;">
+                <strong>解析：</strong>
+                <div style="white-space: pre-wrap; color: #666;">{{ question.explain || '暂无' }}</div>
               </div>
             </el-card>
           </div>
@@ -902,15 +921,15 @@ const getScoreClass = (score, totalScore) => {
               <el-statistic title="总人数" :value="studentSubmissions.length" />
             </el-col>
             <el-col :span="6">
-              <el-statistic title="已提交" :value="studentSubmissions.filter(s => s.status === '已提交').length" />
+              <el-statistic title="已提交" :value="studentSubmissions.filter(s => s.status === 1 || s.status === 2).length" />
             </el-col>
             <el-col :span="6">
-              <el-statistic title="未提交" :value="studentSubmissions.filter(s => s.status === '未提交').length" />
+              <el-statistic title="未提交" :value="studentSubmissions.filter(s => s.status === 0).length" />
             </el-col>
             <el-col :span="6">
               <el-statistic 
                 title="提交率" 
-                :value="Math.round(studentSubmissions.filter(s => s.status === '已提交').length / studentSubmissions.length * 100)" 
+                :value="Math.round(studentSubmissions.filter(s => s.status ===  1 || s.status === 2).length / studentSubmissions.length * 100)" 
                 suffix="%" 
               />
             </el-col>
@@ -1016,26 +1035,26 @@ const getScoreClass = (score, totalScore) => {
               <div class="student-answer-section">
                 <h5>学生答案：</h5>
                 <div class="answer-display">
-                  {{ question.studentAnswer || '未作答' }}
+                  {{ question.answer || '未作答' }}
                 </div>
               </div>
               
               <div class="score-input-section">
-                <el-form-item :label="`得分（满分${question.score}分）：`">
+                <el-form-item :label="`得分（满分${question.questionScore}分）：`">
                   <el-input-number
                     v-model="gradeScores[question.id]"
                     :min="0"
-                    :max="question.score"
+                    :max="question.questionScore"
                     :precision="0"
                     size="large"
                     style="width: 200px"
                   />
                   <span 
                     v-if="gradeScores[question.id] !== undefined" 
-                    :class="getScoreClass(gradeScores[question.id], question.score)"
+                    :class="getScoreClass(gradeScores[question.id], question.questionScore)"
                     style="margin-left: 12px; font-weight: 600;"
                   >
-                    {{ Math.round((gradeScores[question.id] / question.score) * 100) }}%
+                    {{ Math.round((gradeScores[question.id] / question.questionScore) * 100) }}%
                   </span>
                 </el-form-item>
               </div>
@@ -1064,17 +1083,23 @@ const getScoreClass = (score, totalScore) => {
                   {{ Object.values(gradeScores).reduce((sum, score) => sum + (parseInt(score) || 0), 0) }}
                 </span>
                 <span class="total-possible">
-                  / {{ currentGradeQuestions.reduce((sum, q) => sum + q.score, 0) }}
+                  / {{ currentGradeQuestions.reduce((sum, q) => sum + (q.questionScore || 0), 0) }}
                 </span>
               </div>
               <div class="percentage">
                 <span 
                   :class="getScoreClass(
                     Object.values(gradeScores).reduce((sum, score) => sum + (parseInt(score) || 0), 0),
-                    currentGradeQuestions.reduce((sum, q) => sum + q.score, 0)
+                    currentGradeQuestions.reduce((sum, q) => sum + (q.questionScore || 0), 0)
                   )"
                 >
-                  {{ Math.round((Object.values(gradeScores).reduce((sum, score) => sum + (parseInt(score) || 0), 0) / currentGradeQuestions.reduce((sum, q) => sum + q.score, 0)) * 100) }}%
+                  {{
+                    (() => {
+                      const total = Object.values(gradeScores).reduce((sum, score) => sum + (parseInt(score) || 0), 0)
+                      const max = currentGradeQuestions.reduce((sum, q) => sum + (q.questionScore || 0), 0)
+                      return max > 0 ? Math.round((total / max) * 100) : 0
+                    })()
+                  }}%
                 </span>
               </div>
             </div>
@@ -1340,6 +1365,22 @@ const getScoreClass = (score, totalScore) => {
   background: #f8f9fa;
   border-radius: 4px;
   line-height: 1.6;
+}
+
+.question-detail .question-answer {
+  margin-top: 10px;
+  padding: 10px;
+  background: #e9f7ef;
+  border-radius: 4px;
+  border-left: 4px solid #67c23a;
+}
+
+.question-detail .question-explain {
+  margin-top: 10px;
+  padding: 10px;
+  background: #f0f9ff;
+  border-radius: 4px;
+  border-left: 4px solid #409eff;
 }
 
 .el-descriptions {

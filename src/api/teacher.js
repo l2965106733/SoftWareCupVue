@@ -1,41 +1,76 @@
 import request from "@/utils/request";
 
-export const getTeachingPlanApi = (remark, fileUrls) => request.post("/teacher/teachingPlan", {remark,fileUrls});
+// 教师首页相关API
+/**
+ * 获取教师首页概览数据
+ * @param {number} teacherId - 教师ID
+ * @returns {Promise} 返回教师概览数据，包含统计信息和基本信息
+ */
+export const getTeacherHomeOverviewApi = (teacherId) => request.get(`/teacher/stats/homeOverview/${teacherId}`);
 
-export const getQuestionApi = (data) => request.post("/teacher/question", data);
+/**
+ * 获取教师最近活动列表
+ * @param {number} teacherId - 教师ID
+ * @param {number} limit - 返回的活动数量限制，默认10条
+ * @returns {Promise} 返回教师最近的活动列表
+ */
+export const getTeacherActivitiesApi = (teacherId, limit = 10) => request.get(`/teacher/stats/activities/${teacherId}?limit=${limit}`);
 
-export const getAnswerApi = (data) => request.post("/teacher/answer", { question: data });
+export const getQuestionApi = (data) => request.post("/teacher/homework/aiQuestion", data);
 
-export const saveQuestionApi = (data) => request.post("/teacher/questions", data);
+export const getAnswerApi = (data) => request.post("/teacher/interact/aiAnswer", { question: data });
 
-export const publishHomeworkApi = (data) => request.post("/teacher/publish", data);
+export const saveQuestionApi = (data) => request.post("/teacher/homework/questions", data);
+
+export const publishHomeworkApi = (data) => request.post("/teacher/homework/publish", data);
 
 export const getHomeworkListApi = (teacherId) => request.get(`/teacher/homework/${teacherId}`);
 
-export const getStudentQuestionsApi = (teacherId) => request.get(`/teacher/studentQuestion/${teacherId}`);
+export const getStudentQuestionsApi = (teacherId) => request.get(`/teacher/interact/studentQuestion/${teacherId}`);
 
-export const sendStudentAnswerApi = (data) => request.post("/teacher/studentAnswer", data);
+export const sendStudentAnswerApi = (data) => request.post("/teacher/interact/studentAnswer", data);
 
-export const getHomeworkDetailApi = (homeworkId) => request.get(`/teacher/detail/${homeworkId}`);
+/**
+ * 获取作业详情（只查题目和标准答案，不含学生答案）
+ * @param {number} homeworkId - 作业ID
+ * @returns {Promise}
+ */
+export const getHomeworkDetailApi = (homeworkId) => request.get(`/teacher/homework/detail/${homeworkId}`);
 
-export const getStudentSubmissionsApi = (homeworkId) => request.get(`/teacher/submissions/${homeworkId}`);
+/**
+ * 获取作业详情及指定学生的作答情况
+ * @param {number} homeworkId - 作业ID
+ * @param {number} studentId - 学生ID
+ * @returns {Promise}
+ */
+export const getHomeworkDetailWithAnswerApi = (homeworkId, studentId) =>
+  request.get(`/teacher/homework/detailWithAnswer`, { params: { homeworkId, studentId } });
 
-export const gradeHomeworkApi = (data) => request.post("/teacher/homeworkGrade", data);
+export const getStudentSubmissionsApi = (homeworkId) => request.get(`/teacher/homework/submissions/${homeworkId}`);
 
-export const getHomeworkStatsApi = (teacherId) => request.get(`/teacher/homeworkStats/${teacherId}`);
+export const gradeHomeworkApi = (data) => request.post("/teacher/homework/grade", data);
+
+export const getHomeworkStatsApi = (teacherId) => request.get(`/teacher/stats/homeworkStats/${teacherId}`);
 
 // 数据分析相关API
-export const getTeacherOverviewApi = (teacherId) => request.get(`/teacher/overview/${teacherId}`);
-export const getStudentListApi = (teacherId) => request.get(`/teacher/students/${teacherId}`);
-export const getResourceStatsApi = (teacherId) => request.get(`/teacher/resourceStats/${teacherId}`);
-export const getInteractStatsApi = (teacherId) => request.get(`/teacher/interactStats/${teacherId}`);
-export const getStudentProgressApi = (teacherId, params) => request.get(`/teacher/studentProgress/${teacherId}`, { params });
-export const getScoreDistributionApi = (teacherId, params) => request.get(`/teacher/scoreDistribution/${teacherId}`, { params });
-
-export const uploadResourceApi = (data) => request.post("/teacher/resourceUpload", data);
+export const getTeacherOverviewApi = (teacherId) => request.get(`/teacher/stats/overview/${teacherId}`);
+export const getStudentListApi = (teacherId) => request.get(`/teacher/stats/students/${teacherId}`);
+export const getResourceStatsApi = (teacherId) => request.get(`/teacher/stats/resourceStats/${teacherId}`);
+export const getInteractStatsApi = (teacherId) => request.get(`/teacher/stats/interactStats/${teacherId}`);
+export const uploadResourceApi = (data) => request.post("/teacher/resource/upload", data);
 
 export const getResourceListApi = (teacherId) => request.get(`/teacher/resource/${teacherId}`);
 
 export const deleteResourceApi = (resourceId) => request.delete(`/teacher/resource/${resourceId}`);
 
-export const updateResourceApi = (data) => request.put("/teacher/resourceUpdate", data);   
+export const updateResourceApi = (data) => request.put("/teacher/resource/update", data);   
+
+export const getTeachingPlanApi = (remark, fileUrls) => request.post("/teacher/resource/aiTeachingPlan", {remark,fileUrls});
+
+// 学生评分相关API
+/**
+ * 获取学生问题评分列表
+ * @param {number} teacherId - 教师ID
+ * @returns {Promise} 返回学生问题评分列表
+ */
+export const getStudentRatingsApi = (teacherId) => request.get(`/teacher/interact/ratings/${teacherId}`);

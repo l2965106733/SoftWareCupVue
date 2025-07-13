@@ -1,7 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi, exportStudyReportApi } from '@/api/student'
+import { getAiQuestionHistoryApi,getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi } from '@/api/student'
+import { CircleClose } from '@element-plus/icons-vue'
 
 // 对话框
 const showCoursewareDialog = ref(false)
@@ -9,7 +10,7 @@ const currentCourseware = ref(null)
 
 // AI聊天相关
 const inputMessage = ref('')
-const selectedFile = ref(null)
+const selectedFiles = ref([])  // 改为数组支持多个文件
 const sending = ref(false)
 const aiTyping = ref(false)
 const chatMessages = ref(null)
@@ -29,11 +30,11 @@ const realTimeStudyTime = ref({})   // 实时学习时长显示
 // AI对话历史
 const chatHistory = ref([
   {
-    id: 1,
+    id: 'welcome',
     sender: 'ai',
     type: 'ai-reply',
     content: '你好！我是你的AI学习助手，可以帮你解答学习中的各种问题。有什么问题尽管问我吧！',
-    time: '09:00'
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
 ])
 
@@ -51,6 +52,11 @@ const todayAiQuestions = ref(0)
 const resourceProgress = ref([])
 const knowledgeStats = ref([])
 
+// 学习时长趋势图数据
+import { getStudyTimeTrendApi } from '@/api/student'
+const trendOption = ref({})
+const trendChartVisible = ref(false)
+
 // 获取进度条颜色
 const getProgressColor = (percentage) => {
   if (percentage >= 80) return '#67c23a'
@@ -62,6 +68,15 @@ const getProgressColor = (percentage) => {
 const showStudyStatsDetail = async () => {
   showStatsDialog.value = true
   await loadDetailedStats()
+  // 不要在这里调用loadTrendData
+}
+
+const onStatsDialogOpened = () => {
+  trendChartVisible.value = false
+  nextTick(() => {
+    trendChartVisible.value = true
+    loadTrendData()
+  })
 }
 
 // 加载详细统计数据
@@ -98,55 +113,6 @@ const loadDetailedStats = async () => {
     console.log('详细统计数据加载成功')
   } catch (error) {
     console.error('加载详细统计数据失败:', error)
-  }
-}
-
-// 导出学习报告
-const exportStudyReport = async () => {
-  try {
-    const studentId = getCurrentStudentId()
-    if (!studentId) return
-    
-    ElMessage.info('学习报告生成中...')
-    
-    // 调用后端API生成学习报告
-    const result = await exportStudyReportApi(studentId, { 
-      format: 'pdf',
-      period: 'all' 
-    })
-    
-    if (result.code === 1) {
-      // 如果后端返回下载链接
-      if (result.data.downloadUrl) {
-        const link = document.createElement('a')
-        link.href = result.data.downloadUrl
-        link.download = result.data.fileName || `学习报告_${new Date().toLocaleDateString()}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        ElMessage.success('学习报告下载成功')
-      } 
-      // 如果后端返回文件流
-      else if (result.data.fileData) {
-        const blob = new Blob([result.data.fileData], { type: 'application/pdf' })
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `学习报告_${new Date().toLocaleDateString()}.pdf`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        ElMessage.success('学习报告下载成功')
-      } else {
-        ElMessage.success('学习报告已生成')
-      }
-    } else {
-      ElMessage.error(result.msg || '生成失败')
-    }
-  } catch (error) {
-    console.error('导出学习报告失败:', error)
-    ElMessage.error('导出失败，请重试')
   }
 }
 
@@ -372,7 +338,7 @@ const downloadCourseware = async (courseware) => {
     if (courseware.url.startsWith('http') && !courseware.url.includes(window.location.hostname)) {
       // 跨域文件，在新窗口打开
       window.open(courseware.url, '_blank')
-      ElMessage.success(`开始下载：${courseware.title}`)
+  ElMessage.success(`开始下载：${courseware.title}`)
     } else {
       // 同域文件，直接下载
       document.body.appendChild(link)
@@ -398,20 +364,35 @@ const handleFileSelect = (file, fileList) => {
     return false
   }
   
-  selectedFile.value = file
-  ElMessage.success(`已选择文件：${file.name}`)
+  // 检查文件数量（限制5个文件）
+  if (fileList.length > 5) {
+    ElMessage.error('最多只能上传5个文件')
+    return false
+  }
+  
+  selectedFiles.value = fileList  // 存储所有选中的文件
+  ElMessage.success(`已选择${fileList.length}个文件`)
   return true
 }
 
-const removeFile = () => {
-  selectedFile.value = null
+const removeFile = (file) => {
+  if (file) {
+    // 移除指定文件
+    const index = selectedFiles.value.findIndex(f => f.uid === file.uid)
+    if (index > -1) {
+      selectedFiles.value.splice(index, 1)
+    }
+  } else {
+    // 清空所有文件
+    selectedFiles.value = []
   if (fileUpload.value) {
     fileUpload.value.clearFiles()
+    }
   }
 }
 
 const sendMessage = async () => {
-  if (!inputMessage.value.trim() && !selectedFile.value) {
+  if (!inputMessage.value.trim() && selectedFiles.value.length === 0) {
     ElMessage.warning('请输入问题或上传文件')
     return
   }
@@ -422,20 +403,23 @@ const sendMessage = async () => {
   const userMessage = {
     id: Date.now(),
     sender: 'user',
-    type: selectedFile.value ? 'file' : 'text',
-    content: inputMessage.value || (selectedFile.value ? `上传了文件：${selectedFile.value.name}` : ''),
-    fileName: selectedFile.value?.name,
+    type: selectedFiles.value.length > 0 ? 'file' : 'text',
+    content: inputMessage.value || (selectedFiles.value.length > 0 ? 
+      `上传了${selectedFiles.value.length}个文件：${selectedFiles.value.map(f => f.name).join(', ')}` : ''),
+    fileNames: selectedFiles.value.map(f => f.name),
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
   
   chatHistory.value.push(userMessage)
   
-  // 保存问题信息
+  // 保存问题信息和文件URLs
   const question = inputMessage.value
+  const fileUrls = selectedFiles.value.length > 0 ? 
+    selectedFiles.value.map(file => file.url).filter(url => url) : []  // 文件URL数组
   
   // 清空输入
   inputMessage.value = ''
-  removeFile()
+  removeFile()  // 清空所有文件
   
   // 滚动到底部
   await nextTick()
@@ -445,15 +429,18 @@ const sendMessage = async () => {
   aiTyping.value = true
   
   try {
-    // const result = await getChatApi({question: userMessage.content,fileUrl: selectedFile.value?.url})
-    const result = await getChatApi({question: userMessage.content,fileUrls: selectedFile.value?.url})
-    if (result.code === 1 && Array.isArray(result.data)) {
-      // 添加AI回复消息
+    const result = await getChatApi({
+      question: question,
+      fileUrls: fileUrls  // 传递文件URL数组
+    })
+    
+    if (result.code === 1 && result.data) {
+      // 添加AI回复消息，直接使用返回的纯文本
       const aiMessage = {
         id: Date.now() + 1,
         sender: 'ai',
         type: 'ai-reply',
-        content: result.data.join('\n'),
+        content: result.data,  // 直接使用返回的字符串
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       }
       chatHistory.value.push(aiMessage)
@@ -466,7 +453,7 @@ const sendMessage = async () => {
           await recordAiQuestionApi({
             studentId: studentId,
             question: userMessage.content,
-            answer: result.data.join('\n'),
+            answer: result.data,  // 使用纯文本答案
             category: detectQuestionCategory(userMessage.content), // 自动检测问题分类
             satisfaction: null // 初始无评分
           })
@@ -609,6 +596,35 @@ const loadStudyStats = async () => {
   }
 }
 
+// 加载学习时长趋势数据
+const loadTrendData = async () => {
+  const studentId = getCurrentStudentId()
+  const res = await getStudyTimeTrendApi(studentId, { days: 7 })
+  if (res.code === 1) {
+    trendOption.value = {
+      title: { text: '近7天学习时长趋势', left: 'center' },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        data: res.data.map(item => item.date)
+      },
+      yAxis: {
+        type: 'value',
+        name: '学习时长（分钟）'
+      },
+      series: [
+        {
+          name: '学习时长',
+          type: 'line',
+          data: res.data.map(item => item.studyMinutes),
+          smooth: true,
+          areaStyle: {}
+        }
+      ]
+    }
+  }
+}
+
 // 页面可见性变化监听
 const handleVisibilityChange = () => {
   if (document.hidden) {
@@ -632,11 +648,45 @@ const handleVisibilityChange = () => {
   }
 }
 
+// 加载AI聊天历史
+const loadChatHistory = async () => {
+  try {
+    const studentId = getCurrentStudentId()
+    if (!studentId) return
+    const result = await getAiQuestionHistoryApi(studentId, { limit: 50 })
+    if (result.code === 1 && Array.isArray(result.data)) {
+      // 历史消息：每条数据库记录拆分为两条消息
+      const history = []
+      result.data.forEach(item => {
+        history.push({
+          id: `q_${item.id}`,
+          sender: 'user',
+          type: 'user-question',
+          content: item.questionContent,
+          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        })
+        history.push({
+          id: `a_${item.id}`,
+          sender: 'ai',
+          type: 'ai-reply',
+          content: item.aiResponse,
+          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        })
+      })
+      // 保留开场白+历史
+      chatHistory.value = [chatHistory.value[0], ...history]
+    }
+  } catch (error) {
+    console.error('加载AI聊天历史失败:', error)
+  }
+}
+
 // 初始化
 onMounted(() => {
   console.log('学生学习模块初始化')
   loadCoursewareList()
   loadStudyStats()
+  loadChatHistory() // 加载AI聊天历史
   scrollToBottom()
   
   // 启动实时学习时长显示
@@ -677,7 +727,21 @@ onBeforeUnmount(() => {
               <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
                 <!-- 用户消息 -->
                 <div v-if="message.sender === 'user'" class="user-message">
-                  <div class="message-content">{{ message.content }}</div>
+                  <div class="message-content">
+                    {{ message.content }}
+                    <!-- 显示上传的文件信息 -->
+                    <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
+                      <div class="files-indicator">
+                        <el-icon><Paperclip /></el-icon>
+                        附件 ({{ message.fileNames.length }})
+                      </div>
+                      <div class="file-names">
+                        <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
+                          {{ fileName }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   <div class="message-time">{{ message.time }}</div>
                 </div>
                 
@@ -710,29 +774,39 @@ onBeforeUnmount(() => {
                   :before-upload="() => false"
                   :show-file-list="false"
                   accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                  :limit="1"
+                  :limit="5"
+                  multiple
                   class="upload-demo"
                 >
                   <el-button type="info" size="small" text>
                     <el-icon><Paperclip /></el-icon>
-                    上传文件
+                    上传文件 (最多5个)
                   </el-button>
                 </el-upload>
                 
-                <div class="file-preview" v-if="selectedFile">
-                  <div class="file-item">
+                <div class="file-preview" v-if="selectedFiles.length > 0">
+                  <div class="file-list-header">
+                    <span>已选择 {{ selectedFiles.length }} 个文件</span>
+                    <el-button type="danger" size="small" text @click="removeFile()">
+                      <el-icon><Delete /></el-icon>
+                      清空全部
+                    </el-button>
+                  </div>
+                  <div class="file-list">
+                    <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
                     <div class="file-preview-icon">
-                      <el-icon v-if="selectedFile.type?.includes('image')"><Picture /></el-icon>
-                      <el-icon v-else-if="selectedFile.type?.includes('pdf')"><Document /></el-icon>
+                        <el-icon v-if="file.type?.includes('image')"><Picture /></el-icon>
+                        <el-icon v-else-if="file.type?.includes('pdf')"><Document /></el-icon>
                       <el-icon v-else><Paperclip /></el-icon>
                     </div>
                     <div class="file-preview-info">
-                      <span class="file-preview-name">{{ selectedFile.name }}</span>
-                      <span class="file-preview-size">{{ formatFileSize(selectedFile.size) }}</span>
+                        <span class="file-preview-name">{{ file.name }}</span>
+                        <span class="file-preview-size">{{ formatFileSize(file.size) }}</span>
                     </div>
-                    <el-button type="danger" size="small" text @click="removeFile">
+                      <el-button type="danger" size="small" text @click="removeFile(file)">
                       <el-icon><Close /></el-icon>
                     </el-button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -773,7 +847,7 @@ onBeforeUnmount(() => {
               正在学习
             </h4>
             <el-button type="danger" size="small" @click="stopAllStudyTimers">
-              <el-icon><VideoStop /></el-icon>
+              <el-icon><CircleClose /></el-icon>
               全部停止
             </el-button>
           </div>
@@ -793,7 +867,7 @@ onBeforeUnmount(() => {
                   暂停
                 </el-button>
                 <el-button type="danger" size="small" @click="stopStudyTimer(resourceId)">
-                  <el-icon><VideoStop /></el-icon>
+                  <el-icon><CircleClose /></el-icon>
                   停止
                 </el-button>
               </div>
@@ -884,7 +958,12 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 学习统计详情对话框 -->
-    <el-dialog v-model="showStatsDialog" title="学习统计详情" width="800px">
+    <el-dialog
+      v-model="showStatsDialog"
+      title="学习统计详情"
+      width="800px"
+      @opened="onStatsDialogOpened"
+    >
       <div class="stats-detail">
         <!-- 今日学习概况 -->
         <div class="stats-section">
@@ -907,12 +986,8 @@ onBeforeUnmount(() => {
 
         <!-- 学习时长趋势 -->
         <div class="stats-section">
-          <h4>近7天学习时长趋势</h4>
           <div class="chart-container">
-            <div class="chart-placeholder">
-              <el-icon><TrendCharts /></el-icon>
-              <p>学习时长趋势图</p>
-            </div>
+            <vue-echarts v-if="trendChartVisible" :option="trendOption" style="height: 300px; width: 100%" />
           </div>
         </div>
 
@@ -932,31 +1007,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </div>
-
-        <!-- 知识点掌握分析 -->
-        <div class="stats-section">
-          <h4>知识点掌握分析</h4>
-          <div class="knowledge-analysis">
-            <div v-for="category in knowledgeStats" :key="category.name" class="knowledge-item">
-              <div class="knowledge-header">
-                <span class="category-name">{{ category.name }}</span>
-                <span class="mastery-rate">掌握率: {{ category.masteryRate }}%</span>
-              </div>
-              <el-progress :percentage="category.masteryRate" :color="getProgressColor(category.masteryRate)" />
-              <div class="knowledge-details">
-                <span>已学习: {{ category.studied }}</span>
-                <span>未学习: {{ category.notStudied }}</span>
-                <span>需复习: {{ category.needReview }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
-      
-      <template #footer>
-        <el-button @click="showStatsDialog = false">关闭</el-button>
-        <el-button type="primary" @click="exportStudyReport">导出学习报告</el-button>
-      </template>
+      <!-- 移除footer按钮 -->
     </el-dialog>
   </div>
 </template>
@@ -1096,6 +1148,40 @@ onBeforeUnmount(() => {
   margin-top: 4px;
 }
 
+/* 聊天消息中的文件显示样式 */
+.message-files {
+  margin-top: 8px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.files-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.file-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.file-name {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  word-break: break-all;
+}
+
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -1144,17 +1230,50 @@ onBeforeUnmount(() => {
 }
 
 .file-preview {
-  margin-top: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.file-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.file-list-header span {
+  color: #2c3e50;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 8px 12px;
-  background: #f0f0f0;
+  background: white;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+.file-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
 .file-preview-icon {

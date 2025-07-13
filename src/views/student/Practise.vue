@@ -176,7 +176,7 @@ const loadHomeworkList = async () => {
         description: item.description || '暂无描述',
         deadline: item.homework_end_time,           // 截止时间
         status: item.status !== undefined ? item.status : 0,  // 默认为0（草稿状态）
-        score: item.score || 0,                     // 学生得分
+        score: item.total_score || 0,                     // 学生得分
         totalScore: item.homework_total_score || 0, // 作业总分
         feedback: item.feedback || '',
         teacherName: item.teacherName || item.teacher_name || '未知教师',

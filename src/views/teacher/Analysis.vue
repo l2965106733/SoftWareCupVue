@@ -7,8 +7,6 @@ import {
   getStudentListApi,
   getResourceStatsApi,
   getInteractStatsApi,
-  getStudentProgressApi,
-  getScoreDistributionApi
 } from '@/api/teacher'
 
 // 概览数据 - 从API获取真实数据
@@ -43,16 +41,10 @@ const homeworkStats = ref({
   scoreDistribution: {}
 })
 
-// 图表选择器
-const progressPeriod = ref('month')
-const selectedSubject = ref('all')
-const homeworkDateRange = ref([])
 
-// 筛选器
-const selectedClass = ref('all')
-const timeRange = ref('month')
-const scoreRange = ref([0, 100])
-const showAnomalies = ref(false)
+
+
+
 
 // 学生数据搜索和排序
 const searchStudent = ref('')
@@ -94,17 +86,13 @@ const filteredStudentData = computed(() => {
     )
   }
 
-  // 按成绩范围筛选
-  filtered = filtered.filter(student => 
-    student.avgScore >= scoreRange.value[0] && 
-    student.avgScore <= scoreRange.value[1]
-  )
-
   // 排序
-  if (sortBy.value === 'score') {
-    filtered = filtered.sort((a, b) => b.avgScore - a.avgScore)
+  if (sortBy.value === 'viewCount') {
+    filtered = filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
   } else if (sortBy.value === 'progress') {
     filtered = filtered.sort((a, b) => b.progress - a.progress)
+  } else if (sortBy.value === 'questionCount') {
+    filtered = filtered.sort((a, b) => (b.questionCount || 0) - (a.questionCount || 0))
   } else {
     filtered = filtered.sort((a, b) => a.name.localeCompare(b.name))
   }
@@ -119,14 +107,7 @@ const getProgressColor = (progress) => {
   return '#f56c6c'
 }
 
-const getScoreType = (score) => {
-  if (score >= 90) return 'success'
-  if (score >= 80) return 'primary'
-  if (score >= 70) return 'warning'
-  return 'danger'
-}
 
-const formatTooltip = (val) => `${val}分`
 
 // 计算成绩分布条形图宽度
 const getDistributionWidth = (count) => {
@@ -135,31 +116,15 @@ const getDistributionWidth = (count) => {
   return maxCount > 0 ? (count / maxCount) * 100 : 0
 }
 
-const applyFilters = () => {
-  ElMessage.success('筛选条件已应用')
-}
 
-const viewStudentDetail = (student) => {
-  ElMessage.info(`查看${student.name}的详细信息`)
-}
 
-const exportHomeworkData = () => {
-  ElMessage.success('作业数据导出成功')
-}
+
 
 const exportStudentData = () => {
   ElMessage.success('学生数据导出成功')
 }
 
-const generateReport = (type) => {
-  const reportTypes = {
-    weekly: '周度学情报告',
-    monthly: '月度分析报告',
-    semester: '学期总结报告',
-    custom: '自定义报告'
-  }
-  ElMessage.success(`开始生成${reportTypes[type]}`)
-}
+
 
 const handleSizeChange = (val) => {
   pageSize.value = val
@@ -417,7 +382,13 @@ onMounted(() => {
             </div>
             
             <div class="stat-item">
-              <div class="stat-value">{{ Math.round(homeworkStats.submitRate) }}%</div>
+              <div class="stat-value">{{ (() => {
+                let rate = homeworkStats.submitRate || 0;
+                if (rate <= 1) rate = rate * 100;  // 小数转百分比
+                if (rate > 100) rate = 100;  // 限制最大值
+                if (rate < 0) rate = 0;  // 限制最小值
+                return Math.round(rate);
+              })() }}%</div>
               <div class="stat-label">平均提交率</div>
             </div>
           </div>
@@ -446,7 +417,7 @@ onMounted(() => {
           <!-- 最近作业 -->
           <div class="recent-homework">
             <h5>最近作业</h5>
-            <div class="homework-list">
+            <div class="homework-list" v-if="homeworkStats.recentHomework && homeworkStats.recentHomework.length > 0">
               <div 
                 v-for="homework in homeworkStats.recentHomework.slice(0, 5)" 
                 :key="homework.id"
@@ -454,10 +425,13 @@ onMounted(() => {
               >
                 <div class="homework-title">{{ homework.title }}</div>
                 <div class="homework-stats">
-                  <span>提交: {{ homework.submitted_count }}/{{ homework.total_students }}</span>
-                  <span>已批改: {{ homework.graded_count }}</span>
+                  <span>提交: {{ homework.submitted_count || homework.submittedCount || 0 }}/{{ homework.total_students || homework.totalStudents || 0 }}</span>
+                  <span>已批改: {{ homework.graded_count || homework.gradedCount || 0 }}</span>
                 </div>
               </div>
+            </div>
+            <div v-else class="empty-placeholder">
+              <span style="color: #999; font-size: 14px;">暂无最近作业数据</span>
             </div>
           </div>
         </el-card>
@@ -574,86 +548,9 @@ onMounted(() => {
 
       <!-- 图表分析区域 -->
       <div class="charts-section">
-        <div class="charts-row">
-          <!-- 学习进度趋势 -->
-          <el-card shadow="hover" class="chart-card">
-            <div class="chart-header">
-              <h4>
-                <el-icon><TrendCharts /></el-icon>
-                学习进度趋势
-              </h4>
-              <el-radio-group v-model="progressPeriod" size="small">
-                <el-radio-button value="week">本周</el-radio-button>
-                <el-radio-button value="month">本月</el-radio-button>
-                <el-radio-button value="semester">本学期</el-radio-button>
-              </el-radio-group>
-            </div>
-            <div class="chart-container" id="progressChart">
-              <div class="chart-placeholder">
-                <el-icon><TrendCharts /></el-icon>
-                <p>学习进度趋势图</p>
-                <small>显示学生整体学习进度变化</small>
-              </div>
-            </div>
-          </el-card>
 
-          <!-- 知识点掌握情况 -->
-          <el-card shadow="hover" class="chart-card">
-            <div class="chart-header">
-              <h4>
-                <el-icon><PieChart /></el-icon>
-                知识点掌握分布
-              </h4>
-              <el-select v-model="selectedSubject" size="small" style="width: 120px">
-                <el-option label="全部" value="all" />
-                <el-option label="Java" value="java" />
-                <el-option label="Vue" value="vue" />
-                <el-option label="数据库" value="database" />
-              </el-select>
-            </div>
-            <div class="chart-container" id="knowledgeChart">
-              <div class="chart-placeholder">
-                <el-icon><PieChart /></el-icon>
-                <p>知识点掌握分布图</p>
-                <small>已掌握、部分掌握、未掌握</small>
-              </div>
-            </div>
-          </el-card>
-        </div>
 
-        <div class="charts-row">
-          <!-- 作业完成情况统计 -->
-          <el-card shadow="hover" class="chart-card wide">
-            <div class="chart-header">
-              <h4>
-                <el-icon><DataAnalysis /></el-icon>
-                作业完成情况统计
-              </h4>
-              <div class="header-actions">
-                <el-date-picker
-                  v-model="homeworkDateRange"
-                  type="daterange"
-                  range-separator="至"
-                  start-placeholder="开始日期"
-                  end-placeholder="结束日期"
-                  size="small"
-                  style="width: 240px"
-                />
-                <el-button type="primary" size="small" @click="exportHomeworkData">
-                  <el-icon><Download /></el-icon>
-                  导出数据
-                </el-button>
-              </div>
-            </div>
-            <div class="chart-container large" id="homeworkChart">
-              <div class="chart-placeholder">
-                <el-icon><DataAnalysis /></el-icon>
-                <p>作业完成情况柱状图</p>
-                <small>按时间显示各次作业的完成情况</small>
-              </div>
-            </div>
-          </el-card>
-        </div>
+
       </div>
 
       <!-- 详细数据表格 -->
@@ -673,10 +570,11 @@ onMounted(() => {
                 style="width: 200px"
                 clearable
               />
-              <el-select v-model="sortBy" size="small" style="width: 120px; margin-left: 12px">
+              <el-select v-model="sortBy" size="small" style="width: 140px; margin-left: 12px">
                 <el-option label="按姓名" value="name" />
-                <el-option label="按成绩" value="score" />
+                <el-option label="按查看次数" value="viewCount" />
                 <el-option label="按进度" value="progress" />
+                <el-option label="按提问数" value="questionCount" />
               </el-select>
               <el-button type="success" size="small" @click="exportStudentData">
                 <el-icon><Download /></el-icon>
@@ -685,38 +583,52 @@ onMounted(() => {
             </div>
           </div>
           
-          <el-table :data="filteredStudentData" stripe border>
-            <el-table-column prop="name" label="学生姓名" width="120" />
+          <el-table :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}">
+            <el-table-column prop="name" label="学生姓名" width="120" sortable />
             <el-table-column prop="studentId" label="学号" width="120" />
-            <el-table-column label="学习进度" width="150">
+            <el-table-column label="学习进度" width="150" sortable prop="progress">
               <template #default="scope">
+                <div class="progress-cell">
                 <el-progress 
                   :percentage="scope.row.progress" 
                   :color="getProgressColor(scope.row.progress)"
                   :stroke-width="8"
+                    :show-text="false"
                 />
+                  <span class="progress-text">{{ scope.row.progress }}%</span>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column prop="avgScore" label="平均分" width="100">
+            <el-table-column prop="viewCount" label="资源查看次数" width="120" sortable>
               <template #default="scope">
-                <el-tag :type="getScoreType(scope.row.avgScore)">
-                  {{ scope.row.avgScore }}
-                </el-tag>
+                <div class="view-count-cell">
+                  <el-icon><View /></el-icon>
+                  <span>{{ scope.row.viewCount || 0 }}</span>
+                </div>
               </template>
             </el-table-column>
-            <el-table-column prop="homeworkCount" label="完成作业" width="100" />
+            <el-table-column prop="homeworkCount" label="完成作业" width="100" sortable />
             <el-table-column prop="totalHomework" label="总作业数" width="100" />
-            <el-table-column label="完成率" width="100">
+            <el-table-column label="完成率" width="120" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)">
               <template #default="scope">
-                {{ Math.round((scope.row.homeworkCount / scope.row.totalHomework) * 100) }}%
+                <div class="completion-cell">
+                  <el-progress 
+                    :percentage="Math.round((scope.row.homeworkCount / scope.row.totalHomework) * 100)" 
+                    :stroke-width="6"
+                    :show-text="false"
+                    :color="scope.row.homeworkCount / scope.row.totalHomework >= 0.8 ? '#67c23a' : scope.row.homeworkCount / scope.row.totalHomework >= 0.6 ? '#e6a23c' : '#f56c6c'"
+                  />
+                  <span class="completion-text">{{ Math.round((scope.row.homeworkCount / scope.row.totalHomework) * 100) }}%</span>
+                </div>
               </template>
             </el-table-column>
             <el-table-column prop="lastActive" label="最后活跃" width="140" />
-            <el-table-column label="操作" width="120">
+            <el-table-column prop="questionCount" label="提问数" width="100" sortable>
               <template #default="scope">
-                <el-button type="primary" size="small" @click="viewStudentDetail(scope.row)">
-                  详情
-                </el-button>
+                <div class="question-count-cell">
+                  <el-icon><ChatLineSquare /></el-icon>
+                  <span>{{ scope.row.questionCount || 0 }}</span>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -736,91 +648,12 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 右侧面板 -->
-    <div class="side-panel">
-      <!-- 快速筛选 -->
-      <el-card shadow="hover">
-        <h4>
-          <el-icon><Filter /></el-icon>
-          快速筛选
-        </h4>
-        <el-form label-width="70px">
-          <el-form-item label="班级">
-            <el-select v-model="selectedClass" size="small" style="width: 100%">
-              <el-option label="全部班级" value="all" />
-              <el-option label="计算机22-1" value="cs221" />
-              <el-option label="计算机22-2" value="cs222" />
-              <el-option label="软件22-1" value="se221" />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="时间段">
-            <el-select v-model="timeRange" size="small" style="width: 100%">
-              <el-option label="最近一周" value="week" />
-              <el-option label="最近一月" value="month" />
-              <el-option label="本学期" value="semester" />
-              <el-option label="自定义" value="custom" />
-            </el-select>
-          </el-form-item>
-          
-          <el-form-item label="成绩范围">
-            <el-slider
-              v-model="scoreRange"
-              range
-              :min="0"
-              :max="100"
-              :format-tooltip="formatTooltip"
-            />
-          </el-form-item>
-          
-          <el-form-item label="只看异常">
-            <el-switch v-model="showAnomalies" />
-          </el-form-item>
-        </el-form>
-        
-        <el-button type="primary" block @click="applyFilters">
-          <el-icon><Search /></el-icon>
-          应用筛选
-        </el-button>
-      </el-card>
-
-      <!-- 数据报告 -->
-      <el-card style="margin-top: 20px" shadow="hover">
-        <h4>
-          <el-icon><Document /></el-icon>
-          数据报告
-        </h4>
-        <div class="report-list">
-          <div class="report-item" @click="generateReport('weekly')">
-            <el-icon><Calendar /></el-icon>
-            <span>周度学情报告</span>
-            <el-icon class="arrow"><ArrowRight /></el-icon>
-          </div>
-          <div class="report-item" @click="generateReport('monthly')">
-            <el-icon><DataAnalysis /></el-icon>
-            <span>月度分析报告</span>
-            <el-icon class="arrow"><ArrowRight /></el-icon>
-          </div>
-          <div class="report-item" @click="generateReport('semester')">
-            <el-icon><Reading /></el-icon>
-            <span>学期总结报告</span>
-            <el-icon class="arrow"><ArrowRight /></el-icon>
-          </div>
-          <div class="report-item" @click="generateReport('custom')">
-            <el-icon><Setting /></el-icon>
-            <span>自定义报告</span>
-            <el-icon class="arrow"><ArrowRight /></el-icon>
-          </div>
-        </div>
-      </el-card>
-    </div>
+    
   </div>
 </template>
 
 <style scoped>
 .analysis-layout {
-  display: flex;
-  gap: 24px;
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
@@ -828,16 +661,10 @@ onMounted(() => {
 }
 
 .main-panel {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 24px;
-  min-width: 0;
-}
-
-.side-panel {
-  width: 380px;
-  flex-shrink: 0;
+  width: 100%;
 }
 
 /* 卡片样式 */
@@ -907,25 +734,16 @@ onMounted(() => {
   opacity: 0.3;
 }
 
-/* 图表区域 */
+/* 分析区域 */
 .charts-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-.charts-row {
-  display: flex;
-  gap: 20px;
-}
 
-.chart-card {
-  flex: 1;
-}
 
-.chart-card.wide {
-  flex: 2;
-}
+
 
 .chart-header {
   display: flex;
@@ -952,41 +770,9 @@ onMounted(() => {
   align-items: center;
 }
 
-.chart-container {
-  height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 2px dashed #e0e0e0;
-}
 
-.chart-container.large {
-  height: 400px;
-}
 
-.chart-placeholder {
-  text-align: center;
-  color: #999;
-}
 
-.chart-placeholder .el-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  color: #ddd;
-}
-
-.chart-placeholder p {
-  margin: 8px 0 4px 0;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.chart-placeholder small {
-  font-size: 12px;
-  color: #ccc;
-}
 
 /* 作业统计专区 */
 .homework-stats-section {
@@ -1117,6 +903,59 @@ onMounted(() => {
   color: #666;
 }
 
+.empty-placeholder {
+  text-align: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #e0e0e0;
+}
+
+
+
+
+
+/* 学生详细数据表格样式 */
+.progress-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  min-width: 40px;
+}
+
+.view-count-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #409eff;
+}
+
+.question-count-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #67c23a;
+}
+
+.completion-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.completion-text {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  min-width: 40px;
+}
+
 /* 资源统计专区 */
 .resource-stats-section {
   margin-top: 20px;
@@ -1204,7 +1043,7 @@ onMounted(() => {
   text-align: right;
 }
 
-/* 右侧面板样式 */
+/* 通用标题样式 */
 h4 {
   font-size: 16px;
   font-weight: 600;
@@ -1215,56 +1054,13 @@ h4 {
   gap: 8px;
 }
 
-.el-form-item {
-  margin-bottom: 16px;
-}
 
-.el-form-item :deep(.el-form-item__label) {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-/* 报告列表 */
-.report-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.report-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.report-item:hover {
-  background: #e9ecef;
-  transform: translateX(4px);
-}
-
-.report-item span {
-  flex: 1;
-  font-size: 14px;
-  color: #333;
-}
-
-.report-item .arrow {
-  font-size: 12px;
-  color: #999;
-}
 
 
 
 /* 响应式 */
 @media (max-width: 1400px) {
   .analysis-layout {
-    gap: 16px;
     padding: 16px;
   }
   
@@ -1275,26 +1071,9 @@ h4 {
   .stats-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  
-  .side-panel {
-    width: 320px;
-  }
 }
 
 @media (max-width: 1200px) {
-  .analysis-layout {
-    flex-direction: column;
-  }
-  
-  .main-panel,
-  .side-panel {
-    width: 100%;
-  }
-  
-  .charts-row {
-    flex-direction: column;
-  }
-  
   .overview-cards {
     grid-template-columns: repeat(2, 1fr);
   }

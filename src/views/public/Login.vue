@@ -1,64 +1,73 @@
 <script setup>
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import { loginApi } from '@/api/public'
 
 const router = useRouter()
 
-// 控制显示哪个模块（null 为入口界面）
-const role = ref(0)
-const selectedRole = computed(() => {
-  switch (role.value) {
-    case 1:
-      return 'student'
-    case 2:
-      return 'teacher'
-    case 3:
-      return 'admin'
-  }
-})
-const roleLabel = computed(() => {
-  switch (role.value) {
-    case 1:
-      return '学生'
-    case 2:
-      return '教师'
-    case 3:
-      return '管理员'
-    default:
-      return '用户'
-  }
-})
-// 登录表单
-const loginForm = ref({
+// 角色选择状态
+const role = ref(null)
+
+// 登录表单数据
+const loginForm = reactive({
   username: '',
   password: ''
 })
 
-// 登录操作
+// 角色映射（用于页面跳转）
+const roleMap = {
+  1: 'student',
+  2: 'teacher', 
+  3: 'admin'
+}
+
+// 登录处理
 const login = async () => {
-  if (!loginForm.value.username || !loginForm.value.password) {
-    ElMessage.error('用户名或密码不能为空')
+  if (!loginForm.username || !loginForm.password) {
+    ElMessage.warning('请输入用户名和密码')
     return
   }
-  const result = await loginApi(loginForm.value)
-  if (result.code && result.data.role === role.value) {
-    ElMessage.success('登录成功')
-    localStorage.setItem('loginUser', JSON.stringify(result.data))
-    // 跳转至对应角色页面
-    router.push(`/${selectedRole.value}/home`)
-  }
-  else {
-    ElMessage.error('用户或密码不正确')
+
+  const selectedRole = roleMap[role.value]
+  
+  try {
+    const result = await loginApi({
+      username: loginForm.username,
+      password: loginForm.password,
+      role: role.value  // 直接传数字类型的role
+    })
+    
+    if (result.code === 1) {
+      // 保存用户信息到本地存储
+      localStorage.setItem('loginUser', JSON.stringify(result.data))
+      
+      // 记录用户登录日志（直接调用后端接口）
+      try {
+        // 这里可以调用后端接口记录登录日志
+        // await recordUserLoginApi(result.data.id)
+        console.log('用户登录成功')
+      } catch (error) {
+        console.error('记录用户登录日志失败:', error)
+      }
+      
+      // 跳转至对应角色页面
+      router.push(`/${selectedRole}/home`)
+    }
+    else {
+      ElMessage.error('用户或密码不正确')
+    }
+  } catch (error) {
+    console.error('登录失败:', error)
+    ElMessage.error('登录失败，请稍后重试')
   }
 }
 
 // 返回入口界面
 const back = () => {
   role.value = null
-  loginForm.value.username = ''
-  loginForm.value.password = ''
+  loginForm.username = ''
+  loginForm.password = ''
 }
 
 // 忘记密码

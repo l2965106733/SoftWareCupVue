@@ -1,8 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
+import { getStudentHomeStatsApi, getStudentRecentActivitiesApi } from '@/api/student'
 
 const loginUser = ref({})
 const currentTime = ref('')
+
+// 学习统计数据
+const studyStats = ref([
+    { label: '今日学习时长', value: '0小时', icon: 'fas fa-clock', color: '#667eea' },
+    { label: '完成作业数', value: '0个', icon: 'fas fa-check-circle', color: '#f5576c' },
+    { label: '参与讨论', value: '0次', icon: 'fas fa-comment-dots', color: '#4facfe' },
+    { label: '学习进度', value: '0%', icon: 'fas fa-chart-line', color: '#26d0ce' }
+])
+
+// 最近活动数据
+const recentActivities = ref([])
 
 onMounted(() => {
     // 获取登录用户信息
@@ -12,6 +24,9 @@ onMounted(() => {
     // 更新时间
     updateTime()
     setInterval(updateTime, 1000)
+    
+    // 加载学生首页数据
+    loadStudentHomeData()
 })
 
 const updateTime = () => {
@@ -26,6 +41,92 @@ const updateTime = () => {
         second: '2-digit'
     }
     currentTime.value = now.toLocaleDateString('zh-CN', options)
+}
+
+// 获取当前登录学生ID
+const getCurrentStudentId = () => {
+    const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+    return loginUser?.id
+}
+
+// 加载学生首页数据
+const loadStudentHomeData = async () => {
+    try {
+        const studentId = getCurrentStudentId()
+        if (!studentId) return
+        
+        // 加载学习统计数据
+        const statsResult = await getStudentHomeStatsApi(studentId)
+        if (statsResult.code === 1) {
+            const stats = statsResult.data
+            studyStats.value = [
+                { 
+                    label: '今日学习时长', 
+                    value: `${(stats.todayStudyTime || 0).toFixed(1)}小时`, 
+                    icon: 'fas fa-clock', 
+                    color: '#667eea' 
+                },
+                { 
+                    label: '完成作业数', 
+                    value: `${stats.completedHomework || 0}个`, 
+                    icon: 'fas fa-check-circle', 
+                    color: '#f5576c' 
+                },
+                { 
+                    label: '参与讨论', 
+                    value: `${stats.interactionCount || 0}次`, 
+                    icon: 'fas fa-comment-dots', 
+                    color: '#4facfe' 
+                },
+                { 
+                    label: '学习进度', 
+                    value: `${stats.studyProgress || 0}%`, 
+                    icon: 'fas fa-chart-line', 
+                    color: '#26d0ce' 
+                }
+            ]
+        }
+        
+        // 加载最近活动数据
+        const activitiesResult = await getStudentRecentActivitiesApi(studentId)
+        if (activitiesResult.code === 1) {
+            recentActivities.value = activitiesResult.data || []
+        }
+        
+    } catch (error) {
+        console.error('加载学生首页数据失败:', error)
+    }
+}
+
+// 获取活动图标
+const getActivityIcon = (type) => {
+    switch (type) {
+        case 'study':
+            return 'fas fa-book'
+        case 'homework':
+            return 'fas fa-tasks'
+        case 'discussion':
+            return 'fas fa-comments'
+        default:
+            return 'fas fa-info-circle'
+    }
+}
+
+// 格式化活动时间
+const formatActivityTime = (timestamp) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now - date) / 1000)
+
+    if (diffInSeconds < 60) {
+        return `${diffInSeconds}秒前`
+    } else if (diffInSeconds < 3600) {
+        return `${Math.floor(diffInSeconds / 60)}分钟前`
+    } else if (diffInSeconds < 86400) {
+        return `${Math.floor(diffInSeconds / 3600)}小时前`
+    } else {
+        return `${Math.floor(diffInSeconds / 86400)}天前`
+    }
 }
 
 // 快捷功能数据
@@ -51,14 +152,6 @@ const quickActions = ref([
         color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
         route: '/student/interact'
     }
-])
-
-// 学习统计数据
-const studyStats = ref([
-    { label: '今日学习时长', value: '2.5小时', icon: 'fas fa-clock', color: '#667eea' },
-    { label: '完成作业数', value: '8个', icon: 'fas fa-check-circle', color: '#f5576c' },
-    { label: '参与讨论', value: '12次', icon: 'fas fa-comment-dots', color: '#4facfe' },
-    { label: '学习进度', value: '75%', icon: 'fas fa-chart-line', color: '#26d0ce' }
 ])
 </script>
 
@@ -146,31 +239,21 @@ const studyStats = ref([
             </h2>
             <div class="activity-card">
                 <div class="activity-list">
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="fas fa-book"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">完成了《Vue.js基础》学习</div>
-                            <div class="activity-time">2小时前</div>
-                        </div>
+                    <div v-if="recentActivities.length === 0" class="no-activity">
+                        <i class="fas fa-info-circle"></i>
+                        <span>暂无最近活动</span>
                     </div>
-                    <div class="activity-item">
+                    <div 
+                        v-for="(activity, index) in recentActivities" 
+                        :key="index"
+                        class="activity-item"
+                    >
                         <div class="activity-icon">
-                            <i class="fas fa-edit"></i>
+                            <i :class="getActivityIcon(activity.type)"></i>
                         </div>
                         <div class="activity-content">
-                            <div class="activity-title">提交了作业《组件开发实践》</div>
-                            <div class="activity-time">5小时前</div>
-                        </div>
-                    </div>
-                    <div class="activity-item">
-                        <div class="activity-icon">
-                            <i class="fas fa-comment"></i>
-                        </div>
-                        <div class="activity-content">
-                            <div class="activity-title">参与了课堂讨论</div>
-                            <div class="activity-time">1天前</div>
+                            <div class="activity-title">{{ activity.title }}</div>
+                            <div class="activity-time">{{ formatActivityTime(activity.createdTime) }}</div>
                         </div>
                     </div>
                 </div>
@@ -510,6 +593,23 @@ const studyStats = ref([
     font-size: clamp(11px, 2vw, 14px);
     color: rgba(255, 255, 255, 0.6);
     line-height: 1.3;
+}
+
+.no-activity {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: clamp(14px, 2.5vw, 18px);
+    padding: 20px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.no-activity i {
+    margin-right: 10px;
+    font-size: clamp(18px, 3vw, 24px);
 }
 
 /* 响应式设计 */

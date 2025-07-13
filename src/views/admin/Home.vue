@@ -1,56 +1,194 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { 
+    getSystemOverviewApi, 
+    getSystemHealthApi, 
+    getRecentActivitiesApi 
+} from '@/api/admin'
 
 const router = useRouter()
 const adminName = ref('')
 
 // 系统统计数据
 const stats = ref({
-    totalUsers: 1248,
-    teacherCount: 89,
-    studentCount: 1159,
-    resourceCount: 342
+    totalUsers: 0,
+    teacherCount: 0,
+    studentCount: 0,
+    resourceCount: 0
 })
 
-// 最近活动数据
-const recentActivities = ref([
+// 系统状态数据
+const systemStatus = ref([
     {
         id: 1,
-        icon: 'fas fa-user-plus',
-        title: '新增用户',
-        description: '新注册教师账户：张老师',
-        time: '1小时前'
+        title: '系统运行',
+        desc: '检查中...',
+        status: 'checking'
     },
     {
         id: 2,
-        icon: 'fas fa-cog',
-        title: '系统维护',
-        description: '完成数据库优化和清理',
-        time: '3小时前'
+        title: '数据库',
+        desc: '检查中...',
+        status: 'checking'
     },
     {
         id: 3,
-        icon: 'fas fa-upload',
-        title: '资源更新',
-        description: '批量导入新的教学资源',
-        time: '6小时前'
+        title: '存储空间',
+        desc: '检查中...',
+        status: 'checking'
     },
     {
         id: 4,
-        icon: 'fas fa-chart-bar',
-        title: '生成报告',
-        description: '生成本月系统使用统计报告',
-        time: '1天前'
+        title: '网络状态',
+        desc: '检查中...',
+        status: 'checking'
     }
 ])
 
-onMounted(() => {
+// 最近活动数据
+const recentActivities = ref([])
+
+// 加载状态
+const loading = ref({
+    stats: false,
+    status: false,
+    activities: false
+})
+
+// 获取系统统计数据
+const fetchSystemStats = async () => {
+    loading.value.stats = true
+    try {
+        const response = await getSystemOverviewApi()
+        if (response.code === 1) {
+            stats.value = {
+                totalUsers: response.data.totalUsers || 0,
+                teacherCount: response.data.totalTeachers || 0,
+                studentCount: response.data.totalStudents || 0,
+                resourceCount: response.data.totalResources || 0
+            }
+        }
+    } catch (error) {
+        console.error('获取系统统计数据失败:', error)
+    } finally {
+        loading.value.stats = false
+    }
+}
+
+// 获取系统状态
+const fetchSystemStatus = async () => {
+    loading.value.status = true
+    try {
+        const response = await getSystemHealthApi()
+        if (response.code === 1) {
+            const healthData = response.data
+            systemStatus.value = [
+                {
+                    id: 1,
+                    title: '系统运行',
+                    desc: healthData.status === 'healthy' ? '正常运行中' : '异常状态',
+                    status: healthData.status === 'healthy' ? 'online' : 'warning'
+                },
+                {
+                    id: 2,
+                    title: '系统可用性',
+                    desc: `可用性 ${healthData.availability || 0}%`,
+                    status: (healthData.availability || 0) >= 99 ? 'online' : 'warning'
+                },
+                {
+                    id: 3,
+                    title: '数据库',
+                    desc: '连接正常',
+                    status: 'online'
+                },
+                {
+                    id: 4,
+                    title: '网络状态',
+                    desc: '连接稳定',
+                    status: 'online'
+                }
+            ]
+        }
+    } catch (error) {
+        console.error('获取系统状态失败:', error)
+    } finally {
+        loading.value.status = false
+    }
+}
+
+// 获取最近活动
+const fetchRecentActivities = async () => {
+    loading.value.activities = true
+    try {
+        const response = await getRecentActivitiesApi()
+        if (response.code === 1) {
+            recentActivities.value = response.data.map((activity, index) => ({
+                id: activity.id,
+                icon: getActivityIcon(activity.type),
+                title: activity.title,
+                description: activity.description,
+                time: formatTime(activity.createTime)
+            }))
+        }
+    } catch (error) {
+        console.error('获取最近活动失败:', error)
+    } finally {
+        loading.value.activities = false
+    }
+}
+
+// 根据活动类型获取图标
+const getActivityIcon = (type) => {
+    const iconMap = {
+        'USER_REGISTER': 'fas fa-user-plus',
+        'USER_LOGIN': 'fas fa-sign-in-alt',
+        'USER_LOGOUT': 'fas fa-sign-out-alt',
+        'RESOURCE_UPLOAD': 'fas fa-upload',
+        'RESOURCE_DOWNLOAD': 'fas fa-download',
+        'SYSTEM_MAINTENANCE': 'fas fa-cog',
+        'REPORT_GENERATE': 'fas fa-chart-bar',
+        'USER_UPDATE': 'fas fa-user-edit',
+        'RESOURCE_UPDATE': 'fas fa-edit',
+        'USER_DELETE': 'fas fa-user-times',
+        'RESOURCE_DELETE': 'fas fa-trash'
+    }
+    return iconMap[type] || 'fas fa-info-circle'
+}
+
+// 格式化时间
+const formatTime = (timestamp) => {
+    if (!timestamp) return '刚刚'
+    
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diff = now - time
+    
+    const minutes = Math.floor(diff / (1000 * 60))
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (minutes < 1) return '刚刚'
+    if (minutes < 60) return `${minutes}分钟前`
+    if (hours < 24) return `${hours}小时前`
+    if (days < 7) return `${days}天前`
+    
+    return time.toLocaleDateString()
+}
+
+onMounted(async () => {
     // 获取管理员信息
     const loginUser = JSON.parse(localStorage.getItem('loginUser'))
     if (loginUser && loginUser.name) {
         adminName.value = loginUser.name
     }
+    
+    // 并行获取所有数据
+    await Promise.all([
+        fetchSystemStats(),
+        fetchSystemStatus(),
+        fetchRecentActivities()
+    ])
 })
 
 // 导航方法
@@ -151,6 +289,9 @@ const goToTeacherStats = () => {
             <h2 class="section-title">
                 <i class="fas fa-chart-line"></i>
                 系统概览
+                <span v-if="loading.stats" class="loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
             </h2>
             <div class="stats-grid">
                 <div class="stat-card">
@@ -200,37 +341,16 @@ const goToTeacherStats = () => {
             <h2 class="section-title">
                 <i class="fas fa-server"></i>
                 系统状态
+                <span v-if="loading.status" class="loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
             </h2>
             <div class="status-grid">
-                <div class="status-card">
-                    <div class="status-indicator online"></div>
+                <div class="status-card" v-for="item in systemStatus" :key="item.id">
+                    <div :class="['status-indicator', item.status]"></div>
                     <div class="status-content">
-                        <h4 class="status-title">系统运行</h4>
-                        <p class="status-desc">正常运行中</p>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <div class="status-indicator online"></div>
-                    <div class="status-content">
-                        <h4 class="status-title">数据库</h4>
-                        <p class="status-desc">连接正常</p>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <div class="status-indicator warning"></div>
-                    <div class="status-content">
-                        <h4 class="status-title">存储空间</h4>
-                        <p class="status-desc">使用率 78%</p>
-                    </div>
-                </div>
-
-                <div class="status-card">
-                    <div class="status-indicator online"></div>
-                    <div class="status-content">
-                        <h4 class="status-title">网络状态</h4>
-                        <p class="status-desc">连接稳定</p>
+                        <h4 class="status-title">{{ item.title }}</h4>
+                        <p class="status-desc">{{ item.desc }}</p>
                     </div>
                 </div>
             </div>
@@ -241,6 +361,9 @@ const goToTeacherStats = () => {
             <h2 class="section-title">
                 <i class="fas fa-clock"></i>
                 最近活动
+                <span v-if="loading.activities" class="loading-indicator">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </span>
             </h2>
             <div class="activities-list">
                 <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
@@ -601,6 +724,17 @@ const goToTeacherStats = () => {
     box-shadow: 0 0 8px rgba(251, 191, 36, 0.5);
 }
 
+.status-indicator.checking {
+    background: #6b7280;
+    box-shadow: 0 0 8px rgba(107, 114, 128, 0.5);
+    animation: checking-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes checking-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
@@ -707,6 +841,13 @@ const goToTeacherStats = () => {
     font-size: clamp(11px, 1.8vw, 12px);
     color: rgba(255, 255, 255, 0.5);
     word-break: break-word;
+}
+
+/* 加载指示器 */
+.loading-indicator {
+    margin-left: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 14px;
 }
 
 /* 响应式设计 */

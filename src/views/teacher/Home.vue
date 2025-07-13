@@ -1,56 +1,69 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getTeacherHomeOverviewApi, getTeacherActivitiesApi } from '@/api/teacher'
 
 const router = useRouter()
 const teacherName = ref('')
+const loading = ref(true)
+const error = ref('')
 
 // 教学统计数据
 const stats = ref({
-    studentCount: 156,
-    assignmentCount: 24,
-    completionRate: 87,
-    averageScore: 85.6
+    studentCount: 0,
+    assignmentCount: 0,
+    completionRate: 0,
+    averageScore: 0,
+    resourceCount: 0,
+    interactionCount: 0
 })
 
 // 最近活动数据
-const recentActivities = ref([
-    {
-        id: 1,
-        icon: 'fas fa-plus-circle',
-        title: '发布新作业',
-        description: '《数据结构与算法》第三章练习题',
-        time: '2小时前'
-    },
-    {
-        id: 2,
-        icon: 'fas fa-comment-dots',
-        title: '回复学生提问',
-        description: '关于递归算法的疑问解答',
-        time: '4小时前'
-    },
-    {
-        id: 3,
-        icon: 'fas fa-file-upload',
-        title: '上传课件',
-        description: '《计算机网络》第五章PPT',
-        time: '1天前'
-    },
-    {
-        id: 4,
-        icon: 'fas fa-check',
-        title: '批改作业',
-        description: '完成了32份作业的批改',
-        time: '2天前'
+const recentActivities = ref([])
+
+// 获取教师首页数据
+const fetchHomeData = async () => {
+    try {
+        loading.value = true
+        error.value = ''
+        const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+        if (!loginUser || !loginUser.id) {
+            throw new Error('未找到教师信息，请重新登录')
+        }
+        teacherName.value = loginUser.name || '老师'
+        const [overviewRes, activitiesRes] = await Promise.all([
+            getTeacherHomeOverviewApi(loginUser.id),
+            getTeacherActivitiesApi(loginUser.id, 10)
+        ])
+        // 调试输出
+        console.log('overviewRes', overviewRes)
+        console.log('activitiesRes', activitiesRes)
+        // 适配 stats 字段名
+        if (overviewRes.code === 1 && overviewRes.data) {
+            stats.value = overviewRes.data || stats.value
+        }
+        if (activitiesRes.code === 1 && activitiesRes.data) {
+            recentActivities.value = activitiesRes.data || []
+        }
+    } catch (err) {
+        console.error('获取教师首页数据失败:', err)
+        error.value = err.message || '获取数据失败，请稍后重试'
+        stats.value = {
+            studentCount: 0,
+            assignmentCount: 0,
+            completionRate: 0,
+            averageScore: 0,
+            resourceCount: 0,
+            interactionCount: 0
+        }
+        recentActivities.value = []
+    } finally {
+        loading.value = false
     }
-])
+}
 
 onMounted(() => {
-    // 获取教师信息
-    const loginUser = JSON.parse(localStorage.getItem('loginUser'))
-    if (loginUser && loginUser.name) {
-        teacherName.value = loginUser.name
-    }
+    fetchHomeData()
 })
 
 // 导航方法
@@ -69,143 +82,173 @@ const goToInteract = () => {
 const goToAnalysis = () => {
     router.push('/teacher/analysis')
 }
+
+// 刷新数据
+const refreshData = () => {
+    fetchHomeData()
+}
 </script>
 
 <template>
     <div class="teacher-home">
-        <!-- 欢迎区域 -->
-        <div class="welcome-section">
-            <div class="welcome-content">
-                <h1 class="welcome-title">
-                    <i class="fas fa-chalkboard-teacher welcome-icon"></i>
-                    欢迎回来，{{ teacherName }}老师！
-                </h1>
-                <p class="welcome-subtitle">开始您今天的教学工作，让每一堂课都精彩纷呈</p>
-            </div>
-            <div class="welcome-decoration">
-                <div class="floating-element element-1"></div>
-                <div class="floating-element element-2"></div>
-                <div class="floating-element element-3"></div>
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-container">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>正在加载数据...</p>
             </div>
         </div>
 
-        <!-- 快捷操作区域 -->
-        <div class="quick-actions">
-            <h2 class="section-title">
-                <i class="fas fa-bolt"></i>
-                快捷操作
-            </h2>
-            <div class="actions-grid">
-                <div class="action-card" @click="goToResource">
-                    <div class="card-icon">
-                        <i class="fas fa-book-open"></i>
-                    </div>
-                    <h3 class="card-title">备课资源</h3>
-                    <p class="card-desc">管理教学资源，准备精彩课程</p>
-                    <div class="card-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
-
-                <div class="action-card" @click="goToPractise">
-                    <div class="card-icon">
-                        <i class="fas fa-tasks"></i>
-                    </div>
-                    <h3 class="card-title">作业管理</h3>
-                    <p class="card-desc">布置和批改学生作业</p>
-                    <div class="card-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
-
-                <div class="action-card" @click="goToInteract">
-                    <div class="card-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-                    <h3 class="card-title">师生互动</h3>
-                    <p class="card-desc">与学生交流，答疑解惑</p>
-                    <div class="card-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
-
-                <div class="action-card" @click="goToAnalysis">
-                    <div class="card-icon">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                    <h3 class="card-title">数据分析</h3>
-                    <p class="card-desc">查看教学效果和学生表现</p>
-                    <div class="card-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
+        <!-- 错误提示 -->
+        <div v-else-if="error" class="error-container">
+            <div class="error-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>加载失败</h3>
+                <p>{{ error }}</p>
+                <button @click="refreshData" class="retry-btn">
+                    <i class="fas fa-redo"></i>
+                    重新加载
+                </button>
             </div>
         </div>
 
-        <!-- 教学统计 -->
-        <div class="teaching-stats">
-            <h2 class="section-title">
-                <i class="fas fa-chart-line"></i>
-                教学概览
-            </h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number">{{ stats.studentCount }}</h3>
-                        <p class="stat-label">学生总数</p>
-                    </div>
+        <!-- 主要内容 -->
+        <div v-else>
+            <!-- 欢迎区域 -->
+            <div class="welcome-section">
+                <div class="welcome-content">
+                    <h1 class="welcome-title">
+                        <i class="fas fa-chalkboard-teacher welcome-icon"></i>
+                        欢迎回来，{{ teacherName }}老师！
+                    </h1>
+                    <p class="welcome-subtitle">开始您今天的教学工作，让每一堂课都精彩纷呈</p>
                 </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-clipboard-list"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number">{{ stats.assignmentCount }}</h3>
-                        <p class="stat-label">作业数量</p>
-                    </div>
+                <div class="welcome-decoration">
+                    <div class="floating-element element-1"></div>
+                    <div class="floating-element element-2"></div>
+                    <div class="floating-element element-3"></div>
                 </div>
+            </div>
 
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-check-circle"></i>
+            <!-- 快捷操作区域 -->
+            <div class="quick-actions">
+                <h2 class="section-title">
+                    <i class="fas fa-bolt"></i>
+                    快捷操作
+                </h2>
+                <div class="actions-grid">
+                    <div class="action-card" @click="goToResource">
+                        <div class="card-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <h3 class="card-title">备课资源</h3>
+                        <p class="card-desc">管理教学资源，准备精彩课程</p>
+                        <div class="card-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number">{{ stats.completionRate }}%</h3>
-                        <p class="stat-label">完成率</p>
-                    </div>
-                </div>
 
-                <div class="stat-card">
-                    <div class="stat-icon">
-                        <i class="fas fa-star"></i>
+                    <div class="action-card" @click="goToPractise">
+                        <div class="card-icon">
+                            <i class="fas fa-tasks"></i>
+                        </div>
+                        <h3 class="card-title">作业管理</h3>
+                        <p class="card-desc">布置和批改学生作业</p>
+                        <div class="card-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
-                    <div class="stat-content">
-                        <h3 class="stat-number">{{ stats.averageScore }}</h3>
-                        <p class="stat-label">平均分</p>
+
+                    <div class="action-card" @click="goToInteract">
+                        <div class="card-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <h3 class="card-title">师生互动</h3>
+                        <p class="card-desc">与学生交流，答疑解惑</p>
+                        <div class="card-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                    </div>
+
+                    <div class="action-card" @click="goToAnalysis">
+                        <div class="card-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <h3 class="card-title">数据分析</h3>
+                        <p class="card-desc">查看教学效果和学生表现</p>
+                        <div class="card-arrow">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 最近活动 -->
-        <div class="recent-activities">
-            <h2 class="section-title">
-                <i class="fas fa-clock"></i>
-                最近活动
-            </h2>
-            <div class="activities-list">
-                <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
-                    <div class="activity-icon">
-                        <i :class="activity.icon"></i>
+            <!-- 教学统计 -->
+            <div class="teaching-stats">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-line"></i>
+                    教学概览
+                </h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number">{{ stats.studentCount }}</h3>
+                            <p class="stat-label">学生总数</p>
+                        </div>
                     </div>
-                    <div class="activity-content">
-                        <h4 class="activity-title">{{ activity.title }}</h4>
-                        <p class="activity-desc">{{ activity.description }}</p>
-                        <span class="activity-time">{{ activity.time }}</span>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number">{{ stats.assignmentCount }}</h3>
+                            <p class="stat-label">作业数量</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number">{{ stats.completionRate }}%</h3>
+                            <p class="stat-label">完成率</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 class="stat-number">{{ stats.averageScore }}</h3>
+                            <p class="stat-label">平均分</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近活动 -->
+            <div class="recent-activities">
+                <h2 class="section-title">
+                    <i class="fas fa-clock"></i>
+                    最近活动
+                </h2>
+                <div class="activities-list">
+                    <div v-if="recentActivities.length === 0" class="empty-activities">
+                        <i class="fas fa-inbox"></i>
+                        <p>暂无最近活动</p>
+                    </div>
+                    <div v-else class="activity-item" v-for="activity in recentActivities" :key="activity.id">
+                        <div class="activity-content">
+                            <h4 class="activity-title">{{ activity.title }}</h4>
+                            <p class="activity-desc">{{ activity.description }}</p>
+                            <span class="activity-time">{{ activity.relativeTime || activity.time }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -585,6 +628,115 @@ const goToAnalysis = () => {
     font-size: clamp(11px, 1.8vw, 12px);
     color: rgba(255, 255, 255, 0.5);
     word-break: break-word;
+}
+
+/* 加载状态 */
+.loading-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.loading-spinner {
+    text-align: center;
+    color: #fff;
+}
+
+.loading-spinner i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: spin 1s linear infinite;
+}
+
+.loading-spinner p {
+    font-size: 16px;
+    margin: 0;
+    opacity: 0.8;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 错误状态 */
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.error-content {
+    text-align: center;
+    color: #fff;
+    max-width: 400px;
+    padding: 32px;
+}
+
+.error-content i {
+    font-size: 48px;
+    color: #ff6b6b;
+    margin-bottom: 16px;
+}
+
+.error-content h3 {
+    font-size: 24px;
+    margin: 0 0 12px 0;
+    color: #ff6b6b;
+}
+
+.error-content p {
+    font-size: 16px;
+    margin: 0 0 24px 0;
+    opacity: 0.8;
+    line-height: 1.5;
+}
+
+.retry-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    padding: 12px 24px;
+    color: #fff;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.retry-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* 空状态 */
+.empty-activities {
+    text-align: center;
+    padding: 48px 24px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-activities i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-activities p {
+    font-size: 16px;
+    margin: 0;
 }
 
 /* 响应式设计 */

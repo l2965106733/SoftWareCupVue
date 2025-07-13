@@ -86,14 +86,6 @@ const logOut = () => {
                         <i class="fas fa-chart-pie nav-icon"></i>
                         <span class="nav-text">总体统计</span>
                     </router-link>
-                    <router-link to="/admin/studentstats" class="nav-item" active-class="active">
-                        <i class="fas fa-user-graduate nav-icon"></i>
-                        <span class="nav-text">学生统计</span>
-                    </router-link>
-                    <router-link to="/admin/teacherstats" class="nav-item" active-class="active">
-                        <i class="fas fa-chalkboard-teacher nav-icon"></i>
-                        <span class="nav-text">教师统计</span>
-                    </router-link>
                 </nav>
             </aside>
 
