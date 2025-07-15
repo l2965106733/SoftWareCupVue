@@ -18,7 +18,7 @@ export const getTeacherActivitiesApi = (teacherId, limit = 10) => request.get(`/
 
 export const getQuestionApi = (data) => request.post("/teacher/homework/aiQuestion", data);
 
-export const getAnswerApi = (data) => request.post("/teacher/interact/aiAnswer", { question: data });
+export const getAnswerApi = (data) => request.post("/teacher/interact/aiAnswer", data);
 
 export const saveQuestionApi = (data) => request.post("/teacher/homework/questions", data);
 

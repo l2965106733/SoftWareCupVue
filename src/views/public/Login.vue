@@ -74,17 +74,6 @@ const back = () => {
 const reset = () => {
   router.push(`/reset?mode=forget&role=${role.value}`)
 }
-
-// 注册
-const goRegister = () => {
-  if (role.value === 3) {
-    // 只有管理员可以注册
-    router.push(`/register?role=${role.value}`)
-  } else {
-    // 学生和教师显示提示
-    ElMessage.info('学生和教师账号请联系学校管理员开通')
-  }
-}
 </script>
 
 <template>
@@ -142,11 +131,7 @@ const goRegister = () => {
         </div>
         <!-- 注册链接 -->
         <div class="register-link">
-          <span v-if="role === 3">还没有账号？</span>
-          <span v-else>没有账号？</span>
-          <a href="javascript:;" @click="goRegister" class="register-btn">
-            {{ role === 3 ? '立即注册' : '请询问学校管理员' }}
-          </a>
+          <span>还没有账号？请联系相关负责人</span>
         </div>
       </el-form>
     </div>

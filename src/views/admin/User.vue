@@ -20,7 +20,6 @@ const user = ref([{
   gender: '',            // 性别，可为 '男' / '女' / ''
   role: 0,             // 角色，可为 '学生' / '教师' 
   identifier: '',        // 学号/教师号/管理员号
-  subject: '',           // 教师教学科目（仅教师）
   createTime: '',        // 注册时间（字符串）
   updateTime: ''         // 最后修改时间（字符串）
 }])
@@ -189,9 +188,6 @@ const formRules = {
     { required: true, message: '请输入用户号', trigger: 'blur' },
     { min: 5, max: 20, message: '用户号长度应为5-20个字符', trigger: 'blur' }
   ],
-  subject: [
-    { required: true, message: '请输入教学科目', trigger: 'blur' }
-  ]
 }
 
 const save = async () => {
@@ -220,12 +216,6 @@ const save = async () => {
     return;
   }
   
-  // 如果是教师角色，检查科目
-  if (formUser.value.role === 2 && !formUser.value.subject) {
-    console.log('❌ 教师角色缺少科目');
-    ElMessage.error('教师角色请填写教学科目');
-    return;
-  }
   
   console.log('✅ 基础验证通过，开始表单验证');
   
@@ -322,15 +312,6 @@ const addUser = () => {
   }, 100);
 }
 
-// 格式化日期，只显示年月日
-// const formatDate = (dateString) => {
-//   if (!dateString) return '';
-//   const date = new Date(dateString);
-//   const year = date.getFullYear();
-//   const month = String(date.getMonth() + 1).padStart(2, '0');
-//   const day = String(date.getDate()).padStart(2, '0');
-//   return `${year}-${month}-${day}`;
-// }
 </script>
 
 <template>
@@ -367,9 +348,7 @@ const addUser = () => {
           </el-select>
         </el-form-item>
 
-        <el-form-item label="科目" v-if="role === 2">
-          <el-input v-model="searchUser.subject" placeholder="请输入教学科目" clearable class="form-input" />
-        </el-form-item>
+
 
         <el-form-item class="form-buttons">
           <el-button type="primary" @click="search" class="search-btn">
@@ -470,15 +449,7 @@ const addUser = () => {
           </template>
         </el-table-column>
 
-        <!-- 科目（仅教师显示） -->
-        <el-table-column v-if="role === 2" prop="subject" label="科目" align="center" width="120">
-          <template #default="scope">
-            <el-tag type="success" size="small" class="subject-tag">
-              <i class="fas fa-book"></i>
-              {{ scope.row.subject }}
-            </el-tag>
-          </template>
-        </el-table-column>
+      
 
         <!-- 操作按钮 -->
         <el-table-column label="操作" align="center" width="180">
@@ -557,17 +528,6 @@ const addUser = () => {
           </el-input>
         </el-form-item>
 
-        <el-form-item 
-          label="科目" 
-          v-if="formUser.role === 2" 
-          prop="subject"
-          :rules="formUser.role === 2 ? formRules.subject : []">
-          <el-input v-model="formUser.subject" placeholder="请输入教学科目" clearable>
-            <template #prefix>
-              <i class="fas fa-book"></i>
-            </template>
-          </el-input>
-        </el-form-item>
       </el-form>
 
       <template #footer>

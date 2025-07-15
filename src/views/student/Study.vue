@@ -1,12 +1,9 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAiQuestionHistoryApi,getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi } from '@/api/student'
+import { getAiQuestionHistoryApi, getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi } from '@/api/student'
 import { CircleClose } from '@element-plus/icons-vue'
 
-// 对话框
-const showCoursewareDialog = ref(false)
-const currentCourseware = ref(null)
 
 // AI聊天相关
 const inputMessage = ref('')
@@ -15,6 +12,12 @@ const sending = ref(false)
 const aiTyping = ref(false)
 const chatMessages = ref(null)
 const fileUpload = ref(null)
+const uploadHeaders = computed(() => {
+  const loginUser = JSON.parse(localStorage.getItem('loginUser') || '{}');
+  return {
+    token: loginUser.token || ''
+  };
+});
 
 // 课件数据
 const coursewareList = ref([])
@@ -57,13 +60,6 @@ import { getStudyTimeTrendApi } from '@/api/student'
 const trendOption = ref({})
 const trendChartVisible = ref(false)
 
-// 获取进度条颜色
-const getProgressColor = (percentage) => {
-  if (percentage >= 80) return '#67c23a'
-  if (percentage >= 60) return '#e6a23c'
-  return '#f56c6c'
-}
-
 // 显示学习统计详情
 const showStudyStatsDetail = async () => {
   showStatsDialog.value = true
@@ -84,14 +80,14 @@ const loadDetailedStats = async () => {
   try {
     const studentId = getCurrentStudentId()
     if (!studentId) return
-    
+
     // 加载今日统计数据
     const todayResult = await getStudyStatsApi(studentId, { period: 'today' })
     if (todayResult.code === 1) {
       todayStudyResources.value = todayResult.data.studyResources || 0
       todayAiQuestions.value = todayResult.data.aiQuestions || 0
     }
-    
+
     // 加载学习进度数据
     const progressResult = await getStudyRecordsApi(studentId, { type: 'progress' })
     if (progressResult.code === 1) {
@@ -103,13 +99,13 @@ const loadDetailedStats = async () => {
         lastStudyTime: item.lastStudyTime || '暂无'
       }))
     }
-    
+
     // 加载知识点掌握数据
     const knowledgeResult = await getStudyStatsApi(studentId, { type: 'knowledge' })
     if (knowledgeResult.code === 1) {
       knowledgeStats.value = knowledgeResult.data.knowledgeStats || []
     }
-    
+
     console.log('详细统计数据加载成功')
   } catch (error) {
     console.error('加载详细统计数据失败:', error)
@@ -122,12 +118,12 @@ const startStudyTimer = (resourceId) => {
   studyStartTime.value[resourceId] = now
   studySessionTime.value[resourceId] = 0
   activeStudyResources.value.add(resourceId)
-  
+
   // 每30秒记录一次学习进度
   studyTimer.value[resourceId] = setInterval(() => {
     updateStudyProgress(resourceId)
   }, 30000) // 30秒间隔
-  
+
   console.log(`开始学习资源 ${resourceId}，计时器已启动`)
 }
 
@@ -136,26 +132,26 @@ const stopStudyTimer = async (resourceId) => {
     clearInterval(studyTimer.value[resourceId])
     delete studyTimer.value[resourceId]
   }
-  
+
   activeStudyResources.value.delete(resourceId)
-  
+
   // 记录最终的学习时长
   await updateStudyProgress(resourceId, true)
-  
+
   // 清理相关数据
   delete studyStartTime.value[resourceId]
   delete studySessionTime.value[resourceId]
-  
+
   console.log(`停止学习资源 ${resourceId}，数据已保存`)
 }
 
 const updateStudyProgress = async (resourceId, isEnd = false, action = 'update') => {
   const studentId = getCurrentStudentId()
   if (!studentId || !studyStartTime.value[resourceId]) return
-  
+
   const currentTime = Date.now()
   const sessionDuration = Math.floor((currentTime - studyStartTime.value[resourceId]) / 1000)
-  
+
   try {
     await recordStudyBehaviorApi({
       studentId: studentId,
@@ -165,12 +161,12 @@ const updateStudyProgress = async (resourceId, isEnd = false, action = 'update')
       studyStatus: isEnd ? 2 : 1, // 1-学习中, 2-本次学习结束
       timestamp: new Date().toISOString()
     })
-    
+
     // 如果不是结束，重置开始时间用于下一个间隔
     if (!isEnd) {
       studyStartTime.value[resourceId] = Date.now()
     }
-    
+
     console.log(`更新学习进度: 资源${resourceId}, 时长${sessionDuration}秒, 结束:${isEnd}, 动作:${action}`)
   } catch (error) {
     console.error('更新学习进度失败:', error)
@@ -179,7 +175,7 @@ const updateStudyProgress = async (resourceId, isEnd = false, action = 'update')
 
 // 停止所有学习计时器
 const stopAllStudyTimers = async () => {
-  const promises = Array.from(activeStudyResources.value).map(resourceId => 
+  const promises = Array.from(activeStudyResources.value).map(resourceId =>
     stopStudyTimer(resourceId)
   )
   await Promise.all(promises)
@@ -203,28 +199,14 @@ const pauseStudyTimer = async (resourceId) => {
     clearInterval(studyTimer.value[resourceId])
     delete studyTimer.value[resourceId]
     pausedStudyResources.value.add(resourceId)
-    
+
     // 记录暂停
     await updateStudyProgress(resourceId, false, 'pause')
-    
+
     ElMessage.info(`已暂停学习: ${getResourceName(resourceId)}`)
   }
 }
 
-// 恢复学习计时器
-const resumeStudyTimer = (resourceId) => {
-  if (pausedStudyResources.value.has(resourceId)) {
-    pausedStudyResources.value.delete(resourceId)
-    
-    // 重新开始计时
-    studyStartTime.value[resourceId] = Date.now()
-    studyTimer.value[resourceId] = setInterval(() => {
-      updateStudyProgress(resourceId)
-    }, 30000)
-    
-    ElMessage.success(`已恢复学习: ${getResourceName(resourceId)}`)
-  }
-}
 
 // 更新实时学习时长显示
 const updateRealTimeDisplay = () => {
@@ -245,10 +227,10 @@ const startRealTimeDisplay = () => {
 // 增强的课件预览方法
 const handlePreview = async (courseware) => {
   if (!courseware.url) return ElMessage.warning('文件未就绪')
-  
+
   const studentId = getCurrentStudentId()
   const resourceId = courseware.id
-  
+
   try {
     // 记录开始学习
     await recordStudyBehaviorApi({
@@ -258,18 +240,18 @@ const handlePreview = async (courseware) => {
       studyStatus: 1, // 开始学习
       timestamp: new Date().toISOString()
     })
-    
+
     // 开始计时
     startStudyTimer(resourceId)
-    
+
     // 更新本地统计
     await loadStudyStats()
-    
+
     ElMessage.success(`开始学习: ${courseware.title}`)
   } catch (error) {
     console.error('记录学习开始失败:', error)
   }
-  
+
   const url = courseware.url.toLowerCase()
 
   if (
@@ -278,7 +260,7 @@ const handlePreview = async (courseware) => {
     url.endsWith('.xls') || url.endsWith('.xlsx')
   ) {
     const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(courseware.url)}`
-    
+
     // 监听窗口关闭事件
     const studyWindow = window.open(officeUrl, '_blank')
     monitorStudyWindow(studyWindow, resourceId)
@@ -291,7 +273,7 @@ const handlePreview = async (courseware) => {
 // 监听学习窗口
 const monitorStudyWindow = (studyWindow, resourceId) => {
   if (!studyWindow) return
-  
+
   // 定期检查窗口是否关闭
   const checkWindowClosed = setInterval(() => {
     if (studyWindow.closed) {
@@ -300,7 +282,7 @@ const monitorStudyWindow = (studyWindow, resourceId) => {
       ElMessage.info('学习窗口已关闭，学习时长已记录')
     }
   }, 1000)
-  
+
   // 5分钟后自动停止检查（防止内存泄漏）
   setTimeout(() => {
     clearInterval(checkWindowClosed)
@@ -333,12 +315,12 @@ const downloadCourseware = async (courseware) => {
     const link = document.createElement('a')
     link.href = courseware.url
     link.download = courseware.title || '课件文件'
-    
+
     // 处理跨域下载
     if (courseware.url.startsWith('http') && !courseware.url.includes(window.location.hostname)) {
       // 跨域文件，在新窗口打开
       window.open(courseware.url, '_blank')
-  ElMessage.success(`开始下载：${courseware.title}`)
+      ElMessage.success(`开始下载：${courseware.title}`)
     } else {
       // 同域文件，直接下载
       document.body.appendChild(link)
@@ -349,31 +331,39 @@ const downloadCourseware = async (courseware) => {
 
     // 更新本地统计
     await loadStudyStats()
-    
+
   } catch (error) {
     console.error('下载失败:', error)
     ElMessage.error('下载失败，请重试')
   }
 }
 
-const handleFileSelect = (file, fileList) => {
-  // 检查文件大小（限制10MB）
-  const maxSize = 10 * 1024 * 1024
+
+const beforeUpload = (file) => { // 检查文件大小（限制10MB）
+  const maxSize = 10 * 1024 * 1024; // 10MB
   if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过10MB')
-    return false
+    ElMessage.error('文件大小不能超过10MB');
+    return false; // 阻止文件上传
   }
-  
+
   // 检查文件数量（限制5个文件）
-  if (fileList.length > 5) {
-    ElMessage.error('最多只能上传5个文件')
-    return false
+  if (selectedFiles.value.length >= 5) {
+    ElMessage.error('最多只能上传5个文件');
+    return false; // 阻止文件上传
   }
-  
-  selectedFiles.value = fileList  // 存储所有选中的文件
-  ElMessage.success(`已选择${fileList.length}个文件`)
-  return true
-}
+
+  ElMessage.success(`已选择${selectedFiles.length}个文件`);
+  return true; // 允许上传
+};
+
+const handleUploadSuccess = (res, file) => {
+  console.log("文件上传成功", res, file)
+  // 上传成功时的回调处理
+  if (res.code === 1) {
+    file.url = res.data.url || res.data; // 设置上传成功后的文件 URL
+  }
+  console.log("文件上传成功", file);
+};
 
 const removeFile = (file) => {
   if (file) {
@@ -385,8 +375,8 @@ const removeFile = (file) => {
   } else {
     // 清空所有文件
     selectedFiles.value = []
-  if (fileUpload.value) {
-    fileUpload.value.clearFiles()
+    if (fileUpload.value) {
+      fileUpload.value.clearFiles()
     }
   }
 }
@@ -398,42 +388,42 @@ const sendMessage = async () => {
   }
 
   sending.value = true
-  
+
   // 添加用户消息
   const userMessage = {
     id: Date.now(),
     sender: 'user',
     type: selectedFiles.value.length > 0 ? 'file' : 'text',
-    content: inputMessage.value || (selectedFiles.value.length > 0 ? 
+    content: inputMessage.value || (selectedFiles.value.length > 0 ?
       `上传了${selectedFiles.value.length}个文件：${selectedFiles.value.map(f => f.name).join(', ')}` : ''),
     fileNames: selectedFiles.value.map(f => f.name),
     time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
   }
-  
+
   chatHistory.value.push(userMessage)
-  
+
   // 保存问题信息和文件URLs
   const question = inputMessage.value
-  const fileUrls = selectedFiles.value.length > 0 ? 
+  const fileUrls = selectedFiles.value.length > 0 ?
     selectedFiles.value.map(file => file.url).filter(url => url) : []  // 文件URL数组
-  
+
   // 清空输入
   inputMessage.value = ''
   removeFile()  // 清空所有文件
-  
+
   // 滚动到底部
   await nextTick()
   scrollToBottom()
-  
+
   // 显示AI正在输入
   aiTyping.value = true
-  
+
   try {
     const result = await getChatApi({
       question: question,
       fileUrls: fileUrls  // 传递文件URL数组
     })
-    
+
     if (result.code === 1 && result.data) {
       // 添加AI回复消息，直接使用返回的纯文本
       const aiMessage = {
@@ -445,29 +435,27 @@ const sendMessage = async () => {
       }
       chatHistory.value.push(aiMessage)
       ElMessage.success('AI回复成功！')
-      
+
       // 记录AI提问到后端
       try {
         const studentId = getCurrentStudentId()
         if (studentId) {
           await recordAiQuestionApi({
             studentId: studentId,
-            question: userMessage.content,
-            answer: result.data,  // 使用纯文本答案
-            category: detectQuestionCategory(userMessage.content), // 自动检测问题分类
-            satisfaction: null // 初始无评分
+            questionContent: userMessage.content,
+            answer: result.data  // 使用纯文本答案测问题分类
           })
         }
       } catch (error) {
         console.error('记录AI提问失败:', error)
       }
-      
+
       // 更新统计数据
       loadStudyStats()
     } else {
       ElMessage.error(result.msg || '生成失败')
     }
-    
+
   } catch (error) {
     ElMessage.error('AI回复失败，请重试')
   } finally {
@@ -478,42 +466,15 @@ const sendMessage = async () => {
   }
 }
 
-// 检测问题分类
-const detectQuestionCategory = (question) => {
-  const categories = {
-    'java': ['java', 'class', 'object', 'method', 'interface', '类', '对象', '方法', '接口'],
-    'vue': ['vue', 'component', 'router', 'vuex', '组件', '路由', '状态管理'],
-    'database': ['sql', 'mysql', 'database', '数据库', '查询', '表'],
-    'frontend': ['html', 'css', 'javascript', 'js', '前端', '样式', '脚本'],
-    'other': []
-  }
-  
-  const lowerQuestion = question.toLowerCase()
-  
-  for (const [category, keywords] of Object.entries(categories)) {
-    if (keywords.some(keyword => lowerQuestion.includes(keyword))) {
-      return category
-    }
-  }
-  
-  return 'other'
-}
 
-const generateAIResponse = (question) => {
-  const responses = [
-    `关于"${question}"这个问题，我来为你详细解答：\n\n这是一个很好的问题。根据我的理解，主要涉及以下几个方面：\n\n1. 基础概念理解\n2. 实际应用场景\n3. 最佳实践建议\n\n希望这个回答对你有帮助！如果还有疑问，欢迎继续提问。`,
-    `很高兴你提出这个问题！让我来帮你分析一下：\n\n首先，我们需要理解问题的核心。然后，我会提供一些实用的解决方案和建议。\n\n如果你需要更具体的帮助，可以提供更多上下文信息。`,
-    `这是一个经典的问题！让我为你提供一个全面的解答：\n\n从理论角度来看...\n从实践角度来看...\n\n建议你可以通过以下方式深入学习这个话题。`
-  ]
-  return responses[Math.floor(Math.random() * responses.length)]
-}
+
 
 const formatFileSize = (bytes) => {
   // 处理空值和无效值
   if (!bytes || bytes === null || bytes === undefined || isNaN(bytes) || bytes <= 0) {
     return '未知大小'
   }
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -550,7 +511,7 @@ const loadCoursewareList = async () => {
   try {
     const studentId = getCurrentStudentId()
     if (!studentId) return
-    
+
     const result = await getCoursewareListApi(studentId)
     if (result.code === 1) {
       coursewareList.value = result.data.map(item => ({
@@ -564,7 +525,7 @@ const loadCoursewareList = async () => {
         studyProgress: item.study_progress || item.studyProgress || 0, // 学习进度
         lastStudyTime: item.last_study_time || item.lastStudyTime || '暂无'       // 最后学习时间
       }))
-      
+
       console.log('课件列表加载成功:', coursewareList.value) // 调试日志
     } else {
       console.log('课件列表API响应:', result)
@@ -581,7 +542,7 @@ const loadStudyStats = async () => {
   try {
     const studentId = getCurrentStudentId()
     if (!studentId) return
-    
+
     const result = await getStudyStatsApi(studentId)
     if (result.code === 1) {
       const data = result.data
@@ -681,6 +642,7 @@ const loadChatHistory = async () => {
   }
 }
 
+
 // 初始化
 onMounted(() => {
   console.log('学生学习模块初始化')
@@ -688,13 +650,13 @@ onMounted(() => {
   loadStudyStats()
   loadChatHistory() // 加载AI聊天历史
   scrollToBottom()
-  
+
   // 启动实时学习时长显示
   startRealTimeDisplay()
-  
+
   // 监听页面可见性变化
   document.addEventListener('visibilitychange', handleVisibilityChange)
-  
+
   // 监听页面刷新和关闭
   window.addEventListener('beforeunload', stopAllStudyTimers)
 })
@@ -717,7 +679,9 @@ onBeforeUnmount(() => {
         <el-card shadow="hover">
           <div class="section-header">
             <h3>
-              <el-icon><ChatDotRound /></el-icon>
+              <el-icon>
+                <ChatDotRound />
+              </el-icon>
               AI学习助手
             </h3>
           </div>
@@ -732,7 +696,9 @@ onBeforeUnmount(() => {
                     <!-- 显示上传的文件信息 -->
                     <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
                       <div class="files-indicator">
-                        <el-icon><Paperclip /></el-icon>
+                        <el-icon>
+                          <Paperclip />
+                        </el-icon>
                         附件 ({{ message.fileNames.length }})
                       </div>
                       <div class="file-names">
@@ -744,14 +710,14 @@ onBeforeUnmount(() => {
                   </div>
                   <div class="message-time">{{ message.time }}</div>
                 </div>
-                
+
                 <!-- AI回复 -->
                 <div v-else class="ai-message">
                   <div class="message-content">{{ message.content }}</div>
                   <div class="message-time">{{ message.time }}</div>
                 </div>
               </div>
-              
+
               <!-- AI正在输入 -->
               <div v-if="aiTyping" class="message-item ai typing">
                 <div class="ai-message">
@@ -763,70 +729,65 @@ onBeforeUnmount(() => {
                 </div>
               </div>
             </div>
-            
+
             <!-- 输入区域 -->
             <div class="chat-input">
               <div class="input-toolbar">
-                <el-upload
-                  ref="fileUpload"
-                  :auto-upload="false"
-                  :on-change="handleFileSelect"
-                  :before-upload="() => false"
-                  :show-file-list="false"
-                  accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
-                  :limit="5"
-                  multiple
-                  class="upload-demo"
-                >
+                <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
+                  :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
+                  class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
                   <el-button type="info" size="small" text>
-                    <el-icon><Paperclip /></el-icon>
+                    <el-icon>
+                      <Paperclip />
+                    </el-icon>
                     上传文件 (最多5个)
                   </el-button>
                 </el-upload>
-                
+
                 <div class="file-preview" v-if="selectedFiles.length > 0">
                   <div class="file-list-header">
                     <span>已选择 {{ selectedFiles.length }} 个文件</span>
                     <el-button type="danger" size="small" text @click="removeFile()">
-                      <el-icon><Delete /></el-icon>
+                      <el-icon>
+                        <Delete />
+                      </el-icon>
                       清空全部
                     </el-button>
                   </div>
                   <div class="file-list">
                     <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
-                    <div class="file-preview-icon">
-                        <el-icon v-if="file.type?.includes('image')"><Picture /></el-icon>
-                        <el-icon v-else-if="file.type?.includes('pdf')"><Document /></el-icon>
-                      <el-icon v-else><Paperclip /></el-icon>
-                    </div>
-                    <div class="file-preview-info">
+                      <div class="file-preview-icon">
+                        <el-icon v-if="file.type?.includes('image')">
+                          <Picture />
+                        </el-icon>
+                        <el-icon v-else-if="file.type?.includes('pdf')">
+                          <Document />
+                        </el-icon>
+                        <el-icon v-else>
+                          <Paperclip />
+                        </el-icon>
+                      </div>
+                      <div class="file-preview-info">
                         <span class="file-preview-name">{{ file.name }}</span>
                         <span class="file-preview-size">{{ formatFileSize(file.size) }}</span>
-                    </div>
+                      </div>
                       <el-button type="danger" size="small" text @click="removeFile(file)">
-                      <el-icon><Close /></el-icon>
-                    </el-button>
+                        <el-icon>
+                          <Close />
+                        </el-icon>
+                      </el-button>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div class="message-input">
-                <el-input
-                  v-model="inputMessage"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="请输入您的问题..."
-                  @keydown.ctrl.enter="sendMessage"
-                  :disabled="sending"
-                />
-                <el-button 
-                  type="primary" 
-                  @click="sendMessage" 
-                  :loading="sending"
-                  class="send-button"
-                >
-                  <el-icon><Promotion /></el-icon>
+                <el-input v-model="inputMessage" type="textarea" :rows="3" placeholder="请输入您的问题..."
+                  @keydown.ctrl.enter="sendMessage" :disabled="sending" />
+                <el-button type="primary" @click="sendMessage" :loading="sending" class="send-button">
+                  <el-icon>
+                    <Promotion />
+                  </el-icon>
                   发送
                 </el-button>
               </div>
@@ -843,31 +804,35 @@ onBeforeUnmount(() => {
         <el-card shadow="hover">
           <div class="timer-header">
             <h4>
-              <el-icon><Timer /></el-icon>
+              <el-icon>
+                <Timer />
+              </el-icon>
               正在学习
             </h4>
             <el-button type="danger" size="small" @click="stopAllStudyTimers">
-              <el-icon><CircleClose /></el-icon>
+              <el-icon>
+                <CircleClose />
+              </el-icon>
               全部停止
             </el-button>
           </div>
           <div class="active-timers">
-            <div 
-              v-for="resourceId in Array.from(activeStudyResources)" 
-              :key="resourceId" 
-              class="timer-item"
-            >
+            <div v-for="resourceId in Array.from(activeStudyResources)" :key="resourceId" class="timer-item">
               <div class="timer-info">
                 <div class="resource-title">{{ getResourceName(resourceId) }}</div>
                 <div class="timer-display">{{ formatRealTimeStudyTime(resourceId) }}</div>
               </div>
               <div class="timer-actions">
                 <el-button type="warning" size="small" @click="pauseStudyTimer(resourceId)">
-                  <el-icon><VideoPause /></el-icon>
+                  <el-icon>
+                    <VideoPause />
+                  </el-icon>
                   暂停
                 </el-button>
                 <el-button type="danger" size="small" @click="stopStudyTimer(resourceId)">
-                  <el-icon><CircleClose /></el-icon>
+                  <el-icon>
+                    <CircleClose />
+                  </el-icon>
                   停止
                 </el-button>
               </div>
@@ -881,11 +846,15 @@ onBeforeUnmount(() => {
         <el-card shadow="hover">
           <div class="card-header">
             <h4>
-              <el-icon><DataAnalysis /></el-icon>
+              <el-icon>
+                <DataAnalysis />
+              </el-icon>
               学习统计
             </h4>
             <el-button type="primary" size="small" @click="showStudyStatsDetail">
-              <el-icon><View /></el-icon>
+              <el-icon>
+                <View />
+              </el-icon>
               查看详情
             </el-button>
           </div>
@@ -919,19 +888,30 @@ onBeforeUnmount(() => {
         <el-card shadow="hover">
           <div class="section-header">
             <h3>
-              <el-icon><FolderOpened /></el-icon>
+              <el-icon>
+                <FolderOpened />
+              </el-icon>
               课程课件
             </h3>
           </div>
 
           <div class="courseware-list">
-            <div v-for="courseware in coursewareList" :key="courseware.id" class="courseware-item" @click="handlePreview(courseware)">
+            <div v-for="courseware in coursewareList" :key="courseware.id" class="courseware-item"
+              @click="handlePreview(courseware)">
               <div class="courseware-info">
                 <div class="file-icon">
-                  <el-icon v-if="courseware.type === 'pdf'"><Document /></el-icon>
-                  <el-icon v-else-if="courseware.type === 'ppt'"><Monitor /></el-icon>
-                  <el-icon v-else-if="courseware.type === 'video'"><VideoPlay /></el-icon>
-                  <el-icon v-else><Files /></el-icon>
+                  <el-icon v-if="courseware.type === 'pdf'">
+                    <Document />
+                  </el-icon>
+                  <el-icon v-else-if="courseware.type === 'ppt'">
+                    <Monitor />
+                  </el-icon>
+                  <el-icon v-else-if="courseware.type === 'video'">
+                    <VideoPlay />
+                  </el-icon>
+                  <el-icon v-else>
+                    <Files />
+                  </el-icon>
                 </div>
                 <div class="courseware-details">
                   <h4>{{ courseware.title }}</h4>
@@ -944,10 +924,12 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
               </div>
-              
+
               <div class="courseware-actions" @click.stop>
                 <el-button type="success" size="small" @click="downloadCourseware(courseware)">
-                  <el-icon><Download /></el-icon>
+                  <el-icon>
+                    <Download />
+                  </el-icon>
                   下载
                 </el-button>
               </div>
@@ -958,12 +940,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 学习统计详情对话框 -->
-    <el-dialog
-      v-model="showStatsDialog"
-      title="学习统计详情"
-      width="800px"
-      @opened="onStatsDialogOpened"
-    >
+    <el-dialog v-model="showStatsDialog" title="学习统计详情" width="800px" @opened="onStatsDialogOpened">
       <div class="stats-detail">
         <!-- 今日学习概况 -->
         <div class="stats-section">
@@ -1209,10 +1186,14 @@ onBeforeUnmount(() => {
 }
 
 @keyframes typing {
-  0%, 80%, 100% {
+
+  0%,
+  80%,
+  100% {
     transform: scale(0);
     opacity: 0.5;
   }
+
   40% {
     transform: scale(1);
     opacity: 1;
@@ -1447,12 +1428,12 @@ h4 {
   .student-study-layout {
     flex-direction: column;
   }
-  
+
   .left-panel,
   .right-panel {
     flex: 1;
   }
-  
+
   .study-stats {
     grid-template-columns: repeat(4, 1fr);
   }
@@ -1462,17 +1443,17 @@ h4 {
   .study-stats {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   .courseware-item {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-  
+
   .courseware-info {
     justify-content: center;
   }
-  
+
   .courseware-actions {
     justify-content: center;
   }

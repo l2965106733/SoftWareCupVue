@@ -1,8 +1,10 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeachingPlanApi, uploadResourceApi, getResourceListApi, deleteResourceApi, updateResourceApi } from '@/api/teacher'
 import axios from 'axios'
+
+
 
 const clearPlan = () => {
   teachingPlan.value = ''
@@ -11,12 +13,24 @@ const clearPlan = () => {
 
 
 const beforeUpload = (file) => {
+  console.error('Token 11');
   const isLt100M = file.size / 1024 / 1024 < 100
   if (!isLt100M) {
     ElMessage.error('上传文件大小不能超过 100MB')
     return false
   }
-  return true
+  const headers = uploadHeaders.value;
+  console.error('Token 22');
+  // 手动设置请求头
+  if (!headers.token) {
+    console.error('Token missing');
+    return false; // 阻止上传
+  }
+  file.headers = {
+    ...file.headers,
+    token: headers.token // 确保 token 被传递
+  };
+  return true; // 允许上传
 }
 
 
@@ -24,14 +38,14 @@ const handleSuccess = async (response, file) => {
   console.log('上传成功，后端返回:', response)
   if (response && response.data) {
     file.url = response.data
-    
+
     try {
       const teacherId = getCurrentTeacherId()
       if (!teacherId) {
         ElMessage.error('无法获取教师信息，请重新登录')
         return
       }
-      
+
       const resourceData = {
         teacherId: teacherId,
         resourceName: file.name,
@@ -40,11 +54,11 @@ const handleSuccess = async (response, file) => {
         fileSize: file.size,
         description: file.name
       }
-      
+
       console.log('发送的资源数据：', resourceData)
-      
+
       const result = await uploadResourceApi(resourceData)
-      
+
       if (result.code === 1) {
         file.uid = result.data.id // 保存资源ID
         ElMessage.success('资源上传并保存成功')
@@ -88,19 +102,20 @@ const handlePreview = (file) => {
   }
 }
 
+
 const handleRemove = async (file) => {
   if (!file?.url) return
-  
+
   try {
     await ElMessageBox.confirm('确定要删除这个资源吗？', '确认删除', {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
       type: 'warning',
     })
-    
+
     let dbDeleteSuccess = false
     let fileDeleteSuccess = false
-    
+
     if (file.uid) {
       const result = await deleteResourceApi(file.uid)
       if (result.code === 1) {
@@ -110,7 +125,7 @@ const handleRemove = async (file) => {
         return
       }
     }
-    
+
     try {
       const res = await axios.delete('/api/delete', {
         params: { url: file.url }
@@ -121,13 +136,13 @@ const handleRemove = async (file) => {
     } catch (error) {
       console.error('删除文件失败：', error)
     }
-    
+
     if (dbDeleteSuccess) {
       const index = teachingFileList.value.findIndex(item => item.uid === file.uid)
       if (index > -1) {
         teachingFileList.value.splice(index, 1)
       }
-      
+
       if (fileDeleteSuccess) {
         ElMessage.success('资源已删除')
       } else {
@@ -142,7 +157,7 @@ const handleRemove = async (file) => {
 }
 
 // AI 教学生成相关
-const aiFiles = ref([]) 
+const aiFiles = ref([])
 const aiRemark = ref('')
 const teachingPlan = ref('')
 
@@ -160,11 +175,11 @@ const generateTeachingPlan = async () => {
       if (res.data && typeof res.data === 'string' && res.data.endsWith('.docx')) {
         ElMessage.success('教学计划文档生成成功，正在解析内容...')
         await parseDocxContent(res.data)
-      } 
+      }
       // 如果返回的是数组（原来的格式）
       else if (Array.isArray(res.data)) {
-      teachingPlan.value = res.data
-      ElMessage.success('AI 教学结构生成成功')
+        teachingPlan.value = res.data
+        ElMessage.success('AI 教学结构生成成功')
       }
       // 如果返回的是对象包含docx URL
       else if (res.data && res.data.docxUrl) {
@@ -174,8 +189,8 @@ const generateTeachingPlan = async () => {
       else {
         ElMessage.error('返回数据格式不正确')
       }
-      
-      aiFiles.value = [] 
+
+      aiFiles.value = []
     } else {
       ElMessage.error(res.msg || '生成失败')
     }
@@ -192,10 +207,10 @@ const parseDocxContent = async (docxUrl) => {
     if (window.mammoth) {
       const response = await fetch(docxUrl)
       const arrayBuffer = await response.arrayBuffer()
-      
+
       const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
       const htmlContent = result.value
-      
+
       // 将HTML内容转换为教学计划结构
       const planStructure = parseHtmlToTeachingPlan(htmlContent)
       if (planStructure && planStructure.length > 0) {
@@ -221,20 +236,20 @@ const parseHtmlToTeachingPlan = (htmlContent) => {
   try {
     const tempDiv = document.createElement('div')
     tempDiv.innerHTML = htmlContent
-    
+
     const plans = []
     const headings = tempDiv.querySelectorAll('h1, h2, h3, h4')
-    
+
     headings.forEach((heading, index) => {
       let nextSibling = heading.nextElementSibling
       let content = ''
-      
+
       // 收集标题下的内容直到下一个标题
       while (nextSibling && !nextSibling.matches('h1, h2, h3, h4')) {
         content += nextSibling.textContent + '\n'
         nextSibling = nextSibling.nextElementSibling
       }
-      
+
       plans.push({
         title: heading.textContent.trim(),
         summary: content.trim() || '详细内容请查看完整文档',
@@ -242,7 +257,7 @@ const parseHtmlToTeachingPlan = (htmlContent) => {
         practice: false
       })
     })
-    
+
     return plans.length > 0 ? plans : null
   } catch (error) {
     console.error('解析HTML内容失败:', error)
@@ -273,12 +288,12 @@ const getCurrentTeacherId = () => {
   console.log('🔐 检查localStorage中的登录用户信息...')
   const loginUserStr = localStorage.getItem('loginUser')
   console.log('📱 localStorage中的原始数据:', loginUserStr)
-  
+
   if (!loginUserStr) {
     console.warn('❌ localStorage中没有找到loginUser')
     return null
   }
-  
+
   try {
     const loginUser = JSON.parse(loginUserStr)
     console.log('👤 解析后的用户信息:', loginUser)
@@ -295,7 +310,7 @@ const loadResourceList = async () => {
   try {
     const teacherId = getCurrentTeacherId()
     if (!teacherId) return
-    
+
     const result = await getResourceListApi(teacherId)
     if (result.code === 1) {
       teachingFileList.value = result.data.map(item => ({
@@ -357,7 +372,7 @@ const handleDownload = (file) => {
     ElMessage.warning('文件链接不存在')
     return
   }
-  
+
   // 创建下载链接
   const link = document.createElement('a')
   link.href = file.url
@@ -366,7 +381,7 @@ const handleDownload = (file) => {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
-  
+
   ElMessage.success(`开始下载：${file.name}`)
 }
 
@@ -414,16 +429,18 @@ onMounted(() => {
                 <div class="lesson-block">
                   <strong>第{{ index + 1 }}讲：{{ item.title }}</strong>
                   <el-button link type="primary" @click="editLesson(index)" v-if="!item.downloadUrl">编辑</el-button>
-                  
+
                   <!-- 如果有下载链接，显示下载按钮 -->
                   <el-button type="success" @click="downloadTeachingPlan(item.downloadUrl)" v-if="item.downloadUrl">
-                    <el-icon><Download /></el-icon>
+                    <el-icon>
+                      <Download />
+                    </el-icon>
                     下载完整文档
                   </el-button>
-                  
+
                   <p><strong>摘要：</strong>{{ item.summary }}</p>
                   <p v-if="!item.practice && !item.downloadUrl">❌ 无练习题（请前往"作业模块"添加）</p>
-                  
+
                   <!-- 如果有下载链接，显示额外信息 -->
                   <div v-if="item.downloadUrl" class="download-info">
                     <p>📄 完整的教学计划已生成为Word文档</p>
@@ -442,34 +459,32 @@ onMounted(() => {
       <el-col :span="8">
         <el-card class="upload-section" shadow="never">
           <h3>📂 课程资料管理</h3>
-          
+
           <!-- 上传区域 -->
           <div class="upload-area">
             <div class="upload-controls">
-              <el-upload
-                v-model:file-list="teachingFileList"
-                action="/api/upload"
-                :before-upload="beforeUpload"
-                :on-success="handleSuccess"
-                :on-preview="handlePreview"
-                :on-remove="handleRemove"
-                :show-file-list="false"
-              >
+              <el-upload v-model:file-list="teachingFileList" action="/api/upload" :before-upload="beforeUpload"
+                :on-success="handleSuccess" :on-preview="handlePreview" :on-remove="handleRemove"
+                :show-file-list="false">
                 <el-button type="primary">
-                  <el-icon><Upload /></el-icon>
+                  <el-icon>
+                    <Upload />
+                  </el-icon>
                   上传文件
                 </el-button>
               </el-upload>
               <span class="upload-tip">支持上传课程资料，多文件，最大100MB</span>
             </div>
           </div>
-          
+
           <!-- 资源列表 -->
           <div v-if="teachingFileList.length > 0" class="resource-list">
             <h4>📋 资源列表</h4>
             <div v-for="file in teachingFileList" :key="file.uid" class="resource-item">
               <div class="resource-name">
-                <el-icon><Document /></el-icon>
+                <el-icon>
+                  <Document />
+                </el-icon>
                 {{ file.name }}
               </div>
               <div class="resource-meta">
@@ -518,12 +533,7 @@ onMounted(() => {
           <el-input v-model="editingResource.resourceName" placeholder="请输入资源名称" />
         </el-form-item>
         <el-form-item label="资源描述">
-          <el-input 
-            v-model="editingResource.description" 
-            type="textarea" 
-            :rows="3"
-            placeholder="请输入资源描述" 
-          />
+          <el-input v-model="editingResource.description" type="textarea" :rows="3" placeholder="请输入资源描述" />
         </el-form-item>
       </el-form>
 

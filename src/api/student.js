@@ -22,7 +22,7 @@ export const getStudyStatsApi = (studentId, params = {}) => request.get(`/studen
 export const recordStudyBehaviorApi = (data) => request.post("/student/study/record", data);
 
 // 记录AI提问（增强版）
-export const recordAiQuestionApi = (data) => request.post("/student/interact/aiQuestion", data);
+export const recordAiQuestionApi = (data) => request.post("/student/study/aiQuestion", data);
 
 // 获取学生学习详细记录
 export const getStudyRecordsApi = (studentId, params = {}) => request.get(`/student/study/records/${studentId}`, { params });
@@ -78,4 +78,4 @@ export const getRatingStatsApi = (studentId) => request.get(`/student/interact/r
 // ==================== AI问答增强接口 ====================
 
 // 获取AI问答历史
-export const getAiQuestionHistoryApi = (studentId, params = {}) => request.get(`/student/interact/aiQuestions/${studentId}`, { params });
+export const getAiQuestionHistoryApi = (studentId, params = {}) => request.get(`/student/study/aiQuestions/${studentId}`, { params });

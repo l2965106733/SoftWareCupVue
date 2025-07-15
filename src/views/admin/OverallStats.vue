@@ -4,8 +4,6 @@ import { ElMessage } from 'element-plus'
 import { 
   getSystemOverviewApi,
   getUserActivityApi,
-  getSystemUsageApi,
-  getSystemHealthApi,
   getUserActivityTrendApi
 } from '@/api/admin'
 import dayjs from 'dayjs'
@@ -39,24 +37,6 @@ const userActivity = ref({
   uniqueLogins: 0
 })
 
-// 系统使用情况
-const systemUsage = ref({
-  cpuUsage: 0,
-  memoryUsage: 0,
-  diskUsage: 0,
-  networkTraffic: 0,
-  databaseConnections: 0,
-  apiRequests: 0
-})
-
-// 系统健康状态
-const systemHealth = ref({
-  status: 'healthy', // healthy, warning, critical
-  responseTime: 0,
-  errorRate: 0,
-  availability: 99.8
-})
-
 // 用户活跃度趋势数据
 const userActivityTrend = ref([])
 
@@ -74,24 +54,6 @@ const formatUptime = (seconds) => {
   const hours = Math.floor((seconds % 86400) / 3600)
   const minutes = Math.floor((seconds % 3600) / 60)
   return `${days}天 ${hours}小时 ${minutes}分钟`
-}
-
-const getHealthColor = (status) => {
-  const colors = {
-    'healthy': '#67c23a',
-    'warning': '#e6a23c',
-    'critical': '#f56c6c'
-  }
-  return colors[status] || '#909399'
-}
-
-const getHealthText = (status) => {
-  const texts = {
-    'healthy': '正常',
-    'warning': '警告',
-    'critical': '严重'
-  }
-  return texts[status] || '未知'
 }
 
 // 数据加载函数
@@ -137,54 +99,6 @@ const loadUserActivity = async () => {
   }
 }
 
-const loadSystemUsage = async () => {
-  loading.value.usage = true
-  try {
-    const result = await getSystemUsageApi()
-    if (result.code === 1) {
-      systemUsage.value = {
-        cpuUsage: result.data?.cpuUsage || 0,
-        memoryUsage: result.data?.memoryUsage || 0,
-        diskUsage: result.data?.diskUsage || 0,
-        networkTraffic: result.data?.networkTraffic || 0,
-        databaseConnections: result.data?.databaseConnections || 0,
-        apiRequests: result.data?.apiRequests || 0
-      }
-      console.log('系统使用情况加载成功:', systemUsage.value)
-    } else {
-      ElMessage.error(result.msg || '获取系统使用情况失败')
-    }
-  } catch (error) {
-    console.error('获取系统使用情况失败：', error)
-    ElMessage.error('获取系统使用情况失败')
-  } finally {
-    loading.value.usage = false
-  }
-}
-
-const loadSystemHealth = async () => {
-  loading.value.health = true
-  try {
-    const result = await getSystemHealthApi()
-    if (result.code === 1) {
-      systemHealth.value = {
-        status: result.data?.status || 'healthy',
-        responseTime: result.data?.responseTime || 0,
-        errorRate: result.data?.errorRate || 0,
-        availability: result.data?.availability || 99.8
-      }
-      console.log('系统健康状态加载成功:', systemHealth.value)
-    } else {
-      ElMessage.error(result.msg || '获取系统健康状态失败')
-    }
-  } catch (error) {
-    console.error('获取系统健康状态失败：', error)
-    ElMessage.error('获取系统健康状态失败')
-  } finally {
-    loading.value.health = false
-  }
-}
-
 const loadUserActivityTrend = async () => {
   try {
     const result = await getUserActivityTrendApi({
@@ -213,8 +127,6 @@ const loadAllData = async () => {
   await Promise.all([
     loadSystemOverview(),
     loadUserActivity(),
-    loadSystemUsage(),
-    loadSystemHealth(),
     loadUserActivityTrend()
   ])
 }
@@ -354,103 +266,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- 系统健康状态 -->
-    <div class="health-section">
-      <el-card shadow="never" class="health-card">
-        <div class="card-header">
-          <h4>
-            <el-icon><Warning /></el-icon>
-            系统健康状态
-          </h4>
-          <el-tag 
-            :type="systemHealth.status === 'healthy' ? 'success' : systemHealth.status === 'warning' ? 'warning' : 'danger'"
-            size="large"
-          >
-            {{ getHealthText(systemHealth.status) }}
-          </el-tag>
-        </div>
-        
-        <div class="health-metrics" v-loading="loading.health">
-          <div class="metric-item">
-            <div class="metric-label">响应时间</div>
-            <div class="metric-value">{{ systemHealth.responseTime }}ms</div>
-            <el-progress 
-              :percentage="Math.min((systemHealth.responseTime / 1000) * 100, 100)" 
-              :color="systemHealth.responseTime < 500 ? '#67c23a' : systemHealth.responseTime < 1000 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-          
-          <div class="metric-item">
-            <div class="metric-label">错误率</div>
-            <div class="metric-value">{{ systemHealth.errorRate }}%</div>
-            <el-progress 
-              :percentage="systemHealth.errorRate" 
-              :color="systemHealth.errorRate < 1 ? '#67c23a' : systemHealth.errorRate < 5 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-          
-          <div class="metric-item">
-            <div class="metric-label">可用性</div>
-            <div class="metric-value">{{ systemHealth.availability }}%</div>
-            <el-progress 
-              :percentage="systemHealth.availability" 
-              :color="systemHealth.availability > 99.9 ? '#67c23a' : systemHealth.availability > 99 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-        </div>
-      </el-card>
-    </div>
-
-    <!-- 系统资源使用情况 -->
-    <div class="usage-section">
-      <el-card shadow="never" class="usage-card" v-loading="loading.usage">
-        <div class="card-header">
-          <h4>
-            <el-icon><Monitor /></el-icon>
-            系统资源使用
-          </h4>
-        </div>
-        
-        <div class="usage-metrics">
-          <div class="usage-item">
-            <div class="usage-label">CPU使用率</div>
-            <div class="usage-value">{{ systemUsage.cpuUsage }}%</div>
-            <el-progress 
-              :percentage="systemUsage.cpuUsage" 
-              :color="systemUsage.cpuUsage < 60 ? '#67c23a' : systemUsage.cpuUsage < 80 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-          
-          <div class="usage-item">
-            <div class="usage-label">内存使用率</div>
-            <div class="usage-value">{{ systemUsage.memoryUsage }}%</div>
-            <el-progress 
-              :percentage="systemUsage.memoryUsage" 
-              :color="systemUsage.memoryUsage < 70 ? '#67c23a' : systemUsage.memoryUsage < 85 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-          
-          <div class="usage-item">
-            <div class="usage-label">磁盘使用率</div>
-            <div class="usage-value">{{ systemUsage.diskUsage }}%</div>
-            <el-progress 
-              :percentage="systemUsage.diskUsage" 
-              :color="systemUsage.diskUsage < 80 ? '#67c23a' : systemUsage.diskUsage < 90 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-          
-          <div class="usage-item">
-            <div class="usage-label">数据库连接</div>
-            <div class="usage-value">{{ systemUsage.databaseConnections }}</div>
-            <el-progress 
-              :percentage="(systemUsage.databaseConnections / 100) * 100" 
-              :color="systemUsage.databaseConnections < 50 ? '#67c23a' : systemUsage.databaseConnections < 80 ? '#e6a23c' : '#f56c6c'"
-            />
-          </div>
-        </div>
-      </el-card>
-    </div>
-
     <!-- 用户活跃度统计 -->
     <div class="activity-section">
       <el-card shadow="never" class="activity-card" v-loading="loading.activity">
@@ -585,137 +400,6 @@ onMounted(() => {
   opacity: 0.3;
 }
 
-/* 系统健康状态 */
-.health-section {
-  margin-bottom: 24px;
-}
-
-.health-card {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.card-header h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.health-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.metric-item {
-  text-align: center;
-}
-
-.metric-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 8px;
-}
-
-.alerts-section h5 {
-  margin-bottom: 12px;
-  color: #2c3e50;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.alert-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.alert-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.alert-item.warning {
-  background: #fdf6ec;
-  color: #e6a23c;
-  border: 1px solid #f5dab1;
-}
-
-.alert-item.critical {
-  background: #fef0f0;
-  color: #f56c6c;
-  border: 1px solid #fbc4c4;
-}
-
-.alert-time {
-  margin-left: auto;
-  font-size: 12px;
-  opacity: 0.7;
-}
-
-/* 系统资源使用 */
-.usage-section {
-  margin-bottom: 24px;
-}
-
-.usage-card {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.usage-metrics {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.usage-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.usage-label {
-  width: 100px;
-  font-size: 14px;
-  color: #666;
-}
-
-.usage-value {
-  width: 80px;
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
-  text-align: right;
-}
-
-
-
 /* 用户活跃度 */
 .activity-section {
   margin-bottom: 24px;
@@ -774,10 +458,6 @@ onMounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   
-  .health-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
 
 }
 
@@ -787,10 +467,6 @@ onMounted(() => {
   }
   
   .overview-cards {
-    grid-template-columns: 1fr;
-  }
-  
-  .health-metrics {
     grid-template-columns: 1fr;
   }
   

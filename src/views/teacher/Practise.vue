@@ -114,6 +114,7 @@ const handleManualAdd = () => {
   const newQuestion = {
     id: tempIdCounter.value--, // 临时ID，负数
     content: '',
+    knowledge: '',
     answer: '',
     explain: '',
     type: 'choice',
@@ -334,7 +335,7 @@ const publishHomework = async () => {
     })
     
     if (result.code === 1) {
-      ElMessage.success(`作业发布成功！已发布给${result.data?.student_count || 0}名学生`)
+      ElMessage.success(`作业发布成功！已发布给${result.data}名学生`)
       
       // 重新加载历史记录
       await loadHomeworkHistory()
@@ -647,6 +648,15 @@ const getScoreClass = (score, totalScore) => {
                     :rows="3"
                   />
                 </el-form-item>
+
+                <el-form-item label="知识点">
+                  <el-input 
+                    type="textarea" 
+                    v-model="q.knowledge" 
+                    placeholder="请输入涉及知识点" 
+                    :rows="1"
+                  />
+                </el-form-item>
                 
                 <el-form-item label="答案">
                   <el-input 
@@ -731,7 +741,7 @@ const getScoreClass = (score, totalScore) => {
           💡 请先保存题目再发布作业
         </div>
         
-        <!-- 调试信息 -->
+        <!-- 调试信息
         <div class="debug-info" style="margin-top: 10px; font-size: 12px; color: #666; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
           <p><strong>调试信息：</strong></p>
           <p>题目数量: {{ questions.length }}</p>
@@ -755,7 +765,7 @@ const getScoreClass = (score, totalScore) => {
             questions.some(q => !q.id || q.id <= 0) ? '❌有题目未保存' : 
             '✅可以发布'
           }}</strong></p>
-        </div>
+        </div> -->
       </el-card>
 
       <!-- 预览区域 -->
