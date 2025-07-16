@@ -13,14 +13,13 @@ const clearPlan = () => {
 
 
 const beforeUpload = (file) => {
-  console.error('Token 11');
+  
   const isLt100M = file.size / 1024 / 1024 < 100
   if (!isLt100M) {
     ElMessage.error('上传文件大小不能超过 100MB')
     return false
   }
   const headers = uploadHeaders.value;
-  console.error('Token 22');
   // 手动设置请求头
   if (!headers.token) {
     console.error('Token missing');

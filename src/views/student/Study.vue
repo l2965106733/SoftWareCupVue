@@ -351,7 +351,7 @@ const beforeUpload = (file) => { // 检查文件大小（限制10MB）
     return false; // 阻止文件上传
   }
 
-  ElMessage.success(`已选择${selectedFiles.length}个文件`);
+  ElMessage.success(`已选择${selectedFiles.value.length + 1}个文件`);
   return true; // 允许上传
 };
 

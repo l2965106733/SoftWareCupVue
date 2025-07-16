@@ -517,12 +517,12 @@ onMounted(() => {
             
             <div class="stat-item">
               <div class="stat-value">{{ interactStats.avgRating?.toFixed(1) || 0 }}</div>
-              <div class="stat-label">平均评分</div>
+              <div class="stat-label">平均互动评分</div>
             </div>
             
             <div class="stat-item">
               <div class="stat-value">{{ interactStats.avgResponseTime?.toFixed(1) || 0 }}h</div>
-              <div class="stat-label">平均响应时间</div>
+              <div class="stat-label">平均回答时间</div>
             </div>
           </div>
 
