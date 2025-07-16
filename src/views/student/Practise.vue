@@ -173,7 +173,7 @@ const loadHomeworkList = async () => {
         id: item.student_homework_id,               // 学生作业记录ID
         homeworkId: item.homework_id,               // 真正的作业ID
         title: item.homework_title || '未命名作业',
-        description: item.description || '暂无描述',
+        description: item.remark || '暂无描述',
         deadline: item.homework_end_time,           // 截止时间
         status: item.status !== undefined ? item.status : 0,  // 默认为0（草稿状态）
         score: item.total_score || 0,                     // 学生得分
@@ -380,7 +380,7 @@ onMounted(() => {
           <el-card shadow="hover" class="status-card">
             <div class="card-content">
               <div class="card-info">
-                <div class="card-title">平均分</div>
+                <div class="card-title">平均得分率</div>
                 <div class="card-value">{{ homeworkStats.averageScore.toFixed(2) }}</div>
                 <div class="card-desc">学习进度</div>
               </div>
@@ -428,7 +428,7 @@ onMounted(() => {
             <div class="homework-header">
               <div class="homework-info">
                 <h4>{{ homework.title }}</h4>
-                <p class="homework-desc">{{ homework.description }}</p>
+                <p class="homework-desc">作业备注：{{ homework.description }}</p>
                 <div class="homework-meta">
                   <span class="teacher">发布教师：{{ homework.teacherName }}</span>
                   <span class="deadline">截止时间：{{ formatDeadline(homework.deadline) }}</span>
@@ -535,6 +535,15 @@ onMounted(() => {
               
               <!-- 显示得分（已批改） -->
               <div v-if="currentHomework.status === 2 && question.score !== undefined" class="question-score-display">
+                <div class="question-answer" style="margin-top: 8px;">
+                <strong>标准答案：</strong>
+                <div style="white-space: pre-wrap; color: #409eff;">{{ question.answer || '暂无' }}</div>
+              </div>
+              <div class="question-explain" style="margin-top: 8px;">
+                <strong>解析：</strong>
+                <div style="white-space: pre-wrap; color: #666;">{{ question.explain || '暂无' }}</div>
+              </div>
+
                 <span class="score-label">得分：</span>
                 <span 
                   class="score-value" 

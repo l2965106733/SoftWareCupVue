@@ -14,24 +14,21 @@ const clearPlan = () => {
 
 const beforeUpload = (file) => {
   
-  const isLt100M = file.size / 1024 / 1024 < 100
+  const isLt100M = file.size / 1024 / 1024 < 1000
   if (!isLt100M) {
     ElMessage.error('上传文件大小不能超过 100MB')
     return false
   }
-  const headers = uploadHeaders.value;
-  // 手动设置请求头
-  if (!headers.token) {
-    console.error('Token missing');
-    return false; // 阻止上传
-  }
-  file.headers = {
-    ...file.headers,
-    token: headers.token // 确保 token 被传递
-  };
+
   return true; // 允许上传
 }
 
+const uploadHeaders = computed(() => {
+  const loginUser = JSON.parse(localStorage.getItem('loginUser') || '{}');
+  return {
+    token: loginUser.token || ''
+  };
+});
 
 const handleSuccess = async (response, file) => {
   console.log('上传成功，后端返回:', response)
@@ -172,18 +169,8 @@ const generateTeachingPlan = async () => {
     if (res.code === 1) {
       // 如果返回的是docx文件URL
       if (res.data && typeof res.data === 'string' && res.data.endsWith('.docx')) {
-        ElMessage.success('教学计划文档生成成功，正在解析内容...')
-        await parseDocxContent(res.data)
-      }
-      // 如果返回的是数组（原来的格式）
-      else if (Array.isArray(res.data)) {
-        teachingPlan.value = res.data
-        ElMessage.success('AI 教学结构生成成功')
-      }
-      // 如果返回的是对象包含docx URL
-      else if (res.data && res.data.docxUrl) {
-        ElMessage.success('教学计划文档生成成功，正在解析内容...')
-        await parseDocxContent(res.data.docxUrl)
+        ElMessage.success('教学计划文档生成成功，提供下载连接')
+        showDocxDownload(docxUrl)
       }
       else {
         ElMessage.error('返回数据格式不正确')
@@ -199,36 +186,6 @@ const generateTeachingPlan = async () => {
   }
 }
 
-// 解析docx文件内容
-const parseDocxContent = async (docxUrl) => {
-  try {
-    // 方案1：尝试使用mammoth.js解析docx
-    if (window.mammoth) {
-      const response = await fetch(docxUrl)
-      const arrayBuffer = await response.arrayBuffer()
-
-      const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
-      const htmlContent = result.value
-
-      // 将HTML内容转换为教学计划结构
-      const planStructure = parseHtmlToTeachingPlan(htmlContent)
-      if (planStructure && planStructure.length > 0) {
-        teachingPlan.value = planStructure
-        ElMessage.success('教学计划内容解析成功')
-      } else {
-        // 如果解析失败，提供下载链接
-        showDocxDownload(docxUrl)
-      }
-    } else {
-      // 如果没有mammoth.js，直接提供下载
-      showDocxDownload(docxUrl)
-    }
-  } catch (error) {
-    console.error('解析docx文件失败:', error)
-    ElMessage.warning('无法解析文档内容，为您提供下载链接')
-    showDocxDownload(docxUrl)
-  }
-}
 
 // 将HTML内容转换为教学计划结构
 const parseHtmlToTeachingPlan = (htmlContent) => {
@@ -511,7 +468,7 @@ onMounted(() => {
           <el-input v-model="aiRemark" placeholder="如重点章节、教学目标等" />
         </el-form-item>
         <el-form-item label="上传资料">
-          <el-upload v-model:file-list="aiFiles" action="/api/upload" list-type="text" :on-success="(res, file) => {
+          <el-upload :headers="uploadHeaders" v-model:file-list="aiFiles" action="/api/upload" list-type="text" :on-success="(res, file) => {
             if (res.code === 1) file.url = res.data.url || res.data
           }">
             <el-button>选择文件</el-button>

@@ -519,7 +519,7 @@ onMounted(() => {
                 type="textarea"
                 :rows="4"
                 placeholder="请详细描述你遇到的问题，包括具体的错误信息、代码片段等..."
-                maxlength="1000"
+                maxlength="2500"
                 show-word-limit
               />
             </el-form-item>

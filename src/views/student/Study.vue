@@ -919,8 +919,7 @@ onBeforeUnmount(() => {
                     <span class="upload-time">上传时间：{{ courseware.uploadTime }}</span>
                     <span class="file-size">文件大小：{{ courseware.size }}</span>
               
-                    <span class="last-study-time">最后学习：{{ courseware.lastStudyTime }}</span>
-                  </div>
+                    </div>
                 </div>
               </div>
 
@@ -967,21 +966,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <!-- 学习资源进度 -->
-        <div class="stats-section">
-          <h4>学习资源进度</h4>
-          <div class="resource-progress">
-            <div v-for="item in resourceProgress" :key="item.id" class="progress-item">
-              <div class="progress-info">
-                <span class="resource-name">{{ item.name }}</span>
-          
-              </div>
-              <div class="progress-time">
-                学习时长: {{ item.studyTime }}分钟 | 最后学习: {{ item.lastStudyTime }}
-              </div>
-            </div>
-          </div>
-        </div>
+ 
       </div>
       <!-- 移除footer按钮 -->
     </el-dialog>

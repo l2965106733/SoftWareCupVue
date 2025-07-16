@@ -387,7 +387,7 @@ onMounted(() => {
                     :disabled="q.answered"
                     placeholder="请输入回答内容，或点击AI生成回答..."
                     :rows="4"
-                    maxlength="500"
+                    maxlength="2500"
                     show-word-limit
                   />
                 </el-form-item>

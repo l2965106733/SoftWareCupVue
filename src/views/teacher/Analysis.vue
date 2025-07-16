@@ -52,6 +52,14 @@ const sortBy = ref('name')
 const currentPage = ref(1)
 const pageSize = ref(20)
 
+// const sortOrder = ref('descending') // 降序
+const sortOrder = ref('ascending') // 升序
+
+const handleSortChange = ({ prop, order }) => {
+  sortBy.value = prop
+  sortOrder.value = order
+}
+
 // 学生数据 - 从API获取
 const studentData = ref([])
 
@@ -86,17 +94,37 @@ const filteredStudentData = computed(() => {
     )
   }
 
-  // 排序
   if (sortBy.value === 'viewCount') {
-    filtered = filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
+    filtered.sort((a, b) =>
+      sortOrder.value === 'ascending'
+        ? (a.viewCount || 0) - (b.viewCount || 0)
+        : (b.viewCount || 0) - (a.viewCount || 0)
+    )
   } else if (sortBy.value === 'progress') {
-    filtered = filtered.sort((a, b) => b.progress - a.progress)
+    filtered.sort((a, b) =>
+      sortOrder.value === 'ascending'
+        ? (a.progress || 0) - (b.progress || 0)
+        : (b.progress || 0) - (a.progress || 0)
+    )
   } else if (sortBy.value === 'questionCount') {
-    filtered = filtered.sort((a, b) => (b.questionCount || 0) - (a.questionCount || 0))
+    filtered.sort((a, b) =>
+      sortOrder.value === 'ascending'
+        ? (a.questionCount || 0) - (b.questionCount || 0)
+        : (b.questionCount || 0) - (a.questionCount || 0)
+    )
+  } else if (sortBy.value === 'name') {
+    filtered.sort((a, b) =>
+      sortOrder.value === 'ascending'
+        ? (a.name || 0) - (b.name || 0)
+        : (b.name || 0) - (a.name || 0)
+    )
   } else {
-    filtered = filtered.sort((a, b) => a.name.localeCompare(b.name))
+    filtered.sort((a, b) =>
+      sortOrder.value === 'ascending'
+        ? (a.name || '').localeCompare(b.name || '')
+        : (b.name || '').localeCompare(a.name || '')
+    )
   }
-
   return filtered
 })
 
@@ -114,14 +142,6 @@ const getDistributionWidth = (count) => {
   if (!homeworkStats.value.scoreDistribution) return 0
   const maxCount = Math.max(...Object.values(homeworkStats.value.scoreDistribution))
   return maxCount > 0 ? (count / maxCount) * 100 : 0
-}
-
-
-
-
-
-const exportStudentData = () => {
-  ElMessage.success('学生数据导出成功')
 }
 
 
@@ -323,7 +343,7 @@ onMounted(() => {
           <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
-                <div class="card-title">平均分</div>
+                <div class="card-title">平均得分率</div>
                 <div class="card-value">{{ overviewData.avgScore }}</div>
                 <div class="card-change" :class="overviewData.scoreTrend > 0 ? 'positive' : 'negative'">
                   {{ overviewData.scoreTrend > 0 ? '+' : '' }}{{ overviewData.scoreTrend }} 较上次
@@ -338,7 +358,7 @@ onMounted(() => {
           <el-card shadow="hover" class="overview-card" v-loading="loading.overview">
             <div class="card-content">
               <div class="card-info">
-                <div class="card-title">活跃度</div>
+                <div class="card-title">学生活跃度</div>
                 <div class="card-value">{{ overviewData.activeRate }}%</div>
                 <div class="card-change positive">+{{ overviewData.activeIncrease }}% 本周</div>
               </div>
@@ -576,14 +596,10 @@ onMounted(() => {
                 <el-option label="按进度" value="progress" />
                 <el-option label="按提问数" value="questionCount" />
               </el-select>
-              <el-button type="success" size="small" @click="exportStudentData">
-                <el-icon><Download /></el-icon>
-                导出
-              </el-button>
             </div>
           </div>
           
-          <el-table :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}">
+          <el-table :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}" @sort-change="handleSortChange">
             <el-table-column prop="name" label="学生姓名" width="120" sortable />
             <el-table-column prop="studentId" label="学号" width="120" />
             <el-table-column label="学习进度" width="150" sortable prop="progress">

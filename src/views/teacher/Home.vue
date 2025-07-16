@@ -226,7 +226,7 @@ const refreshData = () => {
                         </div>
                         <div class="stat-content">
                             <h3 class="stat-number">{{ stats.averageScore }}</h3>
-                            <p class="stat-label">平均分</p>
+                            <p class="stat-label">学生平均得分率</p>
                         </div>
                     </div>
                 </div>
