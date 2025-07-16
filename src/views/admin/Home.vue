@@ -3,7 +3,6 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
     getSystemOverviewApi, 
-    getSystemHealthApi, 
     getRecentActivitiesApi 
 } from '@/api/admin'
 
@@ -18,36 +17,7 @@ const stats = ref({
     resourceCount: 0
 })
 
-// 系统状态数据
-const systemStatus = ref([
-    {
-        id: 1,
-        title: '系统运行',
-        desc: '检查中...',
-        status: 'checking'
-    },
-    {
-        id: 2,
-        title: '数据库',
-        desc: '检查中...',
-        status: 'checking'
-    },
-    {
-        id: 3,
-        title: '存储空间',
-        desc: '检查中...',
-        status: 'checking'
-    },
-    {
-        id: 4,
-        title: '网络状态',
-        desc: '检查中...',
-        status: 'checking'
-    }
-])
 
-// 最近活动数据
-const recentActivities = ref([])
 
 // 加载状态
 const loading = ref({
@@ -76,67 +46,9 @@ const fetchSystemStats = async () => {
     }
 }
 
-// 获取系统状态
-const fetchSystemStatus = async () => {
-    loading.value.status = true
-    try {
-        const response = await getSystemHealthApi()
-        if (response.code === 1) {
-            const healthData = response.data
-            systemStatus.value = [
-                {
-                    id: 1,
-                    title: '系统运行',
-                    desc: healthData.status === 'healthy' ? '正常运行中' : '异常状态',
-                    status: healthData.status === 'healthy' ? 'online' : 'warning'
-                },
-                {
-                    id: 2,
-                    title: '系统可用性',
-                    desc: `可用性 ${healthData.availability || 0}%`,
-                    status: (healthData.availability || 0) >= 99 ? 'online' : 'warning'
-                },
-                {
-                    id: 3,
-                    title: '数据库',
-                    desc: '连接正常',
-                    status: 'online'
-                },
-                {
-                    id: 4,
-                    title: '网络状态',
-                    desc: '连接稳定',
-                    status: 'online'
-                }
-            ]
-        }
-    } catch (error) {
-        console.error('获取系统状态失败:', error)
-    } finally {
-        loading.value.status = false
-    }
-}
 
-// 获取最近活动
-const fetchRecentActivities = async () => {
-    loading.value.activities = true
-    try {
-        const response = await getRecentActivitiesApi()
-        if (response.code === 1) {
-            recentActivities.value = response.data.map((activity, index) => ({
-                id: activity.id,
-                icon: getActivityIcon(activity.type),
-                title: activity.title,
-                description: activity.description,
-                time: formatTime(activity.createTime)
-            }))
-        }
-    } catch (error) {
-        console.error('获取最近活动失败:', error)
-    } finally {
-        loading.value.activities = false
-    }
-}
+
+
 
 // 根据活动类型获取图标
 const getActivityIcon = (type) => {
@@ -336,48 +248,9 @@ const goToTeacherStats = () => {
             </div>
         </div>
 
-        <!-- 系统状态 -->
-        <div class="system-status">
-            <h2 class="section-title">
-                <i class="fas fa-server"></i>
-                系统状态
-                <span v-if="loading.status" class="loading-indicator">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </span>
-            </h2>
-            <div class="status-grid">
-                <div class="status-card" v-for="item in systemStatus" :key="item.id">
-                    <div :class="['status-indicator', item.status]"></div>
-                    <div class="status-content">
-                        <h4 class="status-title">{{ item.title }}</h4>
-                        <p class="status-desc">{{ item.desc }}</p>
-                    </div>
-                </div>
-            </div>
-        </div>
 
-        <!-- 最近活动 -->
-        <div class="recent-activities">
-            <h2 class="section-title">
-                <i class="fas fa-clock"></i>
-                最近活动
-                <span v-if="loading.activities" class="loading-indicator">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </span>
-            </h2>
-            <div class="activities-list">
-                <div class="activity-item" v-for="activity in recentActivities" :key="activity.id">
-                    <div class="activity-icon">
-                        <i :class="activity.icon"></i>
-                    </div>
-                    <div class="activity-content">
-                        <h4 class="activity-title">{{ activity.title }}</h4>
-                        <p class="activity-desc">{{ activity.description }}</p>
-                        <span class="activity-time">{{ activity.time }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
+
+    
     </div>
 </template>
 
@@ -672,10 +545,6 @@ const goToTeacherStats = () => {
     word-break: break-word;
 }
 
-/* 系统状态 */
-.system-status {
-    margin-bottom: clamp(24px, 4vw, 32px);
-}
 
 .status-grid {
     display: grid;
@@ -760,10 +629,6 @@ const goToTeacherStats = () => {
     word-break: break-word;
 }
 
-/* 最近活动 */
-.recent-activities {
-    margin-bottom: clamp(24px, 4vw, 32px);
-}
 
 .activities-list {
     background: rgba(255, 255, 255, 0.1);

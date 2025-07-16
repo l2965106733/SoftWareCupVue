@@ -381,7 +381,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">平均分</div>
-                <div class="card-value">{{ homeworkStats.averageScore }}</div>
+                <div class="card-value">{{ homeworkStats.averageScore.toFixed(2) }}</div>
                 <div class="card-desc">学习进度</div>
               </div>
               <div class="card-icon">

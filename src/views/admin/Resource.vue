@@ -417,7 +417,7 @@ onMounted(() => {
         
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
-            <div class="stat-value">{{ resourceStats.totalDownloads }}</div>
+            <div class="stat-value">{{ resourceStats.downloadCount }}</div>
             <div class="stat-label">总下载量</div>
           </div>
           <el-icon class="stat-icon"><Download /></el-icon>

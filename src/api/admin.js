@@ -27,12 +27,6 @@ export const getSystemOverviewApi = () => request.get("/admin/systemOverview");
 // 2. 获取用户活跃度数据
 export const getUserActivityApi = () => request.get("/admin/userActivity");
 
-// 3. 获取系统使用情况
-export const getSystemUsageApi = () => request.get("/admin/systemUsage");
-
-// 4. 获取系统健康状态
-export const getSystemHealthApi = () => request.get("/admin/systemHealth");
-
 // 5. 获取用户活跃度趋势
 export const getUserActivityTrendApi = (params) => request.get('/admin/userActivityTrend', { params });
 

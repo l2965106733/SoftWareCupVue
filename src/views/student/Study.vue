@@ -94,7 +94,6 @@ const loadDetailedStats = async () => {
       resourceProgress.value = progressResult.data.map(item => ({
         id: item.resourceId,
         name: item.resourceName,
-        progress: Math.round(item.progress || 0),
         studyTime: Math.floor((item.studyDuration || 0) / 60),
         lastStudyTime: item.lastStudyTime || '暂无'
       }))
@@ -522,7 +521,7 @@ const loadCoursewareList = async () => {
         uploadTime: item.upload_time || item.uploadTime || '未知时间',
         size: formatFileSize(item.file_size || item.fileSize),
         url: item.resource_url || item.resourceUrl || '',
-        studyProgress: item.study_progress || item.studyProgress || 0, // 学习进度
+    
         lastStudyTime: item.last_study_time || item.lastStudyTime || '暂无'       // 最后学习时间
       }))
 
@@ -919,7 +918,7 @@ onBeforeUnmount(() => {
                     <span class="teacher-name">发布教师：{{ courseware.teacher }}</span>
                     <span class="upload-time">上传时间：{{ courseware.uploadTime }}</span>
                     <span class="file-size">文件大小：{{ courseware.size }}</span>
-                    <span class="study-progress">学习进度：{{ courseware.studyProgress }}%</span>
+              
                     <span class="last-study-time">最后学习：{{ courseware.lastStudyTime }}</span>
                   </div>
                 </div>
@@ -975,9 +974,8 @@ onBeforeUnmount(() => {
             <div v-for="item in resourceProgress" :key="item.id" class="progress-item">
               <div class="progress-info">
                 <span class="resource-name">{{ item.name }}</span>
-                <span class="progress-percent">{{ item.progress }}%</span>
+          
               </div>
-              <el-progress :percentage="item.progress" :stroke-width="8" />
               <div class="progress-time">
                 学习时长: {{ item.studyTime }}分钟 | 最后学习: {{ item.lastStudyTime }}
               </div>
