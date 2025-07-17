@@ -42,6 +42,7 @@ export const submitHomeworkApi = (data) => request.post("/student/homework/submi
 
 export const getHomeworkStatsApi = (studentId) => request.get(`/student/homework/stats/${studentId}`);
 
+export const getAnalysisApi = (data) => request.post("/student/homework/analysis", data);
 // ==================== 互动问答相关接口 ====================
 
 export const submitQuestionApi = (data) => request.post("/student/interact/questionSubmit", data);
@@ -53,17 +54,12 @@ export const getQuestionDetailApi = (questionId) => request.get(`/student/intera
 // 评价教师回答
 export const rateAnswerApi = (data) => request.post("/student/interact/questionRate", data);
 
-
+export const getQuestionApi = (data) => request.post("/student/study/generateAIQuestion", data);
 
 export const getInteractStatsApi = (studentId) => request.get(`/student/interact/stats/${studentId}`);
 
 export const getTeacherIdApi = (studentId) => request.get(`/student/interact/teacherId/${studentId}`);
 
-
-
-// ==================== 评分系统相关接口 ====================
-
-// 提交评分（只包含rating分数）
 export const submitRatingApi = (questionId, rating) => request.post("/student/interact/rating/submit", { questionId, rating });
 
 // 获取特定问题的评分

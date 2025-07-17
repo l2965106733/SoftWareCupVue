@@ -6,8 +6,10 @@ import {
   getHomeworkDetailApi, 
   saveHomeworkDraftApi, 
   submitHomeworkApi, 
-  getHomeworkStatsApi 
+  getHomeworkStatsApi,
+  getAnalysisApi
 } from '@/api/student'
+import Analysis from '../teacher/Analysis.vue'
 
 // 过滤状态
 const filterStatus = ref('all')
@@ -232,6 +234,8 @@ const startHomework = async (homework) => {
         ...homework,
         questions: result.data || []  // 直接使用返回的数组
       }
+
+
       
       // 初始化答案对象
       currentAnswers.value = {}
@@ -329,6 +333,23 @@ onMounted(() => {
   loadHomeworkList()
   loadHomeworkStats()
 })
+
+const analysisMap = ref({})
+
+const fetchQuestionAnalysis = async (question) => {
+  try {
+    const res = await getAnalysisApi({
+      content: question.content,
+      answer: question.answer,
+      knowledge: question.knowledge
+    })
+
+    analysisMap.value[question.id] = res.data || '暂无分析结果'
+  } catch (e) {
+    analysisMap.value[question.id] = '诊断失败'
+  }
+}
+
 </script>
 
 <template>
@@ -535,15 +556,32 @@ onMounted(() => {
               
               <!-- 显示得分（已批改） -->
               <div v-if="currentHomework.status === 2 && question.score !== undefined" class="question-score-display">
+                
+                <div v-if="!analysisMap[question.id]">
+                  <span :data-id="question.id" v-once>
+                    {{ fetchQuestionAnalysis(question) }}
+                  </span>
+                </div>
+                
+                <div class="question-explain" style="margin-top: 8px;">
+                  <strong>错误诊断：</strong>
+                  <div style="white-space: pre-wrap; color: #666;">{{analysisMap[question.id] || '诊断中...'}}</div>
+                </div>
+                
+                
                 <div class="question-answer" style="margin-top: 8px;">
                 <strong>标准答案：</strong>
                 <div style="white-space: pre-wrap; color: #409eff;">{{ question.answer || '暂无' }}</div>
-              </div>
-              <div class="question-explain" style="margin-top: 8px;">
-                <strong>解析：</strong>
-                <div style="white-space: pre-wrap; color: #666;">{{ question.explain || '暂无' }}</div>
+              
+                <div class="question-explain" style="margin-top: 8px;">
+                  <strong>解析：</strong>
+                  <div style="white-space: pre-wrap; color: #666;">{{ question.explain || '暂无' }}</div>
+                </div>
+              
+        
               </div>
 
+              
                 <span class="score-label">得分：</span>
                 <span 
                   class="score-value" 
@@ -829,7 +867,7 @@ onMounted(() => {
 
 .question-score-display {
   margin-top: 12px;
-  text-align: right;
+  text-align: left;
 }
 
 .score-label {

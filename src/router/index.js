@@ -18,7 +18,8 @@ const routes = [
           { path: 'home', name: 'StudentHome', component: () => import('@/views/student/Home.vue') },
           { path: 'study', name: 'StudentStudy', component: () => import('@/views/student/Study.vue') },
           { path: 'practise', name: 'StudentPractise', component: () => import('@/views/student/Practise.vue') },
-          { path: 'interact', name: 'StudentInteract', component: () => import('@/views/student/Interact.vue') }
+          { path: 'interact', name: 'StudentInteract', component: () => import('@/views/student/Interact.vue') },
+          { path: 'aiStudy', name: 'StudentAIStudy', component: () => import('@/views/student/AIStudy.vue')}
         ]
       }
     ]

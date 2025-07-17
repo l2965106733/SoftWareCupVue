@@ -30,6 +30,10 @@ export const getUserActivityApi = () => request.get("/admin/userActivity");
 // 5. 获取用户活跃度趋势
 export const getUserActivityTrendApi = (params) => request.get('/admin/userActivityTrend', { params });
 
+export const getTopKnowledgeScoreApi = () => request.get("/admin/topKnowledgeScore");
+
+export const getKnowledgeDistributionApi = (params) => request.get("/admin/knowledgeDistribution",{ params })
+
 // ==================== 管理员首页专用接口 ====================
 
 // 获取最近活动记录（管理员首页专用）

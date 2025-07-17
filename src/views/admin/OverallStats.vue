@@ -4,9 +4,110 @@ import { ElMessage } from 'element-plus'
 import { 
   getSystemOverviewApi,
   getUserActivityApi,
-  getUserActivityTrendApi
+  getUserActivityTrendApi,
+  getTopKnowledgeScoreApi,
+  getKnowledgeDistributionApi
 } from '@/api/admin'
 import dayjs from 'dayjs'
+
+
+const barOption = ref({})
+const pieOption = ref({})
+const pieTitle = ref('知识点掌握分布')
+
+const loadBarChart = async () => {
+  const res = await getTopKnowledgeScoreApi();
+  const rawData = res.data || []
+
+  const data = rawData.filter(item => item.knowledge)
+
+  const colors = ['#5470C6', '#91CC75', '#EE6666']
+
+barOption.value = {
+  tooltip: {
+    trigger: 'axis',
+    axisPointer: { type: 'shadow' },
+    formatter: '{b}: {c}%'
+  },
+  grid: {
+    left: 10, // 纵坐标
+    top: 10,
+    bottom: 10,
+    right: 10,
+    containLabel: true
+  },
+  xAxis: {
+    type: 'value',
+    max: 100,
+    axisLabel: { formatter: '{value}%' }
+  },
+  yAxis: {
+    type: 'category',
+    data: data.map(item => item.knowledge),
+    inverse: true,
+    axisLabel: {
+      overflow: 'ellipsis', 
+      width: 150  
+    }
+  },
+  series: [{
+    type: 'bar',
+    name: '得分率',
+    data: data.map(item => item.scoreRate), 
+    label: {
+      show: true,
+      position: 'right',
+      formatter: '{c}%'
+    },
+    itemStyle: {
+      color: function (params) {
+        return colors[params.dataIndex % colors.length]
+      }
+    }
+  }]
+}
+  if (data.length > 0) {
+    loadPieChart(data[0].knowledge)
+  }
+}
+
+
+const loadPieChart = async (knowledgeName) => {
+  const res = await getKnowledgeDistributionApi({
+    knowledgeName: knowledgeName
+  })
+  const dist = res.data // 格式：[{ label: '掌握好', count: 15 }, ...]
+
+  pieTitle.value = `${knowledgeName} 知识点情况掌握分布`
+  pieOption.value = {
+    tooltip: {
+      trigger: 'item',
+      formatter: '{b}: {c}人 ({d}%)'
+    },
+    legend: {
+      bottom: 0,
+      data: dist.map(item => item.label)
+    },
+    series: [{
+      type: 'pie',
+      radius: '60%',
+      data: dist.map(item => ({
+        name: item.label,
+        value: item.count
+      })),
+      label: {
+        formatter: '{b}: {c}人 ({d}%)'
+      }
+    }]
+  }
+}
+
+const onBarClick = (params) => {
+  if (params?.name) {
+    loadPieChart(params.name)
+  }
+}
+
 
 // 加载状态
 const loading = ref({
@@ -193,6 +294,9 @@ const userActivityTrendOption = computed(() => {
 // 初始化
 onMounted(() => {
   loadAllData()
+  setTimeout(() => {
+    loadBarChart()
+  }, 100)
 })
 </script>
 
@@ -279,7 +383,7 @@ onMounted(() => {
         <div class="activity-stats">
           <div class="activity-item">
             <div class="activity-label">今日活跃用户</div>
-            <div class="activity-value">{{ userActivity.todayActive }}</div>
+            <div class="activity-value">{{ userActivity.uniqueLogins }}</div>
           </div>
           
           <div class="activity-item">
@@ -287,20 +391,13 @@ onMounted(() => {
             <div class="activity-value">{{ userActivity.todayNewUsers }}</div>
           </div>
           
-          <div class="activity-item">
-            <div class="activity-label">平均会话时长</div>
-            <div class="activity-value">{{ formatUptime(userActivity.avgSessionTime) }}</div>
-          </div>
           
           <div class="activity-item">
             <div class="activity-label">总登录次数</div>
             <div class="activity-value">{{ userActivity.totalLogins }}</div>
           </div>
           
-          <div class="activity-item">
-            <div class="activity-label">独立登录用户</div>
-            <div class="activity-value">{{ userActivity.uniqueLogins }}</div>
-          </div>
+
         </div>
         
         <!-- 用户活跃度趋势图 -->
@@ -308,12 +405,58 @@ onMounted(() => {
           <div class="chart-title">用户活跃度趋势（近7天）</div>
           <vue-echarts :option="userActivityTrendOption" style="height: 300px;" />
         </div>
+        
+
+
       </el-card>
+
+
+      <el-card shadow="never" class="activity-card" v-loading="loading.activity">
+        <div class="card-header">
+          <h4>
+            <el-icon><DataAnalysis /></el-icon>
+            知识点掌握分析
+          </h4>
+        </div>
+        <div class="charts-container">
+          <!-- 条形图区域 -->
+          <div class="chart-box">
+            <div class="chart-title">知识点得分率 Top5</div>
+            <vue-echarts :option="barOption" style="height: 300px;" @click="onBarClick"/>
+          </div>
+
+        </div>
+        
+        <div class="charts-container">
+          <!-- 饼图区域 -->
+          <div class="chart-box">
+            <div class="chart-title">{{ pieTitle }}</div>
+            <vue-echarts :option="pieOption" style="height: 300px"/>
+          </div>
+        </div>
+      </el-card>
+
+
     </div>
   </div>
 </template>
 
 <style scoped>
+.charts-container {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+.chart-box {
+  width: 100%;
+}
+.chart-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
 .overall-stats-container {
   padding: 24px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -406,6 +549,7 @@ onMounted(() => {
 }
 
 .activity-card {
+  margin-top: 25px;
   border-radius: 12px;
   border: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);

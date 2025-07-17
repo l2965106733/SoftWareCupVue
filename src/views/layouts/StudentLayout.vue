@@ -74,6 +74,10 @@ const logOut = () => {
                         <i class="fas fa-home nav-icon"></i>
                         <span class="nav-text">首页</span>
                     </router-link>
+                    <router-link to="/student/aiStudy" class="nav-item" active-class="active">
+                        <i class="fas fa-comments nav-icon"></i>
+                        <span class="nav-text">AI助手</span>
+                    </router-link>
                     <router-link to="/student/study" class="nav-item" active-class="active">
                         <i class="fas fa-book nav-icon"></i>
                         <span class="nav-text">学习模块</span>

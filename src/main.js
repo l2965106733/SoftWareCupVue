@@ -8,7 +8,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VueECharts from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
-import { LineChart } from 'echarts/charts'
+import { LineChart,BarChart,PieChart } from 'echarts/charts'
 import {
   TitleComponent,
   TooltipComponent,
@@ -22,6 +22,8 @@ import './styles/theme.css'
 use([
   CanvasRenderer,
   LineChart,
+  BarChart,
+  PieChart,
   TitleComponent,
   TooltipComponent,
   LegendComponent,

@@ -98,12 +98,11 @@ const handleAIGenerate = async () => {
       })
       // 重置保存状态，允许重新保存
       hasSavedInCurrentSession.value = false
-      ElMessage.success('AI成功生成了题目！')
+      ElMessage.success(`AI成功生成了${aiFormData.value.count}道题目！`)
     } else {
       ElMessage.error(result.msg || '生成失败')
     }
 
-    ElMessage.success(`AI成功生成了${aiFormData.value.count}道题目！`)
     showAIDialogVisible.value = false
 
     // 重置表单

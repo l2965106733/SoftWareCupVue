@@ -1,23 +1,117 @@
 <script setup>
-import { ref, computed, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAiQuestionHistoryApi, getChatApi, getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, recordAiQuestionApi, getStudyRecordsApi } from '@/api/student'
+import { getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, getQuestionApi, getStudyRecordsApi } from '@/api/student'
 import { CircleClose } from '@element-plus/icons-vue'
 
+// AI对话框相关
+const showAIDialogVisible = ref(false)
+const isGenerating = ref(false)
+const aiFormRef = ref()
+const questions = ref([
+  {
+    id: -1,
+    type: 'choice',
+    content: '以下哪个关键字用于创建 Java 类的实例？',
+    knowledge: 'Java基础语法',
+    answer: 'new',
+    explain: '在 Java 中，使用 new 关键字可以创建类的实例。',
+  },
+  {
+    id: -2,
+    type: 'short',
+    content: '简要说明 Java 中的多态特性。',
+    knowledge: 'Java面向对象',
+    answer: '多态是指相同的接口，不同的实现。可以通过方法重写或接口实现实现多态。',
+    explain: '多态提高了程序的扩展性和可维护性，是面向对象编程的重要特性。',
+  },
+  {
+    id: -3,
+    type: 'code',
+    content: '编写一个 Java 方法，判断一个整数是否为质数。',
+    knowledge: 'Java算法基础',
+    answer:
+`public boolean isPrime(int n) {
+  if (n <= 1) return false;
+  for (int i = 2; i <= Math.sqrt(n); i++) {
+    if (n % i == 0) return false;
+  }
+  return true;
+}`,
+    explain: '判断质数的常用方法是从 2 遍历到 √n，若存在能整除 n 的数，则不是质数。',
+  }
+])
 
-// AI聊天相关
-const inputMessage = ref('')
-const selectedFiles = ref([])  // 改为数组支持多个文件
-const sending = ref(false)
-const aiTyping = ref(false)
-const chatMessages = ref(null)
-const fileUpload = ref(null)
-const uploadHeaders = computed(() => {
-  const loginUser = JSON.parse(localStorage.getItem('loginUser') || '{}');
-  return {
-    token: loginUser.token || ''
-  };
-});
+const tempIdCounter = ref(-1)
+
+// AI表单数据
+const aiFormData = ref({
+  knowledge: '',
+  type: '',
+  count: 3,
+  remark: ''
+})
+
+// 显示AI对话框
+const showAIDialog = () => {
+  showAIDialogVisible.value = true
+}
+
+// 关闭AI对话框
+const handleCloseAIDialog = () => {
+  if (isGenerating.value) {
+    ElMessage.warning('正在生成题目，请稍候...')
+    return false
+  }
+  showAIDialogVisible.value = false
+  // 重置表单
+  aiFormData.value = {
+    knowledge: '',
+    type: '',
+    count: 3,
+    remark: ''
+  }
+}
+
+// AI生成题目
+const handleAIGenerate = async () => {
+  // 验证表单
+  const valid = await aiFormRef.value.validate().catch(() => false)
+  if (!valid) return
+
+  isGenerating.value = true
+
+  try {
+    ElMessage.info('AI正在分析知识点并生成题目...')
+
+    const result = await getQuestionApi(aiFormData.value)
+    if (result.code === 1 && Array.isArray(result.data)) {
+      // AI生成的题目给临时ID，并自动设置分值
+      
+      questions.value = result.data.map(q => ({
+      ...q,
+      id: tempIdCounter.value-- // 每次生成一个唯一负数 ID
+      }))
+      ElMessage.success(`AI成功生成了${aiFormData.value.count}道题目！`)
+    } else {
+      ElMessage.error(result.msg || '生成失败')
+    }
+    showAIDialogVisible.value = false
+
+    // 重置表单
+    aiFormData.value = {
+      knowledge: '',
+      type: '',
+      count: 3,
+      remark: ''
+    }
+
+  } catch (error) {
+    ElMessage.error('AI生成题目失败，请重试')
+  } finally {
+    isGenerating.value = false
+  }
+}
 
 // 课件数据
 const coursewareList = ref([])
@@ -30,16 +124,6 @@ const activeStudyResources = ref(new Set()) // 当前正在学习的资源
 const pausedStudyResources = ref(new Set()) // 暂停的学习资源
 const realTimeStudyTime = ref({})   // 实时学习时长显示
 
-// AI对话历史
-const chatHistory = ref([
-  {
-    id: 'welcome',
-    sender: 'ai',
-    type: 'ai-reply',
-    content: '你好！我是你的AI学习助手，可以帮你解答学习中的各种问题。有什么问题尽管问我吧！',
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-])
 
 // 统计数据
 const totalCourseware = ref(0)
@@ -338,136 +422,6 @@ const downloadCourseware = async (courseware) => {
 }
 
 
-const beforeUpload = (file) => { // 检查文件大小（限制10MB）
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  if (file.size > maxSize) {
-    ElMessage.error('文件大小不能超过10MB');
-    return false; // 阻止文件上传
-  }
-
-  // 检查文件数量（限制5个文件）
-  if (selectedFiles.value.length >= 5) {
-    ElMessage.error('最多只能上传5个文件');
-    return false; // 阻止文件上传
-  }
-
-  ElMessage.success(`已选择${selectedFiles.value.length + 1}个文件`);
-  return true; // 允许上传
-};
-
-const handleUploadSuccess = (res, file) => {
-  console.log("文件上传成功", res, file)
-  // 上传成功时的回调处理
-  if (res.code === 1) {
-    file.url = res.data.url || res.data; // 设置上传成功后的文件 URL
-  }
-  console.log("文件上传成功", file);
-};
-
-const removeFile = (file) => {
-  if (file) {
-    // 移除指定文件
-    const index = selectedFiles.value.findIndex(f => f.uid === file.uid)
-    if (index > -1) {
-      selectedFiles.value.splice(index, 1)
-    }
-  } else {
-    // 清空所有文件
-    selectedFiles.value = []
-    if (fileUpload.value) {
-      fileUpload.value.clearFiles()
-    }
-  }
-}
-
-const sendMessage = async () => {
-  if (!inputMessage.value.trim() && selectedFiles.value.length === 0) {
-    ElMessage.warning('请输入问题或上传文件')
-    return
-  }
-
-  sending.value = true
-
-  // 添加用户消息
-  const userMessage = {
-    id: Date.now(),
-    sender: 'user',
-    type: selectedFiles.value.length > 0 ? 'file' : 'text',
-    content: inputMessage.value || (selectedFiles.value.length > 0 ?
-      `上传了${selectedFiles.value.length}个文件：${selectedFiles.value.map(f => f.name).join(', ')}` : ''),
-    fileNames: selectedFiles.value.map(f => f.name),
-    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-
-  chatHistory.value.push(userMessage)
-
-  // 保存问题信息和文件URLs
-  const question = inputMessage.value
-  const fileUrls = selectedFiles.value.length > 0 ?
-    selectedFiles.value.map(file => file.url).filter(url => url) : []  // 文件URL数组
-
-  // 清空输入
-  inputMessage.value = ''
-  removeFile()  // 清空所有文件
-
-  // 滚动到底部
-  await nextTick()
-  scrollToBottom()
-
-  // 显示AI正在输入
-  aiTyping.value = true
-
-  try {
-    const result = await getChatApi({
-      question: question,
-      fileUrls: fileUrls  // 传递文件URL数组
-    })
-
-    if (result.code === 1 && result.data) {
-      // 添加AI回复消息，直接使用返回的纯文本
-      const aiMessage = {
-        id: Date.now() + 1,
-        sender: 'ai',
-        type: 'ai-reply',
-        content: result.data,  // 直接使用返回的字符串
-        time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-      }
-      chatHistory.value.push(aiMessage)
-      ElMessage.success('AI回复成功！')
-
-      // 记录AI提问到后端
-      try {
-        const studentId = getCurrentStudentId()
-        if (studentId) {
-          await recordAiQuestionApi({
-            studentId: studentId,
-            questionContent: userMessage.content,
-            answer: result.data  // 使用纯文本答案测问题分类
-          })
-        }
-      } catch (error) {
-        console.error('记录AI提问失败:', error)
-      }
-
-      // 更新统计数据
-      loadStudyStats()
-    } else {
-      ElMessage.error(result.msg || '生成失败')
-    }
-
-  } catch (error) {
-    ElMessage.error('AI回复失败，请重试')
-  } finally {
-    aiTyping.value = false
-    sending.value = false
-    await nextTick()
-    scrollToBottom()
-  }
-}
-
-
-
-
 const formatFileSize = (bytes) => {
   // 处理空值和无效值
   if (!bytes || bytes === null || bytes === undefined || isNaN(bytes) || bytes <= 0) {
@@ -480,11 +434,6 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-const scrollToBottom = () => {
-  if (chatMessages.value) {
-    chatMessages.value.scrollTop = chatMessages.value.scrollHeight
-  }
-}
 
 // 格式化学习时长显示
 const formatStudyTime = (seconds) => {
@@ -521,7 +470,7 @@ const loadCoursewareList = async () => {
         uploadTime: item.upload_time || item.uploadTime || '未知时间',
         size: formatFileSize(item.file_size || item.fileSize),
         url: item.resource_url || item.resourceUrl || '',
-    
+
         lastStudyTime: item.last_study_time || item.lastStudyTime || '暂无'       // 最后学习时间
       }))
 
@@ -608,54 +557,44 @@ const handleVisibilityChange = () => {
   }
 }
 
-// 加载AI聊天历史
-const loadChatHistory = async () => {
-  try {
-    const studentId = getCurrentStudentId()
-    if (!studentId) return
-    const result = await getAiQuestionHistoryApi(studentId, { limit: 50 })
-    if (result.code === 1 && Array.isArray(result.data)) {
-      // 历史消息：每条数据库记录拆分为两条消息
-      const history = []
-      result.data.forEach(item => {
-        history.push({
-          id: `q_${item.id}`,
-          sender: 'user',
-          type: 'user-question',
-          content: item.questionContent,
-          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-        })
-        history.push({
-          id: `a_${item.id}`,
-          sender: 'ai',
-          type: 'ai-reply',
-          content: item.aiResponse,
-          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-        })
-      })
-      // 保留开场白+历史
-      chatHistory.value = [chatHistory.value[0], ...history]
-    }
-  } catch (error) {
-    console.error('加载AI聊天历史失败:', error)
+// 获取题型颜色
+const getTypeColor = (type) => {
+  const colorMap = {
+    choice: 'primary',
+    short: 'success',
+    code: 'warning'
   }
+  return colorMap[type] || 'info'
 }
 
+// 获取题型名称
+const getTypeName = (type) => {
+  const typeMap = {
+    choice: '选择题',
+    short: '简答题',
+    code: '编程题'
+  }
+  return typeMap[type] || '未知题型'
+}
+
+const removeQuestion = (id) => {
+  questions.value = questions.value.filter(q => q.id !== id)
+}
+
+const clearQuestions = () => {
+  questions.value = []
+  tempIdCounter.value = -1 // 可选：重置 ID 起点
+}
 
 // 初始化
 onMounted(() => {
   console.log('学生学习模块初始化')
   loadCoursewareList()
   loadStudyStats()
-  loadChatHistory() // 加载AI聊天历史
-  scrollToBottom()
-
   // 启动实时学习时长显示
   startRealTimeDisplay()
-
   // 监听页面可见性变化
   document.addEventListener('visibilitychange', handleVisibilityChange)
-
   // 监听页面刷新和关闭
   window.addEventListener('beforeunload', stopAllStudyTimers)
 })
@@ -671,130 +610,6 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="student-study-layout">
-    <!-- 左侧AI助手区域 -->
-    <div class="left-panel">
-      <!-- AI互动提问区域 -->
-      <div class="ai-section">
-        <el-card shadow="hover">
-          <div class="section-header">
-            <h3>
-              <el-icon>
-                <ChatDotRound />
-              </el-icon>
-              AI学习助手
-            </h3>
-          </div>
-
-          <div class="chat-container">
-            <div ref="chatMessages" class="chat-messages">
-              <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
-                <!-- 用户消息 -->
-                <div v-if="message.sender === 'user'" class="user-message">
-                  <div class="message-content">
-                    {{ message.content }}
-                    <!-- 显示上传的文件信息 -->
-                    <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
-                      <div class="files-indicator">
-                        <el-icon>
-                          <Paperclip />
-                        </el-icon>
-                        附件 ({{ message.fileNames.length }})
-                      </div>
-                      <div class="file-names">
-                        <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
-                          {{ fileName }}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="message-time">{{ message.time }}</div>
-                </div>
-
-                <!-- AI回复 -->
-                <div v-else class="ai-message">
-                  <div class="message-content">{{ message.content }}</div>
-                  <div class="message-time">{{ message.time }}</div>
-                </div>
-              </div>
-
-              <!-- AI正在输入 -->
-              <div v-if="aiTyping" class="message-item ai typing">
-                <div class="ai-message">
-                  <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 输入区域 -->
-            <div class="chat-input">
-              <div class="input-toolbar">
-                <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
-                  :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
-                  class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
-                  <el-button type="info" size="small" text>
-                    <el-icon>
-                      <Paperclip />
-                    </el-icon>
-                    上传文件 (最多5个)
-                  </el-button>
-                </el-upload>
-
-                <div class="file-preview" v-if="selectedFiles.length > 0">
-                  <div class="file-list-header">
-                    <span>已选择 {{ selectedFiles.length }} 个文件</span>
-                    <el-button type="danger" size="small" text @click="removeFile()">
-                      <el-icon>
-                        <Delete />
-                      </el-icon>
-                      清空全部
-                    </el-button>
-                  </div>
-                  <div class="file-list">
-                    <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
-                      <div class="file-preview-icon">
-                        <el-icon v-if="file.type?.includes('image')">
-                          <Picture />
-                        </el-icon>
-                        <el-icon v-else-if="file.type?.includes('pdf')">
-                          <Document />
-                        </el-icon>
-                        <el-icon v-else>
-                          <Paperclip />
-                        </el-icon>
-                      </div>
-                      <div class="file-preview-info">
-                        <span class="file-preview-name">{{ file.name }}</span>
-                        <span class="file-preview-size">{{ formatFileSize(file.size) }}</span>
-                      </div>
-                      <el-button type="danger" size="small" text @click="removeFile(file)">
-                        <el-icon>
-                          <Close />
-                        </el-icon>
-                      </el-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="message-input">
-                <el-input v-model="inputMessage" type="textarea" :rows="3" placeholder="请输入您的问题..."
-                  @keydown.ctrl.enter="sendMessage" :disabled="sending" />
-                <el-button type="primary" @click="sendMessage" :loading="sending" class="send-button">
-                  <el-icon>
-                    <Promotion />
-                  </el-icon>
-                  发送
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </el-card>
-      </div>
-    </div>
 
     <!-- 右侧内容区域 -->
     <div class="right-panel">
@@ -895,8 +710,12 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="courseware-list">
-            <div v-for="courseware in coursewareList" :key="courseware.id" class="courseware-item"
-              @click="handlePreview(courseware)">
+            <div
+              v-for="courseware in coursewareList"
+              :key="courseware.id"
+              class="courseware-item"
+            >
+            
               <div class="courseware-info">
                 <div class="file-icon">
                   <el-icon v-if="courseware.type === 'pdf'">
@@ -918,21 +737,31 @@ onBeforeUnmount(() => {
                     <span class="teacher-name">发布教师：{{ courseware.teacher }}</span>
                     <span class="upload-time">上传时间：{{ courseware.uploadTime }}</span>
                     <span class="file-size">文件大小：{{ courseware.size }}</span>
-              
-                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div class="courseware-actions" @click.stop>
-                <el-button type="success" size="small" @click="downloadCourseware(courseware)">
-                  <el-icon>
-                    <Download />
-                  </el-icon>
+              <div class="courseware-actions">
+                <el-button
+                  type="primary"
+                  size="small"
+                  @click.stop="handlePreview(courseware)"
+                >
+                  <el-icon><View /></el-icon>
+                  预览
+                </el-button>
+                <el-button
+                  type="success"
+                  size="small"
+                  @click.stop="downloadCourseware(courseware)"
+                >
+                  <el-icon><Download /></el-icon>
                   下载
                 </el-button>
               </div>
             </div>
           </div>
+
         </el-card>
       </div>
     </div>
@@ -966,11 +795,115 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
- 
+
       </div>
       <!-- 移除footer按钮 -->
     </el-dialog>
   </div>
+
+  <div class="control-section">
+    <el-card shadow="hover">
+      <div class="control-header">
+        <h3>题目生成(自行保存)</h3>
+      </div>
+
+      <div class="button-group">
+        <el-button type="primary" @click="showAIDialog" size="large">
+          <el-icon>
+            <MagicStick />
+          </el-icon>
+          AI 生成题目
+        </el-button>
+        <el-button type="primary" @click="clearQuestions" size="large">
+          <el-icon>
+            <MagicStick />
+          </el-icon>
+          清空生成题目
+        </el-button>
+      </div>
+    </el-card>
+    
+  </div>
+
+  <div class="question-block" v-for="(q, index) in questions" :key="q.id">
+  <div class="question-header">
+    <h4>题目 {{ index + 1 }}</h4>
+    <div>
+      <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
+    </div>
+  </div>
+
+  <div class="question-content">
+    <p><strong>题干：</strong>{{ q.content }}</p>
+    <p><strong>知识点：</strong>{{ q.knowledge }}</p>
+    <p><strong>答案：</strong>{{ q.answer }}</p>
+    <p><strong>解析：</strong>{{ q.explain }}</p>
+  </div>
+
+  <div class="question-actions">
+    <el-button type="danger" size="small" @click="removeQuestion(q.id)">
+      <el-icon><Close /></el-icon>
+      删除
+    </el-button>
+  </div>
+
+  <el-divider />
+</div>
+
+
+  <!-- AI生成题目对话框 -->
+  <el-dialog v-model="showAIDialogVisible" title="AI 生成题目" width="600px" :before-close="handleCloseAIDialog">
+    <div class="ai-dialog-content">
+      <el-form label-width="80px" :model="aiFormData" ref="aiFormRef">
+        <el-form-item label="知识点" prop="knowledge" :rules="[{ required: true, message: '请输入知识点', trigger: 'blur' }]">
+          <el-input v-model="aiFormData.knowledge" placeholder="请输入知识点，如：JAVA面向对象编程" type="textarea" :rows="3" />
+          <div class="form-tips">
+            💡 提示：请详细描述知识点内容，AI将根据此内容生成相关题目
+          </div>
+        </el-form-item>
+
+        <el-form-item label="题型" prop="type" :rules="[{ required: true, message: '请选择题型', trigger: 'change' }]">
+          <el-select v-model="aiFormData.type" placeholder="请选择题型" style="width: 100%">
+            <el-option label="选择题" value="choice">
+              <span>选择题</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">快速判断基础知识</span>
+            </el-option>
+            <el-option label="简答题" value="short">
+              <span>简答题</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">考察理解和表达能力</span>
+            </el-option>
+            <el-option label="编程题" value="code">
+              <span>编程题</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">实际编程能力测试</span>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="题目数量">
+          <el-input-number v-model="aiFormData.count" :min="1" :max="10" placeholder="题目数量" style="width: 200px" />
+          <div class="form-tips">
+            建议：选择题 3-5道，简答题 2-3道，编程题 1-2道
+          </div>
+        </el-form-item>
+
+        <el-form-item label="额外要求">
+          <el-input v-model="aiFormData.remark" placeholder="可选：特殊要求或注意事项" type="textarea" :rows="2" />
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <template #footer>
+      <span class="dialog-footer">
+        <el-button @click="handleCloseAIDialog">取消</el-button>
+        <el-button type="primary" @click="handleAIGenerate" :loading="isGenerating">
+          <el-icon>
+            <MagicStick />
+          </el-icon>
+          {{ isGenerating ? 'AI生成中...' : '开始生成' }}
+        </el-button>
+      </span>
+    </template>
+  </el-dialog>
 </template>
 
 <style scoped>
@@ -1029,250 +962,54 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-/* AI聊天区域 */
-.ai-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+
+
+/* 卡片样式 */
+.el-card {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  border: none !important;
 }
 
-.ai-section .el-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.el-card :deep(.el-card__body) {
+  padding: 24px;
 }
 
-.ai-section .el-card :deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* 控制区域 */
+.control-section {
+  flex-shrink: 0;
 }
 
-.chat-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
+.control-header {
+  margin-bottom: 20px;
+  text-align: center;
 }
 
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f9f9f9;
-  margin-bottom: 16px;
-}
-
-.message-item {
-  margin-bottom: 16px;
-}
-
-.message-item.user {
-  text-align: right;
-}
-
-.message-item.ai {
-  text-align: left;
-}
-
-.user-message,
-.ai-message {
-  display: inline-block;
-  max-width: 70%;
-  text-align: left;
-}
-
-.user-message .message-content {
-  background: #409eff;
-  color: white;
-  padding: 12px 16px;
-  border-radius: 18px 18px 4px 18px;
-  word-wrap: break-word;
-}
-
-.ai-message .message-content {
-  background: white;
-  color: #333;
-  padding: 12px 16px;
-  border-radius: 18px 18px 18px 4px;
-  border: 1px solid #e0e0e0;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-}
-
-.message-time {
-  font-size: 12px;
-  color: #999;
-  margin-top: 4px;
-}
-
-/* 聊天消息中的文件显示样式 */
-.message-files {
-  margin-top: 8px;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.files-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
-.file-names {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.file-name {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 2px 6px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  word-break: break-all;
-}
-
-.typing-indicator {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 12px 16px;
-  background: white;
-  border-radius: 18px 18px 18px 4px;
-  border: 1px solid #e0e0e0;
-}
-
-.typing-indicator span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #409eff;
-  animation: typing 1.4s infinite ease-in-out;
-}
-
-.typing-indicator span:nth-child(1) {
-  animation-delay: -0.32s;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: -0.16s;
-}
-
-@keyframes typing {
-
-  0%,
-  80%,
-  100% {
-    transform: scale(0);
-    opacity: 0.5;
-  }
-
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* 输入区域 */
-.chat-input {
-  border-top: 1px solid #e0e0e0;
-  padding-top: 16px;
-}
-
-.input-toolbar {
-  margin-bottom: 12px;
-}
-
-.file-preview {
-  margin-top: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.file-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding: 0 4px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.file-list-header span {
+.control-header h3 {
+  margin: 0;
   color: #2c3e50;
-}
-
-.file-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
-  font-size: 13px;
-  border: 1px solid #e8e8e8;
-  transition: all 0.2s ease;
-}
-
-.file-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
-}
-
-.file-preview-icon {
-  color: #409eff;
-}
-
-.file-preview-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.file-preview-name {
+  font-size: 20px;
   font-weight: 600;
-  color: #333;
 }
 
-.file-preview-size {
-  font-size: 12px;
-  color: #666;
+.button-group {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
 }
 
-.message-input {
-  display: flex;
-  gap: 12px;
-  align-items: flex-end;
+.button-group .el-button {
+  height: 60px;
+  font-size: 16px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
-.message-input .el-textarea {
-  flex: 1;
+.button-group .el-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
-.send-button {
-  height: 40px;
-}
 
 /* 学习统计 */
 .stats-section {
@@ -1335,6 +1072,7 @@ h4 {
 }
 
 .courseware-item {
+
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1343,7 +1081,7 @@ h4 {
   border-radius: 12px;
   background: #f8fcff;
   transition: all 0.3s ease;
-  cursor: pointer;
+  cursor: default;
 }
 
 .courseware-item:hover {

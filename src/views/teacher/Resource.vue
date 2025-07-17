@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeachingPlanApi, uploadResourceApi, getResourceListApi, deleteResourceApi, updateResourceApi } from '@/api/teacher'
 import axios from 'axios'
-
+import { ElLoading } from 'element-plus'
 
 
 const clearPlan = () => {
@@ -157,8 +157,16 @@ const aiFiles = ref([])
 const aiRemark = ref('')
 const teachingPlan = ref('')
 
+const isGenerating = ref(false)
+
 const generateTeachingPlan = async () => {
   aiDialogVisible.value = false
+  isGenerating.value = true  // 开始加载
+  const loading = ElLoading.service({
+    lock: true,
+    text: '教学计划生成中，请稍候...',
+    background: 'rgba(255, 255, 255, 0.8)',
+  })
 
   const uploadedUrls = aiFiles.value
     .filter(file => file.url)
@@ -183,43 +191,13 @@ const generateTeachingPlan = async () => {
   } catch (e) {
     console.error('生成教学计划失败:', e)
     ElMessage.error('网络错误，生成失败')
+  } finally {
+    loading.close()
+    isGenerating.value = false
   }
 }
 
 
-// 将HTML内容转换为教学计划结构
-const parseHtmlToTeachingPlan = (htmlContent) => {
-  try {
-    const tempDiv = document.createElement('div')
-    tempDiv.innerHTML = htmlContent
-
-    const plans = []
-    const headings = tempDiv.querySelectorAll('h1, h2, h3, h4')
-
-    headings.forEach((heading, index) => {
-      let nextSibling = heading.nextElementSibling
-      let content = ''
-
-      // 收集标题下的内容直到下一个标题
-      while (nextSibling && !nextSibling.matches('h1, h2, h3, h4')) {
-        content += nextSibling.textContent + '\n'
-        nextSibling = nextSibling.nextElementSibling
-      }
-
-      plans.push({
-        title: heading.textContent.trim(),
-        summary: content.trim() || '详细内容请查看完整文档',
-        duration: `第${index + 1}讲`,
-        practice: false
-      })
-    })
-
-    return plans.length > 0 ? plans : null
-  } catch (error) {
-    console.error('解析HTML内容失败:', error)
-    return null
-  }
-}
 
 // 显示docx下载链接
 const showDocxDownload = (docxUrl) => {
