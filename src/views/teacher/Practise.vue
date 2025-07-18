@@ -872,7 +872,7 @@ const confirmAndSaveQuestions = async () => {
         <el-form label-width="80px" :model="aiFormData" ref="aiFormRef">
           <el-form-item label="知识点" prop="knowledge" :rules="[{ required: true, message: '请输入知识点', trigger: 'blur' }]">
             <el-input v-model="aiFormData.knowledge" placeholder="请输入知识点，如：JAVA面向对象编程" type="textarea" :rows="3" />
-            <div class="form-tips">
+            <div class="form-tips" style="color:black">
               💡 提示：请详细描述知识点内容，AI将根据此内容生成相关题目
             </div>
           </el-form-item>
@@ -896,7 +896,7 @@ const confirmAndSaveQuestions = async () => {
 
           <el-form-item label="题目数量">
             <el-input-number v-model="aiFormData.count" :min="1" :max="10" placeholder="题目数量" style="width: 200px" />
-            <div class="form-tips">
+            <div class="form-tips" style="color:black">
               建议：选择题 3-5道，简答题 2-3道，编程题 1-2道
             </div>
           </el-form-item>
