@@ -807,15 +807,15 @@ const fetchQuestionAnalysis = async (question) => {
 }
 
 .status-warning {
-  background: #bfa600;
+  background:rgb(229, 202, 27);
 }
 
 .status-primary {
-  background: #1761a0;
+  background:rgb(238, 134, 64);
 }
 
 .status-success {
-  background: #137a2b;
+  background:rgb(45, 218, 91);
 }
 
 .status-info {

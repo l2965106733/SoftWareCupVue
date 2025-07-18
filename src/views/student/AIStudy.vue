@@ -330,7 +330,7 @@ onMounted(() => {
               <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
                 :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
                 class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
-                <el-button type="info" size="small" text>
+                <el-button type="info" size="small" text style="color:white">
                   <el-icon>
                     <Paperclip />
                   </el-icon>

@@ -316,8 +316,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">总学生数</div>
-                <div class="card-value"><el-icon><User /></el-icon>{{ overviewData.totalStudents }}</div>
-                <div class="card-change positive">+{{ overviewData.newStudentsWeek }} 本周新增</div>
+                <div class="card-value"><el-icon><User /></el-icon>  {{ overviewData.totalStudents }}</div>
               </div>
     
             </div>
@@ -327,10 +326,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">作业完成率</div>
-                <div class="card-value"><el-icon><Document /></el-icon>{{ overviewData.homeworkRate }}%</div>
-                <div class="card-change" :class="overviewData.homeworkTrend > 0 ? 'positive' : 'negative'">
-                  {{ overviewData.homeworkTrend > 0 ? '+' : '' }}{{ overviewData.homeworkTrend }}% 较上周
-                </div>
+                <div class="card-value"><el-icon><Document /></el-icon>  {{ overviewData.homeworkRate }}%</div>
               </div>
               
             </div>
@@ -340,10 +336,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">平均得分率</div>
-                <div class="card-value"><el-icon><TrendCharts /></el-icon>{{ overviewData.avgScore }}</div>
-                <div class="card-change" :class="overviewData.scoreTrend > 0 ? 'positive' : 'negative'">
-                  {{ overviewData.scoreTrend > 0 ? '+' : '' }}{{ overviewData.scoreTrend }} 较上次
-                </div>
+                <div class="card-value"><el-icon><TrendCharts /></el-icon>  {{ overviewData.avgScore }}</div>
               </div>
       
             </div>
@@ -353,8 +346,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">学生活跃度</div>
-                <div class="card-value"><el-icon><ChatLineRound /></el-icon>{{ overviewData.activeRate }}%</div>
-                <div class="card-change positive">+{{ overviewData.activeIncrease }}% 本周</div>
+                <div class="card-value"><el-icon><ChatLineRound /></el-icon>  {{ overviewData.activeRate }}%</div>
               </div>
           
             </div>
@@ -808,20 +800,20 @@ onMounted(() => {
 }
 
 .card-title {
-  font-size:15px;
+  font-size:18px;
   color: #e0e0e0;
   margin-bottom: 8px;
 }
 
 .card-value {
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 600;
   color: #fff;
   margin-bottom: 4px;
 }
 
 .card-change {
-  font-size: 12px;
+  font-size: 16px;
 }
 
 .card-change.positive {
@@ -891,20 +883,6 @@ onMounted(() => {
   text-align: right;
 }
 
-.range-bar {
-  flex: 1;
-  height: 20px;
-  background: #2c3e50;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.range-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #409eff, #67c23a);
-  border-radius: 10px;
-  transition: width 0.3s ease;
-}
 
 .range-count {
   width: 50px;
@@ -1045,6 +1023,23 @@ onMounted(() => {
   color: gray;
   font-weight: 500;
   min-width: 40px;
+}
+
+/* 成绩分布自定义进度条样式 */
+.range-bar {
+  flex: 1;
+  height: 16px;
+  background: #e6f9ed; /* 极淡青绿底色 */
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 0 8px;
+  position: relative;
+}
+.range-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5ad8a6 0%, #36cfc9 100%); /* 青绿渐变 */
+  border-radius: 8px 0 0 8px;
+  transition: width 0.4s cubic-bezier(.4,0,.2,1);
 }
 
 /* 资源统计专区 */

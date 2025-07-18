@@ -63,7 +63,7 @@ const getRatingStars = (rating) => {
 
 // 获取评分颜色
 const getRatingColor = (rating) => {
-  if (rating >= 4) return '#67c23a'
+  if (rating >= 4) return '#5ad8a6'
   if (rating === 3) return '#e6a23c'
   return '#f56c6c'
 }
@@ -254,7 +254,7 @@ onMounted(() => {
         <el-divider style="margin: 18px 0 12px 0;" />
         <div class="rating-stats-row">
           <div class="avg-rating-block">
-            <span class="avg-value" style="color: gold;">{{ averageRating }}</span>
+            <span class="avg-value" style="color: white;">{{ averageRating }}</span>
             <span class="avg-stars" :style="{ color: getRatingColor(Math.round(averageRating)) }">
               {{ getRatingStars(Math.round(averageRating)) }}
             </span>
@@ -262,19 +262,31 @@ onMounted(() => {
           </div>
           <div class="rating-bars-block">
             <div class="rating-bar">
-              <span>满意</span>
-              <el-progress :percentage="ratings.length > 0 ? Math.round((positiveRatingCount / ratings.length) * 100) : 0" :color="'#67c23a'" :stroke-width="8" />
-              <span>{{ positiveRatingCount }}</span>
+              <span style="color:white">满意</span>
+              <el-progress
+                class="satisfied-progress"
+                :percentage="ratings.length > 0 ? Math.round((positiveRatingCount / ratings.length) * 100) : 0"
+                :color="'#67c23a'"
+                :stroke-width="8"
+              />
             </div>
             <div class="rating-bar">
-              <span>一般</span>
-              <el-progress :percentage="ratings.length > 0 ? Math.round((neutralRatingCount / ratings.length) * 100) : 0" :color="'#e6a23c'" :stroke-width="8" />
-              <span>{{ neutralRatingCount }}</span>
+              <span style="color:white">一般</span>
+              <el-progress
+                class="neutral-progress"
+                :percentage="ratings.length > 0 ? Math.round((neutralRatingCount / ratings.length) * 100) : 0"
+                :color="'#e6a23c'"
+                :stroke-width="8"
+              />
             </div>
             <div class="rating-bar">
-              <span>不满意</span>
-              <el-progress :percentage="ratings.length > 0 ? Math.round((negativeRatingCount / ratings.length) * 100) : 0" :color="'#f56c6c'" :stroke-width="8" />
-              <span>{{ negativeRatingCount }}</span>
+              <span style="color:white">不满意</span>
+              <el-progress
+                class="unsatisfied-progress"
+                :percentage="ratings.length > 0 ? Math.round((negativeRatingCount / ratings.length) * 100) : 0"
+                :color="'#f56c6c'"
+                :stroke-width="8"
+              />
             </div>
           </div>
         </div>
@@ -957,5 +969,15 @@ h4 {
     margin-right: 0;
     gap: 12px;
   }
+}
+
+:deep(.satisfied-progress .el-progress-bar__outer) {
+  background-color: #fff !important;
+}
+:deep(.neutral-progress .el-progress-bar__outer) {
+  background-color: #fff !important;
+}
+:deep(.unsatisfied-progress .el-progress-bar__outer) {
+  background-color: #fff !important;
 }
 </style>

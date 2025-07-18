@@ -916,11 +916,11 @@ const hoverRating = ref(0)
 }
 
 .status-warning {
-  background: var(--gradient-warning);
+  background: rgb(222, 105, 42);
 }
 
 .status-success {
-  background: var(--gradient-success);
+  background: rgb(33, 220, 89);
 }
 
 .question-content {

@@ -525,13 +525,15 @@ const currentSubmission = ref({})
 const currentGradeQuestions = ref([])
 const gradeScores = ref({})
 const gradeFeedback = ref('')
+const isGraded = ref(false) // 新增：是否已批改
 
 // 批改作业
 const gradeHomework = async (submission) => {
   try {
     currentSubmission.value = submission
     gradeDialogVisible.value = true
-
+    // 新增：根据状态判断是否已批改
+    isGraded.value = submission.status === 2
     // 获取作业详情和学生答案（新接口）
     const detailResult = await getHomeworkDetailWithAnswerApi(submission.homeworkId, submission.studentId)
     if (detailResult.code === 1) {
@@ -551,12 +553,17 @@ const gradeHomework = async (submission) => {
   }
 }
 
-// 提交批改结果
+// 提交批改结果（只能批改一次，确认提示，批改后禁用）
 const submitGrade = async () => {
+  if (isGraded.value) return
   try {
+    await ElMessageBox.confirm('批改后将无法再次修改，是否确认批改？', '确认批改', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
     // 计算总分
     const totalScore = Object.values(gradeScores.value).reduce((sum, score) => sum + (parseInt(score) || 0), 0)
-
     const gradeData = {
       homeworkId: currentHomework.value.id,  // 使用作业ID，不是提交记录ID
       submissionId: currentSubmission.value.id,  // 添加提交记录ID
@@ -565,12 +572,11 @@ const submitGrade = async () => {
       totalScore: totalScore,
       feedback: gradeFeedback.value
     }
-
     const result = await gradeHomeworkApi(gradeData)
     if (result.code === 1) {
       ElMessage.success('批改完成！')
+      isGraded.value = true // 批改后禁用
       gradeDialogVisible.value = false
-
       // 重新加载提交列表
       const submissionsResult = await getStudentSubmissionsApi(currentHomework.value.id)
       if (submissionsResult.code === 1) {
@@ -580,7 +586,7 @@ const submitGrade = async () => {
       ElMessage.error(result.msg || '批改失败')
     }
   } catch (error) {
-    ElMessage.error('提交批改失败')
+    if (error !== 'cancel') ElMessage.error('提交批改失败')
   }
 }
 
@@ -662,7 +668,7 @@ const confirmAndSaveQuestions = async () => {
           </div>
 
           <el-form label-width="60px">
-            <el-form-item label="题型">
+            <el-form-item label="题型" class="type-label">
               <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="(val) => { handleTypeChange(q); onQuestionFieldChange(); }" :disabled="isQuestionSaved(q)">
                 <el-option label="选择题" value="choice">
                   <span>选择题</span>
@@ -679,24 +685,24 @@ const confirmAndSaveQuestions = async () => {
               </el-select>
             </el-form-item>
 
-            <el-form-item label="题干">
+            <el-form-item label="题干" class="content-label">
               <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
-            <el-form-item label="知识点">
+            <el-form-item label="知识点" class="knowledge-label">
               <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
-            <el-form-item label="答案">
+            <el-form-item label="答案" class="answer-label">
               <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
                 :rows="getAnswerRows(q.type)" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
-            <el-form-item label="解析">
+            <el-form-item label="解析" class="explain-label">
               <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
-            <el-form-item label="分值">
+            <el-form-item label="分值" class="score-label">
               <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" @change="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
           </el-form>
@@ -736,28 +742,28 @@ const confirmAndSaveQuestions = async () => {
             作业设置
           </h3>
         </div>
-        <el-form label-width="80px" >
-          <el-form-item label="作业标题">
+        <el-form label-width="80px"  >
+          <el-form-item label="作业标题" class="title-label">
             <el-input v-model="homeworkTitle" placeholder="请输入作业标题" />
           </el-form-item>
 
-          <el-form-item label="作业备注">
+          <el-form-item label="作业备注" class="remark-label">
             <el-input v-model="homeworkRemark" placeholder="请输入作业备注(默认无)" />
           </el-form-item>
 
-          <el-form-item label="起止时间">
+          <el-form-item label="起止时间" class="time-label">
             <el-date-picker v-model="timeRange" type="datetimerange" range-separator="至" start-placeholder="开始"
               end-placeholder="截止" style="width: 100%" format="YYYY-MM-DD HH:mm" value-format="YYYY-MM-DD HH:mm:ss" />
           </el-form-item>
 
-          <el-form-item label="题目总数">
-            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+          <el-form-item label="题目总数" class="count-label">
+            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
               "choice").length}} 道选择题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
               "short").length}} 道简答题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
               "code").length}} 道编程题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{questions.reduce((sum, q) => sum +
+            <el-tag type="info" size="large" style="margin-right: 6px; color:white">当前总分为 {{questions.reduce((sum, q) => sum +
               (q.score || 0), 0)}} 分</el-tag>
           </el-form-item>
         </el-form>
@@ -820,44 +826,43 @@ const confirmAndSaveQuestions = async () => {
 
       <!-- 发布记录区块 -->
       <el-card shadow="never">
-        <h3 class="section-title" style="color:white; margin-bottom: 6px;"><el-icon>
+        <h3 class="section-title" style="color:white; margin-bottom: 25px;"><el-icon>
             <List />
           </el-icon> 发布记录</h3>
+        <div class="publish-table-wrapper">
+          <el-table :data="history" stripe :row-key="row => row.id" class="publish-table" style="width: 100%;">
+
+            <el-table-column prop="title" label="作业名称" align="center" header-align="center"
+              show-overflow-tooltip style="border-radius: 12px;" />
+
+            <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
+              header-align="center" show-overflow-tooltip />
+
+            <el-table-column prop="endTime" label="截止时间" :formatter="formatDate" width="200px" align="center"
+              header-align="center" show-overflow-tooltip />
+
+            <el-table-column prop="timeLeft" label="剩余时间" width="150px" align="center" header-align="center">
+              <template #default="scope">
+                <!-- <el-tag :type="scope.row.timeLeft === '已逾期' ? 'danger' : 'info'" size="small"
+                  style="font-size: 13px; font-weight: 500; padding: 0 8px;">
+                </el-tag> -->
+                {{ scope.row.timeLeft }}
+              </template>
+            </el-table-column>
+
+            <el-table-column label="操作" width="100px" align="center" header-align="center">
+              <template #default="scope">
+                <div class="center-cell">
+                  <el-button type="danger" size = "small" @click="viewDetail(scope.row)" style=" color: white;">
+                    查看
+                  </el-button>
+                </div>
+              </template>
+            </el-table-column>
 
 
-        <el-table :data="history" stripe :row-key="row => row.id" class="table-card-local">
-
-          <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
-            show-overflow-tooltip style="border-radius: 12px;" />
-
-          <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
-            header-align="center" show-overflow-tooltip />
-
-          <el-table-column prop="endTime" label="截止时间" :formatter="formatDate" width="200px" align="center"
-            header-align="center" show-overflow-tooltip />
-
-          <el-table-column prop="timeLeft" label="剩余时间" width="150px" align="center" header-align="center">
-            <template #default="scope">
-              <!-- <el-tag :type="scope.row.timeLeft === '已逾期' ? 'danger' : 'info'" size="small"
-                style="font-size: 13px; font-weight: 500; padding: 0 8px;">
-              </el-tag> -->
-              {{ scope.row.timeLeft }}
-            </template>
-          </el-table-column>
-
-          <el-table-column label="操作" width="100px" align="center" header-align="center">
-            <template #default="scope">
-              <div class="center-cell">
-                <el-button size="small" type="info" text class="el-button-local" @click="viewDetail(scope.row)" style="background-color: orange; color: white;">
-                  查看
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-
-
-        </el-table>
-
+          </el-table>
+        </div>
       </el-card>
     </div>
 
@@ -939,7 +944,7 @@ const confirmAndSaveQuestions = async () => {
           <div v-for="(question, index) in homeworkQuestions" :key="question.id || `detail-${index}`">
             <el-card shadow="hover" style="margin-bottom: 15px">
               <div class="question-header">
-                <h4 style="color: black;">第{{ index + 1 }}题</h4>
+                <h3 style="color: black;">第{{ index + 1 }}题</h3>
                 <div>
                   <el-tag :type="info" style="color:white" size="small">{{ getTypeName(question.type) }}</el-tag>
                   <el-tag type="info" size="small"  style="margin-left: 8px; color:white">{{ question.score }}分</el-tag>
@@ -1034,9 +1039,9 @@ const confirmAndSaveQuestions = async () => {
         <div class="questions-grade">
           <div v-for="(question, index) in currentGradeQuestions" :key="question.id || `grade-${index}`"
             class="grade-question-item">
-            <el-card shadow="hover" style="margin-bottom: 20px">
+            <el-card shadow="hover" style="margin-bottom: 20px" >
               <div class="question-header">
-                <h4>第{{ index + 1 }}题</h4>
+                <h3 style = "color:black">第{{ index + 1 }}题</h3>
                 <div>
                   <el-tag :type="getTypeColor(question.type)" size="small" style="color:white">
                     {{ getTypeName(question.type) }}
@@ -1053,7 +1058,7 @@ const confirmAndSaveQuestions = async () => {
               </div>
 
               <div class="question-section question-answer" style="margin-top: 8px;">
-                <strong>标准答案：</strong>
+                <h5>标准答案：</h5>
                 <div style="white-space: pre-wrap;">{{ question.trueAnswer || '暂无' }}</div>
               </div>
 
@@ -1067,12 +1072,7 @@ const confirmAndSaveQuestions = async () => {
               <div class="score-input-section">
                 <el-form-item :label="`得分（满分${question.questionScore}分）：`">
                   <el-input-number v-model="gradeScores[question.id]" :min="0" :max="question.questionScore"
-                    :precision="0" size="large" style="width: 200px" />
-                  <span v-if="gradeScores[question.id] !== undefined"
-                    :class="getScoreClass(gradeScores[question.id], question.questionScore)"
-                    style="margin-left: 12px; font-weight: 600;">
-                    {{ Math.round((gradeScores[question.id] / question.questionScore) * 100) }}%
-                  </span>
+                    :precision="0" size="large" style="width: 200px" :disabled="isGraded" />
                 </el-form-item>
               </div>
             </el-card>
@@ -1081,9 +1081,9 @@ const confirmAndSaveQuestions = async () => {
 
         <div class="feedback-section">
           <el-card shadow="hover">
-            <h4>教师反馈：</h4>
+            <h3 style = "color:black">教师反馈：</h3>
             <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..."
-              style="margin-top: 8px;" />
+              style="margin-top: 8px;" :disabled="isGraded" />
           </el-card>
         </div>
 
@@ -1099,7 +1099,7 @@ const confirmAndSaveQuestions = async () => {
                   / {{currentGradeQuestions.reduce((sum, q) => sum + (q.questionScore || 0), 0)}}
                 </span>
               </div>
-              <div class="percentage">
+              <div class="percentage">得分率：
                 <span :class="getScoreClass(
                   Object.values(gradeScores).reduce((sum, score) => sum + (parseInt(score) || 0), 0),
                   currentGradeQuestions.reduce((sum, q) => sum + (q.questionScore || 0), 0)
@@ -1121,11 +1121,11 @@ const confirmAndSaveQuestions = async () => {
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="gradeDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="submitGrade">
+          <el-button type="primary" @click="submitGrade" :disabled="isGraded">
             <el-icon>
               <Check />
             </el-icon>
-            提交批改
+            {{ isGraded ? '已批改' : '提交批改' }}
           </el-button>
         </div>
       </template>
@@ -1135,20 +1135,6 @@ const confirmAndSaveQuestions = async () => {
 
 
 <style scoped>
-:deep(.table-card-local .center-cell) {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-:deep(.table-card-local .el-button-local) {
-  margin: 0 !important;
-  padding: 4px 10px !important;
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  line-height: 1 !important;
-}
 
 
 /* 模拟按钮垂直居中 */
@@ -1163,12 +1149,6 @@ const confirmAndSaveQuestions = async () => {
   /* 水平内边距可调整 */
 }
 
-
-/* 你可以根据需要微调 padding、边框等 */
-.table-card-local .el-table__header-wrapper,
-.table-card-local .el-table__body-wrapper {
-  background-color: transparent;
-}
 
 .question-content {
   margin-bottom: 8px;
@@ -1387,6 +1367,28 @@ const confirmAndSaveQuestions = async () => {
   text-align: right;
 }
 
+/* 只影响作业标题label为白色 */
+:deep(.side-panel .title-label .el-form-item__label) {
+  color: #fff !important;
+}
+
+/* 只影响作业备注、起止时间、题目总数label为白色 */
+:deep(.side-panel .remark-label .el-form-item__label),
+:deep(.side-panel .time-label .el-form-item__label),
+:deep(.side-panel .count-label .el-form-item__label) {
+  color: #fff !important;
+}
+
+/* 只影响题型、题干、知识点、答案、解析、分值label为白色 */
+:deep(.type-label .el-form-item__label),
+:deep(.content-label .el-form-item__label),
+:deep(.knowledge-label .el-form-item__label),
+:deep(.answer-label .el-form-item__label),
+:deep(.explain-label .el-form-item__label),
+:deep(.score-label .el-form-item__label) {
+  color: #fff !important;
+}
+
 @media (max-width: 900px) {
   .vertical-layout.practise-layout {
     padding: 12px;
@@ -1401,5 +1403,15 @@ const confirmAndSaveQuestions = async () => {
     padding: 12px 8px 8px 8px;
     margin-bottom: 16px;
   }
+}
+
+.publish-table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+}
+.publish-table {
+  border-radius: 0; /* 由外层控制圆角 */
 }
 </style>
