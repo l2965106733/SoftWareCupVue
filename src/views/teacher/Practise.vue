@@ -719,10 +719,14 @@ const getTypeTextColor = (type) => {
           </el-form-item>
 
           <el-form-item label="题目总数">
-            <el-tag type="info" size="large" style="margin-right: 6px;" >{{ questions.filter(q => q.type === "choice").length }} 道选择题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;" >{{ questions.filter(q => q.type === "short").length }} 道简答题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;">{{ questions.filter(q => q.type === "code").length }} 道编程题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{ questions.reduce((sum, q) => sum + (q.score || 0), 0) }} 分</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "choice").length}} 道选择题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "short").length}} 道简答题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "code").length}} 道编程题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{questions.reduce((sum, q) => sum +
+              (q.score || 0), 0)}} 分</el-tag>
           </el-form-item>
         </el-form>
 
@@ -784,13 +788,15 @@ const getTypeTextColor = (type) => {
 
       <!-- 发布记录区块 -->
       <el-card shadow="never">
-        <h3 class="section-title" style="color:white"><el-icon>
+        <h3 class="section-title" style="color:white; margin-bottom: 6px;"><el-icon>
             <List />
           </el-icon> 发布记录</h3>
-        <el-table :data="history" stripe :row-key="row => row.id" class="table-card"
-          style="border-radius: 12px; background: rgba(255,255,255,0.25); backdrop-filter: blur(12px); padding: 8px;">
+
+
+        <el-table :data="history" stripe :row-key="row => row.id" class="table-card-local">
+
           <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
-            show-overflow-tooltip />
+            show-overflow-tooltip style="border-radius: 12px;" />
 
           <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
             header-align="center" show-overflow-tooltip />
@@ -808,17 +814,17 @@ const getTypeTextColor = (type) => {
           </el-table-column>
 
           <el-table-column label="操作" width="100px" align="center" header-align="center">
-            <template #default="scope" class>
-              <div class="center-button-wrapper">
-                <el-button type="primary" size="small" text @click="viewDetail(scope.row)" class="action-btn"
-                  style="font-size: 13px; font-weight: 500;">
+            <template #default="scope">
+              <div class="center-cell">
+                <el-button size="small" type="info" text class="el-button-local" @click="viewDetail(scope.row)" style="background-color: orange; color: white;">
                   查看
                 </el-button>
               </div>
             </template>
           </el-table-column>
-        </el-table>
 
+
+        </el-table>
 
       </el-card>
     </div>
@@ -1098,6 +1104,41 @@ const getTypeTextColor = (type) => {
 
 
 <style scoped>
+:deep(.table-card-local .center-cell) {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:deep(.table-card-local .el-button-local) {
+  margin: 0 !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+
+/* 模拟按钮垂直居中 */
+.el-button-local {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 30px !important;
+  /* 用行高控制垂直居中 */
+  height: 30px !important;
+  /* 保持按钮高度固定 */
+  padding: 0 12px !important;
+  /* 水平内边距可调整 */
+}
+
+
+/* 你可以根据需要微调 padding、边框等 */
+.table-card-local .el-table__header-wrapper,
+.table-card-local .el-table__body-wrapper {
+  background-color: transparent;
+}
+
 .question-content {
   margin-bottom: 8px;
   padding: 12px;
@@ -1161,7 +1202,7 @@ const getTypeTextColor = (type) => {
 
 
 .el-table__row {
-  height: 48px;
+  height: 58px;
 }
 
 el-table th,
