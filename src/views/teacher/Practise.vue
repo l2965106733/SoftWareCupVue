@@ -751,7 +751,14 @@ const confirmAndSaveQuestions = async () => {
           </el-form-item>
 
           <el-form-item label="题目总数">
-            <el-tag style="color : white" size="large" >{{ questions.length }} 道题目</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "choice").length}} 道选择题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "short").length}} 道简答题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
+              "code").length}} 道编程题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{questions.reduce((sum, q) => sum +
+              (q.score || 0), 0)}} 分</el-tag>
           </el-form-item>
         </el-form>
 
@@ -813,12 +820,15 @@ const confirmAndSaveQuestions = async () => {
 
       <!-- 发布记录区块 -->
       <el-card shadow="never">
-        <h3 class="section-title" style="color:white"><el-icon>
+        <h3 class="section-title" style="color:white; margin-bottom: 6px;"><el-icon>
             <List />
           </el-icon> 发布记录</h3>
-        <el-table :data="history" stripe :row-key="row => row.id">
+
+
+        <el-table :data="history" stripe :row-key="row => row.id" class="table-card-local">
+
           <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
-            show-overflow-tooltip />
+            show-overflow-tooltip style="border-radius: 12px;" />
 
           <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
             header-align="center" show-overflow-tooltip />
@@ -836,17 +846,17 @@ const confirmAndSaveQuestions = async () => {
           </el-table-column>
 
           <el-table-column label="操作" width="100px" align="center" header-align="center">
-            <template #default="scope" class >
-              <div class="center-button-wrapper">
-              <el-button type="primary" size="small" text @click="viewDetail(scope.row)"  class="action-btn"
-                style="font-size: 13px; font-weight: 500;">
-                查看
-              </el-button>
+            <template #default="scope">
+              <div class="center-cell">
+                <el-button size="small" type="info" text class="el-button-local" @click="viewDetail(scope.row)" style="background-color: orange; color: white;">
+                  查看
+                </el-button>
               </div>
             </template>
           </el-table-column>
-        </el-table>
 
+
+        </el-table>
 
       </el-card>
     </div>
@@ -906,7 +916,8 @@ const confirmAndSaveQuestions = async () => {
     </el-dialog>
 
     <!-- 作业详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" :title="`作业详情 - ${currentHomework.title}`" width="80%" top="5vh">
+    <el-dialog v-model="detailDialogVisible" :title="`作业详情 - ${currentHomework.title}`" width="80%"
+      :append-to-body="true" :lock-scroll="true" :modal="true" top="15vh">
       <el-tabs type="border-card">
         <!-- 基本信息 -->
         <el-tab-pane label="基本信息">
@@ -928,7 +939,7 @@ const confirmAndSaveQuestions = async () => {
           <div v-for="(question, index) in homeworkQuestions" :key="question.id || `detail-${index}`">
             <el-card shadow="hover" style="margin-bottom: 15px">
               <div class="question-header">
-                <h4>第{{ index + 1 }}题</h4>
+                <h4 style="color: black;">第{{ index + 1 }}题</h4>
                 <div>
                   <el-tag :type="info" style="color:white" size="small">{{ getTypeName(question.type) }}</el-tag>
                   <el-tag type="info" size="small"  style="margin-left: 8px; color:white">{{ question.score }}分</el-tag>
@@ -1006,7 +1017,7 @@ const confirmAndSaveQuestions = async () => {
 
     <!-- 批改作业对话框 -->
     <el-dialog v-model="gradeDialogVisible" :title="`批改作业 - ${currentSubmission.studentName}`" width="80%"
-      :close-on-click-modal="false">
+      :close-on-click-modal="false" :append-to-body="true" :lock-scroll="true" :modal="true" top="15vh">
       <div v-if="currentGradeQuestions.length > 0" class="grade-container">
         <div class="student-info">
           <el-descriptions :column="3" border>
@@ -1041,12 +1052,12 @@ const confirmAndSaveQuestions = async () => {
                 <p>{{ question.content }}</p>
               </div>
 
-              <div class="question-answer" style="margin-top: 8px;">
+              <div class="question-section question-answer" style="margin-top: 8px;">
                 <strong>标准答案：</strong>
                 <div style="white-space: pre-wrap;">{{ question.trueAnswer || '暂无' }}</div>
               </div>
 
-              <div class="student-answer-section">
+              <div class="question-section question-analysis">
                 <h5>学生答案：</h5>
                 <div class="answer-display">
                   {{ question.answer || '未作答' }}
@@ -1070,8 +1081,9 @@ const confirmAndSaveQuestions = async () => {
 
         <div class="feedback-section">
           <el-card shadow="hover">
-            <h4 style="color:grey">教师反馈：</h4>
-            <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..." />
+            <h4>教师反馈：</h4>
+            <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..."
+              style="margin-top: 8px;" />
           </el-card>
         </div>
 
@@ -1123,15 +1135,105 @@ const confirmAndSaveQuestions = async () => {
 
 
 <style scoped>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+:deep(.table-card-local .center-cell) {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-.vertical-layout.practise-layout {
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(18px);
-  border-radius: 24px;
-  padding: clamp(24px, 4vw, 48px);
-  color: #fff;
-  animation: page-fade-in 0.8s cubic-bezier(.4,0,.2,1);
+:deep(.table-card-local .el-button-local) {
+  margin: 0 !important;
+  padding: 4px 10px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
+}
+
+
+/* 模拟按钮垂直居中 */
+.el-button-local {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 30px !important;
+  /* 用行高控制垂直居中 */
+  height: 30px !important;
+  /* 保持按钮高度固定 */
+  padding: 0 12px !important;
+  /* 水平内边距可调整 */
+}
+
+
+/* 你可以根据需要微调 padding、边框等 */
+.table-card-local .el-table__header-wrapper,
+.table-card-local .el-table__body-wrapper {
+  background-color: transparent;
+}
+
+.question-content {
+  margin-bottom: 8px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  /* 默认背景 */
+  margin-bottom: 8px;
+}
+
+.question-explain {
+  background-color: #fdf6ec;
+  /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
+}
+
+.question-answer {
+  background-color: #ecf5ff;
+  /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
+}
+
+.question-analysis {
+  background-color: #f0f9eb;
+  /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+
+.center-button-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.action-btn {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: normal !important;
+  padding: 4px 10px !important;
+}
+
+
+.el-table__row {
+  height: 58px;
 }
 
 @keyframes page-fade-in {
