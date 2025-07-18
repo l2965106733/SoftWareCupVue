@@ -393,23 +393,23 @@ const history = ref([])
 
 const formatTimeLeft = (deadline) => {
   if (!deadline) return '未设置'
-  
+
   const now = new Date()
   const deadlineDate = new Date(deadline)
-  
+
   // 检查日期是否有效
   if (isNaN(deadlineDate.getTime())) return '无效日期'
-  
+
   const timeDiff = deadlineDate - now
-  
+
   if (timeDiff < 0) return '已逾期'
-  
+
   const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
   const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-  
+
   if (days > 0) return `${days}天${hours}小时`
   if (hours > 0) return `${hours}小时`
-  
+
   const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
   return `${minutes}分钟`
 }
@@ -575,6 +575,19 @@ const getScoreClass = (score, totalScore) => {
   if (percentage >= 70) return 'average'
   return 'poor'
 }
+
+const getTypeTextColor = (type) => {
+  switch (type) {
+    case 'choice':
+      return '#1E824C';
+    case 'short':
+      return '#E6A23C'; // 橙色
+    case 'code':
+      return '#A18CD1'; // 紫色
+    default:
+      return '#606266'; // 默认灰
+  }
+}
 </script>
 
 <template>
@@ -584,85 +597,87 @@ const getScoreClass = (score, totalScore) => {
       <el-card shadow="hover">
         <div class="control-header">
           <h3>题目编辑区</h3>
+        </div>
+        <div class="empty-hint">
+          <el-button type="primary" @click="showAIDialog" size="large" style="color: white">
+            <el-icon>
+              <MagicStick />
+            </el-icon>
+            AI 生成题目
+          </el-button>
+
+          <el-button type="info" @click="handleManualAdd" size="large" style="color: white">
+            <el-icon>
+              <EditPen />
+            </el-icon>
+            人工出题
+          </el-button>
+        </div>
+
+        <div v-for="(q, index) in questions" :key="q.id" class="question-block">
+          <div class="question-header">
+            <h4>题目 {{ index + 1 }}</h4>
+            <div>
+              <el-tag :type="getTypeColor(q.type)" size="small" :style="{ color: getTypeTextColor(q.type) }">{{
+                getTypeName(q.type) }}</el-tag>
+              <el-tag v-if="q.id && q.id > 0" type="success" size="small"
+                style="margin-left: 8px; color: #28C76F">已保存</el-tag>
+              <el-tag v-else type="warning" size="small" style="margin-left: 8px; color: red">未保存</el-tag>
+            </div>
           </div>
-            <div class="empty-hint">
-              <el-button type="primary" @click="showAIDialog" size="large">
-                <el-icon>
-                  <MagicStick />
-                </el-icon>
-                AI 生成题目
-              </el-button>
 
-              <el-button type="info" @click="handleManualAdd" size="large">
-                <el-icon>
-                  <EditPen />
-                </el-icon>
-                人工出题
-              </el-button>
-            </div>
-  
-          <div v-for="(q, index) in questions" :key="q.id" class="question-block">
-            <div class="question-header">
-              <h4>题目 {{ index + 1 }}</h4>
-              <div>
-                <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
-                <el-tag v-if="q.id && q.id > 0" type="success" size="small" style="margin-left: 8px">已保存</el-tag>
-                <el-tag v-else type="warning" size="small" style="margin-left: 8px">未保存</el-tag>
-              </div>
-            </div>
+          <el-form label-width="60px">
+            <el-form-item label="题型">
+              <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="handleTypeChange(q)">
+                <el-option label="选择题" value="choice">
+                  <span>选择题</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
+                </el-option>
+                <el-option label="简答题" value="short">
+                  <span>简答题</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">15分</span>
+                </el-option>
+                <el-option label="编程题" value="code">
+                  <span>编程题</span>
+                  <span style="float: right; color: #8492a6; font-size: 13px">25分</span>
+                </el-option>
+              </el-select>
+            </el-form-item>
 
-            <el-form label-width="60px">
-              <el-form-item label="题型">
-                <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="handleTypeChange(q)">
-                  <el-option label="选择题" value="choice">
-                    <span>选择题</span>
-                    <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
-                  </el-option>
-                  <el-option label="简答题" value="short">
-                    <span>简答题</span>
-                    <span style="float: right; color: #8492a6; font-size: 13px">15分</span>
-                  </el-option>
-                  <el-option label="编程题" value="code">
-                    <span>编程题</span>
-                    <span style="float: right; color: #8492a6; font-size: 13px">25分</span>
-                  </el-option>
-                </el-select>
-              </el-form-item>
+            <el-form-item label="题干">
+              <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8" />
+            </el-form-item>
 
-              <el-form-item label="题干">
-                <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="3" />
-              </el-form-item>
+            <el-form-item label="知识点">
+              <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" />
+            </el-form-item>
 
-              <el-form-item label="知识点">
-                <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" />
-              </el-form-item>
+            <el-form-item label="答案">
+              <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
+                :rows="getAnswerRows(q.type)" />
+            </el-form-item>
 
-              <el-form-item label="答案">
-                <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
-                  :rows="getAnswerRows(q.type)" />
-              </el-form-item>
+            <el-form-item label="解析">
+              <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" />
+            </el-form-item>
 
-              <el-form-item label="解析">
-                <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" />
-              </el-form-item>
+            <el-form-item label="分值">
+              <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" />
+            </el-form-item>
+          </el-form>
 
-              <el-form-item label="分值">
-                <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" />
-              </el-form-item>
-            </el-form>
-
-            <div class="question-actions">
-              <el-button type="danger" size="small" @click="removeQuestion(q.id)">
-                <el-icon>
-                  <Close />
-                </el-icon>
-                删除
-              </el-button>
-            </div>
-
-            <el-divider />
+          <div class="question-actions">
+            <el-button type="danger" size="small" @click="removeQuestion(q.id)">
+              <el-icon>
+                <Close />
+              </el-icon>
+              删除
+            </el-button>
           </div>
-      
+
+          <el-divider />
+        </div>
+
         <div class="header-actions" style="margin-top: 16px;">
           <el-button
             :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
@@ -673,12 +688,12 @@ const getScoreClass = (score, totalScore) => {
             {{
               isSaving ? '保存中...' :
                 hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? '已保存' : '保存题目'}} </el-button>
-          <el-button type="warning" size="small" @click="clearQuestions" :disabled="questions.length === 0">
-            <el-icon>
-              <Delete />
-            </el-icon>
-            清空
-          </el-button>
+              <el-button type="warning" size="small" @click="clearQuestions" :disabled="questions.length === 0">
+                <el-icon>
+                  <Delete />
+                </el-icon>
+                清空
+              </el-button>
         </div>
       </el-card>
     </div>
@@ -708,7 +723,7 @@ const getScoreClass = (score, totalScore) => {
           </el-form-item>
         </el-form>
 
-        <el-button type="success" block @click="publishHomework"
+        <el-button type="success" block @click="publishHomework" style="color: gray"
           :disabled="questions.length === 0 || !homeworkTitle || questions.some(q => !q.id || q.id <= 0)">
           <el-icon>
             <Upload />
@@ -748,7 +763,7 @@ const getScoreClass = (score, totalScore) => {
       </el-card>
 
       <!-- 预览区域 -->
-      <el-card style="margin-top: 20px" shadow="hover" v-if="questions.length > 0">
+      <!-- <el-card style="margin-top: 20px" shadow="hover" v-if="questions.length > 0">
         <div class="control-header">
           <h3>题目预览</h3>
         </div>
@@ -762,30 +777,46 @@ const getScoreClass = (score, totalScore) => {
             </div>
           </div>
         </div>
-      </el-card>
+      </el-card> -->
 
       <!-- 发布记录区块 -->
-      <el-card class="publish-history-card" shadow="never">
-        <h3 class="section-title"><el-icon><List /></el-icon> 发布记录</h3>
-        <el-table :data="history" size="small" stripe :row-key="row => row.id" class="publish-table">
-          <el-table-column prop="title" label="作业名称" :cell-class-name="() => 'text-dark'" />
-          <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" :cell-class-name="() => 'text-dark'" />
-          <el-table-column prop="endTime" label="截至时间" :formatter="formatDate" :cell-class-name="() => 'text-dark'" />
-          <el-table-column prop="timeLeft" label="剩余时间" :cell-class-name="() => 'text-dark'">
+      <el-card shadow="never">
+        <h3 class="section-title" style="color:white"><el-icon>
+            <List />
+          </el-icon> 发布记录</h3>
+        <el-table :data="history" stripe :row-key="row => row.id" class="table-card"
+          style="border-radius: 12px; background: rgba(255,255,255,0.25); backdrop-filter: blur(12px); padding: 8px;">
+          <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
+            show-overflow-tooltip />
+
+          <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
+            header-align="center" show-overflow-tooltip />
+
+          <el-table-column prop="endTime" label="截止时间" :formatter="formatDate" width="200px" align="center"
+            header-align="center" show-overflow-tooltip />
+
+          <el-table-column prop="timeLeft" label="剩余时间" width="150px" align="center" header-align="center">
             <template #default="scope">
-              <el-tag :type="scope.row.timeLeft === '已逾期' ? 'danger' : 'info'" size="small">
-                {{ scope.row.timeLeft }}
-              </el-tag>
+              <!-- <el-tag :type="scope.row.timeLeft === '已逾期' ? 'danger' : 'info'" size="small"
+                style="font-size: 13px; font-weight: 500; padding: 0 8px;">
+              </el-tag> -->
+              {{ scope.row.timeLeft }}
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="60">
-            <template #default="scope">
-              <el-button type="primary" size="small" text @click="viewDetail(scope.row)">
+
+          <el-table-column label="操作" width="100px" align="center" header-align="center">
+            <template #default="scope" class >
+              <div class="center-button-wrapper">
+              <el-button type="primary" size="small" text @click="viewDetail(scope.row)"  class="action-btn"
+                style="font-size: 13px; font-weight: 500;">
                 查看
               </el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
+
+
       </el-card>
     </div>
 
@@ -857,7 +888,7 @@ const getScoreClass = (score, totalScore) => {
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="总分">{{homeworkQuestions.reduce((sum, q) => sum + q.score, 0)
-              }}分</el-descriptions-item>
+            }}分</el-descriptions-item>
           </el-descriptions>
         </el-tab-pane>
 
@@ -970,7 +1001,7 @@ const getScoreClass = (score, totalScore) => {
                     {{ getTypeName(question.type) }}
                   </el-tag>
                   <el-tag type="info" size="small" style="margin-left: 8px">
-                    满分{{ question.score }}分
+                    满分{{ question.questionScore }}分
                   </el-tag>
                 </div>
               </div>
@@ -1060,141 +1091,72 @@ const getScoreClass = (score, totalScore) => {
   </div>
 </template>
 
-<!-- <style scoped>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
-.practise-layout {
-  min-height: 100%;
-  background: rgba(255,255,255,0.1);
-  backdrop-filter: blur(15px);
-  border-radius: 24px;
-  padding: clamp(24px, 4vw, 48px);
-  color: #222;
-  animation: page-fade-in 0.8s cubic-bezier(.4,0,.2,1);
-}
-.vertical-blocks {
-  display: flex;
-  flex-direction: column;
-  gap: 36px;
-  margin-top: 28px;
-}
-.top-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 12px;
-}
-.section-title, h3, h4 {
-  font-size: clamp(20px, 3vw, 24px);
-  font-weight: 700;
-  color: #4f277e;
-  margin: 0 0 clamp(16px, 3vw, 24px) 0;
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 2vw, 14px);
-  letter-spacing: 1px;
-  transition: color 0.2s;
-}
-.section-title el-icon, .section-title .el-icon {
-  font-size: 1.2em;
-  color: #a18cd1;
-}
-.publish-history-card, .preview-card {
-  border-radius: 20px;
-  background: rgba(255,255,255,0.92);
-  box-shadow: 0 4px 24px 0 rgba(79,39,126,0.10);
-  border: none;
-  transition: box-shadow 0.25s, transform 0.25s, background 0.25s;
-  animation: card-fade-in 0.7s cubic-bezier(.4,0,.2,1);
-}
-.publish-history-card:hover, .preview-card:hover {
-  box-shadow: 0 8px 32px 0 rgba(161,140,209,0.18);
-  transform: translateY(-2px) scale(1.015);
-  background: rgba(255,255,255,0.98);
-}
-.publish-table {
-  background: transparent;
-  border-radius: 12px;
-  overflow: hidden;
-}
-.text-dark {
-  color: #4f277e !important;
-  font-weight: 500;
-}
-::v-deep(.text-dark) {
-  color: #4f277e !important;
-  font-weight: 500;
-}
-.el-table th {
-  background: rgba(79,39,126,0.08) !important;
-  color: #4f277e !important;
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: 1px;
-  transition: background 0.2s;
-}
-.el-table td {
-  background: transparent !important;
-  transition: background 0.2s;
-}
-.el-table__body tr:hover > td {
-  background: #f3e8ff !important;
-}
-.el-button--primary {
-  background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
-  border: none;
-  color: #fff;
-  font-weight: 700;
-  border-radius: 10px;
-  box-shadow: 0 2px 8px 0 rgba(161,140,209,0.10);
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-}
-.el-button--primary:hover {
-  background: linear-gradient(90deg, #b993d6 0%, #fbc2eb 100%);
-  box-shadow: 0 4px 16px 0 rgba(161,140,209,0.18);
-  transform: translateY(-1px) scale(1.03);
-}
-.el-tag--success {
-  background: #e0e7ff;
-  color: #4f277e;
-  border: none;
-  font-weight: 600;
-}
-.el-tag--info {
-  background: #f3e8ff;
-  color: #4f277e;
-  border: none;
-  font-weight: 600;
-}
-.preview-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 10px;
-  color: #222;
-  font-size: 16px;
-  letter-spacing: 0.5px;
-  transition: color 0.2s;
-}
-.item-num {
-  font-weight: 700;
-  color: #4f277e;
-}
-.item-score {
-  color: #a18cd1;
-  font-size: 15px;
-}
-@keyframes page-fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-@keyframes card-fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-</style> -->
-
 
 <style scoped>
+.center-button-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.action-btn {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: normal !important;
+  padding: 4px 10px !important;
+}
+
+
+.el-table__row {
+  height: 48px;
+}
+
+el-table th,
+.el-table td {
+  padding: 12px 16px !important;
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.resource-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #fff;
+}
+
+.name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #000;
+}
+
+.download-count {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+
+
 .editor-section {
   margin-bottom: 24px;
   padding: 20px;
@@ -1206,6 +1168,7 @@ const getScoreClass = (score, totalScore) => {
   color: #222;
 }
 
+
 /* 题目块样式 */
 .question-block {
   background: rgba(255, 255, 255, 0.12);
@@ -1216,26 +1179,8 @@ const getScoreClass = (score, totalScore) => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-/* 标题 */
-.question-header h4 {
-  font-size: 16px;
-  font-weight: bold;
-  color: #2c3e50;
-  margin: 0 0 8px 0;
-}
 
-/* 标题右侧标签 */
-.question-header .el-tag {
-  font-weight: 600;
-}
-
-/* 表单字体 */
-.el-form-item__label {
-  color: #333;
-  font-weight: 500;
-}
-
-.empty-hint{
+.empty-hint {
   margin-bottom: 20px;
 }
 
@@ -1262,7 +1207,7 @@ const getScoreClass = (score, totalScore) => {
 .question-header h4 {
   font-size: 16px;
   font-weight: bold;
-  color: #333;
+  color: white;
   margin: 0;
 }
 
@@ -1340,12 +1285,12 @@ const getScoreClass = (score, totalScore) => {
   font-size: 18px;
   font-weight: 700;
   margin-bottom: 12px;
-  color: #222;
+  color: white;
 }
 
-.el-form-item .el-form-item__label {
-  color: #222;
-  font-weight: 500;
+.side-panel .el-form-item__label {
+  color: #222 !important;
+  font-weight: 600;
 }
 
 .el-input,
@@ -1389,17 +1334,6 @@ const getScoreClass = (score, totalScore) => {
 
 
 
-
-
-
-
-
-/* 表单项字体调整 */
-.el-form-item__label {
-  color: #444;
-  font-weight: 500;
-}
-
 /* 删除按钮区域 */
 .question-actions {
   text-align: right;
@@ -1429,8 +1363,6 @@ const getScoreClass = (score, totalScore) => {
 }
 
 
-
-
 .vertical-layout.practise-layout {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(24px);
@@ -1439,72 +1371,6 @@ const getScoreClass = (score, totalScore) => {
   color: #222;
 }
 
-/* 顶部工具栏 */
-.top-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 16px;
-  background: rgba(255,255,255,0.15);
-  padding: 12px 16px;
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-}
-
-/* 卡片风格 */
-.el-card {
-  background: rgba(255, 255, 255, 0.18) !important;
-  backdrop-filter: blur(14px);
-  border: none !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
-  color: #222;
-}
-
-/* 卡片内容内边距 */
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-/* 标题统一样式 */
-h3, h4 {
-  color: #2c3e50;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-
-/* 表格头部 */
-.el-table th {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: #222;
-  font-weight: 600;
-}
-
-/* 表格单元格 */
-.el-table td {
-  background: transparent !important;
-  color: #222;
-}
-
-/* 表格 hover 行 */
-.el-table__body tr:hover > td {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* 操作区按钮 */
-.action-buttons .el-button {
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #222;
-  border-radius: 8px;
-  padding: 5px 12px;
-  transition: all 0.2s ease;
-}
-
-.action-buttons .el-button:hover {
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
 
 /* 标准字体色彩 */
 .el-input,
@@ -1513,6 +1379,4 @@ h3, h4 {
 .el-button {
   color: #222;
 }
-
-
 </style>

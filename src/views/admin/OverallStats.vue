@@ -153,8 +153,7 @@ const formatBytes = (bytes) => {
 const formatUptime = (seconds) => {
   const days = Math.floor(seconds / 86400)
   const hours = Math.floor((seconds % 86400) / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  return `${days}天 ${hours}小时 ${minutes}分钟`
+  return `${days}天 ${hours}小时`
 }
 
 // 数据加载函数
@@ -359,7 +358,7 @@ onMounted(() => {
           <div class="card-content">
             <div class="card-info">
               <div class="card-title">系统运行</div>
-              <div class="card-value">{{ formatUptime(systemOverview.systemUptime || 0) }}</div>
+              <div class="card-value" style="font-size: 24px;">{{ formatUptime(systemOverview.systemUptime || 0) }}</div>
               <div class="card-change positive">稳定运行中</div>
             </div>
             <div class="card-icon">
@@ -459,7 +458,7 @@ onMounted(() => {
 
 .overall-stats-container {
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.05);
   min-height: 100vh;
 }
 
@@ -602,6 +601,7 @@ onMounted(() => {
 
 .card-change.positive {
   color: #67c23a;
+  font-size: 18px;
 }
 .card-change.negative {
   color: #f56c6c;

@@ -591,10 +591,12 @@ onMounted(() => {
             </div>
           </div>
           
-          <el-table :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}" @sort-change="handleSortChange">
-            <el-table-column prop="name" label="学生姓名" width="120" sortable />
-            <el-table-column prop="studentId" label="学号" width="120" />
-            <el-table-column label="学习进度" width="150" sortable prop="progress">
+          <el-table   style="border-radius: 10px; margin-bottom: 10px;"
+          :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}" @sort-change="handleSortChange">
+            <el-table-column prop="name" label="姓名" width="85" sortable/>
+            <el-table-column prop="studentId" label="学号" width="105" />
+
+            <!-- <el-table-column label="学习进度" width="150" sortable prop="progress">
               <template #default="scope">
                 <div class="progress-cell">
                 <el-progress 
@@ -606,8 +608,9 @@ onMounted(() => {
                   <span class="progress-text">{{ scope.row.progress }}%</span>
                 </div>
               </template>
-            </el-table-column>
-            <el-table-column prop="viewCount" label="资源查看次数" width="120" sortable>
+            </el-table-column> -->
+
+            <el-table-column prop="viewCount" label="资源查看数" width="119" sortable :cell-class-name="() => 'table-cell'">
               <template #default="scope">
                 <div class="view-count-cell">
                   <el-icon><View /></el-icon>
@@ -615,9 +618,9 @@ onMounted(() => {
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="homeworkCount" label="完成作业" width="100" sortable />
-            <el-table-column prop="totalHomework" label="总作业数" width="100" />
-            <el-table-column label="完成率" width="120" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)">
+            <el-table-column prop="homeworkCount" label="完成作业" width="110" sortable :cell-class-name="() => 'table-cell'"/>
+            <el-table-column prop="totalHomework" label="总作业数" width="85" />
+            <el-table-column label="完成率" width="95" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)" :cell-class-name="() => 'table-cell'">
               <template #default="scope">
                 <div class="completion-cell">
                   <el-progress 
@@ -630,8 +633,8 @@ onMounted(() => {
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="lastActive" label="最后活跃" width="140" />
-            <el-table-column prop="questionCount" label="提问数" width="100" sortable>
+            <!-- <el-table-column prop="lastActive" label="最后活跃" width="140" /> -->
+            <el-table-column prop="questionCount" label="提问数" width="92" sortable>
               <template #default="scope">
                 <div class="question-count-cell">
                   <el-icon><ChatLineSquare /></el-icon>
@@ -665,7 +668,7 @@ onMounted(() => {
 .analysis-layout {
     min-height: 100%;
     animation: page-fade-in 0.8s ease-out;
-    background: linear-gradient(120deg, #4f8cff 0%, #6a82fb 100%);
+    background: rgba(255, 255, 255, 0.05);
     padding: clamp(24px, 4vw, 48px);
     border-radius: 24px;
     color: #fff;
@@ -708,6 +711,11 @@ onMounted(() => {
     box-shadow: 0 16px 48px rgba(0,0,0,0.18);
 }
 
+.table-cell {
+  color: black; /* Element Plus 蓝色 */
+  font-weight: 500;
+}
+
 .el-button, .btn, button {
     background: rgba(255,255,255,0.2) !important;
     border: 1px solid rgba(255,255,255,0.3) !important;
@@ -737,12 +745,20 @@ onMounted(() => {
     gap: clamp(16px, 3vw, 20px);
 }
 
-.table-section, .resource-list, .question-list {
+.resource-list, .question-list {
     background: rgba(255,255,255,0.1);
     border-radius: 20px;
     padding: clamp(16px, 3vw, 24px);
     color: #fff;
 }
+.table-section {
+  display: flex;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: clamp(16px, 3vw, 24px);
+  color: #fff;
+}
+
 
 .main-panel {
   display: flex;
@@ -845,6 +861,7 @@ onMounted(() => {
 
 /* 成绩分布条 */
 .score-distribution {
+  margin-top: 20px;
   margin-bottom: 24px;
 }
 
@@ -946,6 +963,56 @@ onMounted(() => {
   color: #fff;
 }
 
+.table-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+}
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important; 
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+} 
+
+.resource-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #fff; /* 玻璃背景下字体亮色更清晰 */
+}
+
+.name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: black;
+}
+
+.download-count {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+
+
+
+
+
+
 /* 学生详细数据表格样式 */
 .progress-cell {
   display: flex;
@@ -964,25 +1031,26 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #fff;
+  color: gray;
 }
 
 .question-count-cell {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #67c23a;
+  color: gray;
 }
 
 .completion-cell {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: black;
 }
 
 .completion-text {
   font-size: 12px;
-  color: #e0e0e0;
+  color: gray;
   font-weight: 500;
   min-width: 40px;
 }
@@ -1074,9 +1142,6 @@ onMounted(() => {
   margin-top: 20px;
   text-align: right;
 } */
-.table-section {
-  flex: 1;
-}
 
 /* 表格头部容器样式玻璃化 */
 .table-header {

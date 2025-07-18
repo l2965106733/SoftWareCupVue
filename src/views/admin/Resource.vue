@@ -637,7 +637,7 @@ onMounted(() => {
 <style scoped>
 .admin-resource-container {
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.05);
   min-height: 100vh;
 }
 

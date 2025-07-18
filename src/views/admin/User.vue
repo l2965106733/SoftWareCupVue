@@ -376,11 +376,11 @@ const addUser = () => {
     <!-- 数据表格 -->
     <div class="table-card">
       <el-table 
+        style="border-radius: 10px; margin-bottom: 10px;"
         ref="tableRef"
         :data="user" 
-        class="modern-table" 
         :show-header="true" 
-        :header-cell-style="{ background: 'rgba(255, 255, 255, 0.2)', color: '#ffffff', textAlign: 'center' }"
+        :header-cell-style="{ textAlign: 'center' }"
         :cell-style="{ textAlign: 'center' }"
         @selection-change="handleSelectionChange">
         <!-- 多选 -->
@@ -391,9 +391,9 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 用户名 -->
-        <el-table-column prop="username" label="用户名" align="center" min-width="120" show-overflow-tooltip>
+        <el-table-column prop="username" label="用户名" align="center" min-width="120" show-overflow-tooltip style="color:black">
           <template #default="scope">
-            <div class="user-info">
+            <div>
               <i class="fas fa-user"></i>
               {{ scope.row.username }}
             </div>
@@ -401,10 +401,9 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 姓名 -->
-        <el-table-column prop="name" label="姓名" align="center" min-width="120" show-overflow-tooltip>
+        <el-table-column prop="name" label="姓名" align="center" min-width="120" show-overflow-tooltip style="color:black">
           <template #default="scope">
-            <div class="user-info">
-              <i class="fas fa-signature"></i>
+            <div>
               {{ scope.row.name }}
             </div>
           </template>
@@ -433,9 +432,9 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 用户号 -->
-        <el-table-column prop="identifier" label="用户号" align="center" min-width="140">
+        <el-table-column prop="identifier" label="用户号" align="center" min-width="140" style="color:black">
           <template #default="scope">
-            <div class="user-info">
+            <div>
               <i class="fas fa-id-card"></i>
               {{ scope.row.identifier }}
             </div>
@@ -447,12 +446,12 @@ const addUser = () => {
         <!-- 操作按钮 -->
         <el-table-column label="操作" align="center" width="180">
           <template #default="scope">
-            <div class="action-buttons-cell">
-              <el-button type="primary" size="small" @click="edit(scope.row.id)" class="edit-btn">
+            <div class="action-buttons">
+              <el-button type="primary" size="small" @click="edit(scope.row.id)">
                 <i class="fas fa-edit"></i>
                 编辑
               </el-button>
-              <el-button type="danger" size="small" @click="deleteById(scope.row.id)" class="delete-btn-small">
+              <el-button type="danger" size="small" @click="deleteById(scope.row.id)">
                 <i class="fas fa-trash"></i>
                 删除
               </el-button>
@@ -460,21 +459,22 @@ const addUser = () => {
           </template>
         </el-table-column>
       </el-table>
+
+      <div class="pagination-card">
+        <el-pagination 
+          v-model:current-page="currentPage" 
+          v-model:page-size="pageSize"
+          :page-sizes="[5, 10, 20, 50, 75, 100]" 
+          :background="background" 
+          layout="total, sizes, prev, pager, next, jumper"
+          :total="total" 
+          @size-change="handleSizeChange" 
+          @current-change="handleCurrentChange"
+          class="modern-pagination" />
+      </div>
     </div>
 
-    <!-- 分页器 -->
-    <div class="pagination-card">
-      <el-pagination 
-        v-model:current-page="currentPage" 
-        v-model:page-size="pageSize"
-        :page-sizes="[5, 10, 20, 50, 75, 100]" 
-        :background="background" 
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="total" 
-        @size-change="handleSizeChange" 
-        @current-change="handleCurrentChange"
-        class="modern-pagination" />
-    </div>
+  
 
     <!-- 编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="modern-dialog">
@@ -574,7 +574,7 @@ const addUser = () => {
 /* 卡片通用样式 */
 .search-card,
 .action-card,
-.table-card,
+/* .table-card, */
 .pagination-card {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(20px);
@@ -585,6 +585,12 @@ const addUser = () => {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, box-shadow;
 }
+
+
+
+
+
+
 /* 覆盖分页按钮背景和边框 */
 .modern-pagination >>> .el-pager li,
 .modern-pagination >>> .el-pagination__sizes {
@@ -613,6 +619,31 @@ const addUser = () => {
 .table-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
+}
+
+.resource-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #fff; /* 玻璃背景下字体亮色更清晰 */
+}
+
+.name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: black;
+}
+
+.download-count {
+  color: #67c23a;
+  font-weight: 600;
 }
 
 .action-row {
@@ -734,7 +765,8 @@ const addUser = () => {
 
 .action-buttons {
   display: flex;
-  gap: 12px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .add-btn,
@@ -780,10 +812,11 @@ const addUser = () => {
   padding: 24px;
   overflow-x: auto;
   width: 100%;
+  margin-bottom: 10px;
 }
 
 /* 确保表格完全填充容器 */
-.modern-table :deep(.el-table) {
+/* .modern-table :deep(.el-table) {
   width: 100% !important;
 }
 
@@ -794,10 +827,10 @@ const addUser = () => {
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
-}
+} */
 
 /* 表格标题 - 更清晰可见的设计 */
-.modern-table :deep(.el-table__header-wrapper) {
+/* .modern-table :deep(.el-table__header-wrapper) {
   background: linear-gradient(135deg, rgba(244, 63, 94, 0.8), rgba(190, 18, 60, 0.9)) !important;
   border-radius: 12px 12px 0 0 !important;
 }
@@ -821,10 +854,10 @@ const addUser = () => {
   color: #ffffff !important;
   font-weight: 700 !important;
   text-align: center !important;
-}
+} */
 
 /* 表格数据行 */
-.modern-table :deep(.el-table__body tr) {
+/* .modern-table :deep(.el-table__body tr) {
   background: rgba(255, 255, 255, 0.08);
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
@@ -855,10 +888,10 @@ const addUser = () => {
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
-}
+} */
 
 /* 标签样式优化 */
-.gender-tag,
+/* .gender-tag,
 .role-tag,
 .subject-tag {
   display: flex;
@@ -881,10 +914,10 @@ const addUser = () => {
   min-width: 11px;
   color: #ffffff;
   flex-shrink: 0;
-}
+} */
 
 /* 自定义标签颜色 - 稍微深一点 */
-.gender-tag.el-tag--primary {
+/* .gender-tag.el-tag--primary {
   background: linear-gradient(135deg, #1e40af, #1d4ed8) !important;
   color: #ffffff !important;
 }
@@ -948,7 +981,26 @@ const addUser = () => {
   background: linear-gradient(135deg, #15803d, #14532d) !important;
   transform: translateY(-1px) scale(1.02);
   box-shadow: 0 3px 8px rgba(22, 101, 52, 0.3);
+} */
+
+.table-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
 }
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important; 
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+} 
 
 /* 分页器 */
 .pagination-card {
@@ -1191,7 +1243,7 @@ const addUser = () => {
   font-weight: 500;
 }
 
-/* 强制显示表格标题 - 多重选择器确保生效 */
+/* 强制显示表格标题 - 多重选择器确保生效
 .modern-table :deep(.el-table thead),
 .modern-table :deep(.el-table__header thead),
 .modern-table :deep(thead) {
@@ -1239,7 +1291,7 @@ const addUser = () => {
   display: inline !important;
   visibility: visible !important;
   opacity: 1 !important;
-}
+} */
 
 /* 确保表格结构完整 */
 .modern-table :deep(.el-table) {

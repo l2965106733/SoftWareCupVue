@@ -254,11 +254,11 @@ onMounted(() => {
         <el-divider style="margin: 18px 0 12px 0;" />
         <div class="rating-stats-row">
           <div class="avg-rating-block">
-            <span class="avg-value">{{ averageRating }}</span>
+            <span class="avg-value" style="color: gold;">{{ averageRating }}</span>
             <span class="avg-stars" :style="{ color: getRatingColor(Math.round(averageRating)) }">
               {{ getRatingStars(Math.round(averageRating)) }}
             </span>
-            <span class="avg-label">平均评分</span>
+            <span class="avg-label" >平均评分</span>
           </div>
           <div class="rating-bars-block">
             <div class="rating-bar">
@@ -344,18 +344,22 @@ onMounted(() => {
                 暂无评分
               </div>
               <div class="answer-section">
+
                 <el-form label-width="60px">
                   <el-form-item label="回答">
                     <el-input
                       v-model="q.answer"
                       type="textarea"
                       :disabled="q.answered"
+                     
                       placeholder="请输入回答内容，或点击AI生成回答..."
-                      :rows="4"
+                      :rows="10"
                       maxlength="2500"
                       show-word-limit
                     />
                   </el-form-item>
+
+              
                 </el-form>
                 <div class="action-buttons">
                   <div class="left-actions">
@@ -526,6 +530,18 @@ onMounted(() => {
   color: #fff;
 }
 
+:deep(.el-textarea__inner::placeholder) {
+  color: white !important; /* 改成你想要的颜色 */
+  opacity: 1;
+}
+
+/* 修改字数统计样式 */
+:deep(.el-input__count) {
+  color: white !important;
+  font-size: 13px;
+  font-weight: 500;
+  background-color: transparent;
+}
 
 
 .vertical-blocks {
@@ -667,7 +683,7 @@ onMounted(() => {
 .avg-value {
   font-size: 24px;
   font-weight: bold;
-  color: #409eff;
+  color: yellow;
 }
 
 .avg-stars {
@@ -914,9 +930,10 @@ h4 {
 }
 
 .avg-label {
-  font-size: 13px;
-  color: #888;
+  font-size: 15px;
+  color: white;
   margin-top: 2px;
+
 }
 
 .rating-bars-block {
