@@ -719,7 +719,10 @@ const getTypeTextColor = (type) => {
           </el-form-item>
 
           <el-form-item label="题目总数">
-            <el-tag type="info" size="large">{{ questions.length }} 道题目</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;" >{{ questions.filter(q => q.type === "choice").length }} 道选择题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;" >{{ questions.filter(q => q.type === "short").length }} 道简答题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{ questions.filter(q => q.type === "code").length }} 道编程题</el-tag>
+            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{ questions.reduce((sum, q) => sum + (q.score || 0), 0) }} 分</el-tag>
           </el-form-item>
         </el-form>
 
@@ -805,12 +808,12 @@ const getTypeTextColor = (type) => {
           </el-table-column>
 
           <el-table-column label="操作" width="100px" align="center" header-align="center">
-            <template #default="scope" class >
+            <template #default="scope" class>
               <div class="center-button-wrapper">
-              <el-button type="primary" size="small" text @click="viewDetail(scope.row)"  class="action-btn"
-                style="font-size: 13px; font-weight: 500;">
-                查看
-              </el-button>
+                <el-button type="primary" size="small" text @click="viewDetail(scope.row)" class="action-btn"
+                  style="font-size: 13px; font-weight: 500;">
+                  查看
+                </el-button>
               </div>
             </template>
           </el-table-column>
@@ -875,7 +878,8 @@ const getTypeTextColor = (type) => {
     </el-dialog>
 
     <!-- 作业详情对话框 -->
-    <el-dialog v-model="detailDialogVisible" :title="`作业详情 - ${currentHomework.title}`" width="80%" top="5vh">
+    <el-dialog v-model="detailDialogVisible" :title="`作业详情 - ${currentHomework.title}`" width="80%"
+      :append-to-body="true" :lock-scroll="true" :modal="true" top="15vh">
       <el-tabs type="border-card">
         <!-- 基本信息 -->
         <el-tab-pane label="基本信息">
@@ -898,7 +902,7 @@ const getTypeTextColor = (type) => {
             class="question-detail">
             <el-card shadow="hover" style="margin-bottom: 15px">
               <div class="question-header">
-                <h4>第{{ index + 1 }}题</h4>
+                <h4 style="color: black;">第{{ index + 1 }}题</h4>
                 <div>
                   <el-tag :type="getTypeColor(question.type)" size="small">{{ getTypeName(question.type) }}</el-tag>
                   <el-tag type="info" size="small" style="margin-left: 8px">{{ question.score }}分</el-tag>
@@ -976,7 +980,7 @@ const getTypeTextColor = (type) => {
 
     <!-- 批改作业对话框 -->
     <el-dialog v-model="gradeDialogVisible" :title="`批改作业 - ${currentSubmission.studentName}`" width="80%"
-      :close-on-click-modal="false">
+      :close-on-click-modal="false" :append-to-body="true" :lock-scroll="true" :modal="true" top="15vh">
       <div v-if="currentGradeQuestions.length > 0" class="grade-container">
         <div class="student-info">
           <el-descriptions :column="3" border>
@@ -1011,12 +1015,12 @@ const getTypeTextColor = (type) => {
                 <p>{{ question.content }}</p>
               </div>
 
-              <div class="question-answer" style="margin-top: 8px;">
+              <div class="question-section question-answer" style="margin-top: 8px;">
                 <strong>标准答案：</strong>
                 <div style="white-space: pre-wrap;">{{ question.trueAnswer || '暂无' }}</div>
               </div>
 
-              <div class="student-answer-section">
+              <div class="question-section question-analysis">
                 <h5>学生答案：</h5>
                 <div class="answer-display">
                   {{ question.answer || '未作答' }}
@@ -1041,7 +1045,8 @@ const getTypeTextColor = (type) => {
         <div class="feedback-section">
           <el-card shadow="hover">
             <h4>教师反馈：</h4>
-            <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..." />
+            <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..."
+              style="margin-top: 8px;" />
           </el-card>
         </div>
 
@@ -1093,6 +1098,53 @@ const getTypeTextColor = (type) => {
 
 
 <style scoped>
+.question-content {
+  margin-bottom: 8px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  /* 默认背景 */
+  margin-bottom: 8px;
+}
+
+.question-explain {
+  background-color: #fdf6ec;
+  /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
+}
+
+.question-answer {
+  background-color: #ecf5ff;
+  /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
+}
+
+.question-analysis {
+  background-color: #f0f9eb;
+  /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+
 .center-button-wrapper {
   display: flex;
   justify-content: center;
