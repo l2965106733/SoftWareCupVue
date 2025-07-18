@@ -793,6 +793,7 @@ const getTypeTextColor = (type) => {
           </el-icon> 发布记录</h3>
 
 
+          
         <el-table :data="history" stripe :row-key="row => row.id" class="table-card-local">
 
           <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
@@ -825,6 +826,7 @@ const getTypeTextColor = (type) => {
 
 
         </el-table>
+
 
       </el-card>
     </div>
