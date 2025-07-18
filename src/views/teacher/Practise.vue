@@ -594,7 +594,7 @@ const getTypeTextColor = (type) => {
   <div class="vertical-layout practise-layout">
     <!-- 题目编辑区域 -->
     <div class="editor-section">
-      <el-card shadow="hover">
+      <el-card shadow="hover" class="temp-el-card">
         <div class="control-header">
           <h3>题目编辑区</h3>
         </div>
@@ -1155,7 +1155,10 @@ el-table th,
   font-weight: 600;
 }
 
-
+.temp-el-card {
+  background-color: rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+}
 
 .editor-section {
   margin-bottom: 24px;
