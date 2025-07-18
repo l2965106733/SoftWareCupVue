@@ -299,6 +299,24 @@ const clearQuestions = () => {
   })
 }
 
+// 在script中添加清空题目内容的方法
+const clearQuestionContent = (q) => {
+  q.content = ''
+  q.knowledge = ''
+  q.answer = ''
+  q.explain = ''
+  q.score = 5
+  hasSavedInCurrentSession.value = false
+}
+
+// 监听题目内容变化，允许再次保存
+const onQuestionFieldChange = () => {
+  hasSavedInCurrentSession.value = false
+}
+
+// 判断题目是否已保存
+const isQuestionSaved = (q) => q.id > 0
+
 // 获取当前登录老师ID
 const getCurrentTeacherId = () => {
   const loginUser = JSON.parse(localStorage.getItem('loginUser'))
@@ -579,13 +597,27 @@ const getScoreClass = (score, totalScore) => {
 const getTypeTextColor = (type) => {
   switch (type) {
     case 'choice':
-      return '#1E824C';
+      return '#FFFFFF';
     case 'short':
-      return '#E6A23C'; // 橙色
+      return '#FFFFFF'; // 橙色
     case 'code':
-      return '#A18CD1'; // 紫色
+      return '#FFFFFF'; // 紫色
     default:
-      return '#606266'; // 默认灰
+      return '#FFFFFF'; // 默认灰
+  }
+}
+
+// 保存题目前弹出确认提示
+const confirmAndSaveQuestions = async () => {
+  try {
+    await ElMessageBox.confirm('保存后将无法修改该题目内容，是否确认保存？', '确认保存', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+    await saveQuestions()
+  } catch (e) {
+    // 用户取消
   }
 }
 </script>
@@ -596,7 +628,10 @@ const getTypeTextColor = (type) => {
     <div class="editor-section">
       <el-card shadow="hover" class="temp-el-card">
         <div class="control-header">
-          <h3>题目编辑区</h3>
+          <h3 class="section-title">
+            <el-icon style="margin-right:8px;"><EditPen /></el-icon>
+            题目编辑区
+          </h3>
         </div>
         <div class="empty-hint">
           <el-button type="primary" @click="showAIDialog" size="large" style="color: white">
@@ -606,7 +641,7 @@ const getTypeTextColor = (type) => {
             AI 生成题目
           </el-button>
 
-          <el-button type="info" @click="handleManualAdd" size="large" style="color: white">
+          <el-button type="danger" @click="handleManualAdd" size="large" style="color: white">
             <el-icon>
               <EditPen />
             </el-icon>
@@ -620,15 +655,15 @@ const getTypeTextColor = (type) => {
             <div>
               <el-tag :type="getTypeColor(q.type)" size="small" :style="{ color: getTypeTextColor(q.type) }">{{
                 getTypeName(q.type) }}</el-tag>
-              <el-tag v-if="q.id && q.id > 0" type="success" size="small"
-                style="margin-left: 8px; color: #28C76F">已保存</el-tag>
-              <el-tag v-else type="warning" size="small" style="margin-left: 8px; color: red">未保存</el-tag>
+              <el-tag v-if="q.id && q.id > 0" size="small"
+                style="margin-left: 8px; color:white">已保存</el-tag>
+              <el-tag v-else type="warning" size="small" style="margin-left: 8px; color:white">未保存</el-tag>
             </div>
           </div>
 
           <el-form label-width="60px">
             <el-form-item label="题型">
-              <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="handleTypeChange(q)">
+              <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="(val) => { handleTypeChange(q); onQuestionFieldChange(); }" :disabled="isQuestionSaved(q)">
                 <el-option label="选择题" value="choice">
                   <span>选择题</span>
                   <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
@@ -645,66 +680,63 @@ const getTypeTextColor = (type) => {
             </el-form-item>
 
             <el-form-item label="题干">
-              <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8" />
+              <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="知识点">
-              <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" />
+              <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="答案">
               <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
-                :rows="getAnswerRows(q.type)" />
+                :rows="getAnswerRows(q.type)" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="解析">
-              <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" />
+              <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="分值">
-              <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" />
+              <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" @change="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
           </el-form>
 
-          <div class="question-actions">
+          <div class="question-actions right-actions">
+            <el-button type="warning" size="small" @click="clearQuestionContent(q)" :disabled="isQuestionSaved(q)">
+              <el-icon><Delete /></el-icon>
+              清空
+            </el-button>
             <el-button type="danger" size="small" @click="removeQuestion(q.id)">
-              <el-icon>
-                <Close />
-              </el-icon>
+              <el-icon><Close /></el-icon>
               删除
             </el-button>
+            <el-button
+              :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
+              size="small" @click="confirmAndSaveQuestions" :disabled="isQuestionSaved(q) || isSaveButtonDisabled" :loading="isSaving">
+              <el-icon><Check /></el-icon>
+              {{
+                isSaving ? '保存中...' :
+                  isQuestionSaved(q) ? '已保存' : '保存题目'}}
+            </el-button>
           </div>
-
-          <el-divider />
         </div>
 
         <div class="header-actions" style="margin-top: 16px;">
-          <el-button
-            :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
-            size="small" @click="saveQuestions" :disabled="isSaveButtonDisabled" :loading="isSaving">
-            <el-icon>
-              <Check />
-            </el-icon>
-            {{
-              isSaving ? '保存中...' :
-                hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? '已保存' : '保存题目'}} </el-button>
-              <el-button type="warning" size="small" @click="clearQuestions" :disabled="questions.length === 0">
-                <el-icon>
-                  <Delete />
-                </el-icon>
-                清空
-              </el-button>
+          
         </div>
       </el-card>
     </div>
 
     <!-- 右侧发布与预览 -->
     <div class="side-panel">
-      <el-card shadow="hover">
+      <el-card shadow="hover" >
         <div class="control-header">
-          <h3>作业设置</h3>
+          <h3 class="section-title">
+            <el-icon style="margin-right:8px;"><Setting /></el-icon>
+            作业设置
+          </h3>
         </div>
-        <el-form label-width="80px">
+        <el-form label-width="80px" >
           <el-form-item label="作业标题">
             <el-input v-model="homeworkTitle" placeholder="请输入作业标题" />
           </el-form-item>
@@ -719,11 +751,11 @@ const getTypeTextColor = (type) => {
           </el-form-item>
 
           <el-form-item label="题目总数">
-            <el-tag type="info" size="large">{{ questions.length }} 道题目</el-tag>
+            <el-tag style="color : white" size="large" >{{ questions.length }} 道题目</el-tag>
           </el-form-item>
         </el-form>
 
-        <el-button type="success" block @click="publishHomework" style="color: gray"
+        <el-button type="success" block @click="publishHomework" style=""
           :disabled="questions.length === 0 || !homeworkTitle || questions.some(q => !q.id || q.id <= 0)">
           <el-icon>
             <Upload />
@@ -784,8 +816,7 @@ const getTypeTextColor = (type) => {
         <h3 class="section-title" style="color:white"><el-icon>
             <List />
           </el-icon> 发布记录</h3>
-        <el-table :data="history" stripe :row-key="row => row.id" class="table-card"
-          style="border-radius: 12px; background: rgba(255,255,255,0.25); backdrop-filter: blur(12px); padding: 8px;">
+        <el-table :data="history" stripe :row-key="row => row.id">
           <el-table-column prop="title" label="作业名称" width="150px" align="center" header-align="center"
             show-overflow-tooltip />
 
@@ -883,7 +914,7 @@ const getTypeTextColor = (type) => {
             <el-descriptions-item label="作业标题">{{ currentHomework.title }}</el-descriptions-item>
             <el-descriptions-item label="发布时间">{{ formatDate(currentHomework.publishTime) }}</el-descriptions-item>
             <el-descriptions-item label="状态">
-              <el-tag :type="statusMap[currentHomework.status]?.type || 'default'">
+              <el-tag :type="statusMap[currentHomework.status]?.type || 'default'" style="color:white">
                 {{ statusMap[currentHomework.status]?.text || '未知状态' }}
               </el-tag>
             </el-descriptions-item>
@@ -894,14 +925,13 @@ const getTypeTextColor = (type) => {
 
         <!-- 题目列表 -->
         <el-tab-pane label="题目内容">
-          <div v-for="(question, index) in homeworkQuestions" :key="question.id || `detail-${index}`"
-            class="question-detail">
+          <div v-for="(question, index) in homeworkQuestions" :key="question.id || `detail-${index}`">
             <el-card shadow="hover" style="margin-bottom: 15px">
               <div class="question-header">
                 <h4>第{{ index + 1 }}题</h4>
                 <div>
-                  <el-tag :type="getTypeColor(question.type)" size="small">{{ getTypeName(question.type) }}</el-tag>
-                  <el-tag type="info" size="small" style="margin-left: 8px">{{ question.score }}分</el-tag>
+                  <el-tag :type="info" style="color:white" size="small">{{ getTypeName(question.type) }}</el-tag>
+                  <el-tag type="info" size="small"  style="margin-left: 8px; color:white">{{ question.score }}分</el-tag>
                 </div>
               </div>
               <div class="question-content">
@@ -936,7 +966,7 @@ const getTypeTextColor = (type) => {
             <el-table-column prop="studentName" label="学生姓名" />
             <el-table-column prop="status" label="提交状态">
               <template #default="scope">
-                <el-tag :type="getStatusTagType(scope.row.status)">
+                <el-tag :type="getStatusTagType(scope.row.status)" style="color:white">
                   {{ getStatusText(scope.row.status) }}
                 </el-tag>
               </template>
@@ -962,7 +992,7 @@ const getTypeTextColor = (type) => {
                 <el-button v-if="scope.row.status === 1" type="primary" size="small" @click="gradeHomework(scope.row)">
                   批改
                 </el-button>
-                <el-button v-else-if="scope.row.status === 2" type="info" size="small"
+                <el-button v-else-if="scope.row.status === 2" type="danger" size="small"
                   @click="gradeHomework(scope.row)">
                   查看
                 </el-button>
@@ -983,7 +1013,7 @@ const getTypeTextColor = (type) => {
             <el-descriptions-item label="学生姓名">{{ currentSubmission.studentName }}</el-descriptions-item>
             <el-descriptions-item label="提交时间">{{ currentSubmission.submitTime }}</el-descriptions-item>
             <el-descriptions-item label="当前状态">
-              <el-tag :type="getStatusTagType(currentSubmission.status)">
+              <el-tag :type="getStatusTagType(currentSubmission.status)" style="color:white">
                 {{ getStatusText(currentSubmission.status) }}
               </el-tag>
             </el-descriptions-item>
@@ -997,10 +1027,10 @@ const getTypeTextColor = (type) => {
               <div class="question-header">
                 <h4>第{{ index + 1 }}题</h4>
                 <div>
-                  <el-tag :type="getTypeColor(question.type)" size="small">
+                  <el-tag :type="getTypeColor(question.type)" size="small" style="color:white">
                     {{ getTypeName(question.type) }}
                   </el-tag>
-                  <el-tag type="info" size="small" style="margin-left: 8px">
+                  <el-tag type="info" size="small" style="margin-left: 8px; color:white">
                     满分{{ question.questionScore }}分
                   </el-tag>
                 </div>
@@ -1040,13 +1070,13 @@ const getTypeTextColor = (type) => {
 
         <div class="feedback-section">
           <el-card shadow="hover">
-            <h4>教师反馈：</h4>
+            <h4 style="color:grey">教师反馈：</h4>
             <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..." />
           </el-card>
         </div>
 
         <div class="grade-summary">
-          <el-card shadow="hover" style="background: #f8f9fa;">
+          <el-card shadow="hover" style="background: rgba(255,255,255,0.08); backdrop-filter: blur(10px);">
             <div class="summary-content">
               <div class="total-score">
                 <span class="label">总得分：</span>
@@ -1093,130 +1123,83 @@ const getTypeTextColor = (type) => {
 
 
 <style scoped>
-.center-button-wrapper {
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
+.vertical-layout.practise-layout {
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(18px);
+  border-radius: 24px;
+  padding: clamp(24px, 4vw, 48px);
+  color: #fff;
+  animation: page-fade-in 0.8s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes page-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.section-title, .control-header h3, h4 {
+  font-size: clamp(20px, 3vw, 24px);
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 clamp(16px, 3vw, 24px) 0;
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100%;
+  gap: clamp(8px, 2vw, 12px);
+  animation: section-fade-in 0.8s cubic-bezier(.4,0,.2,1);
 }
 
-.action-btn {
-  font-size: 13px !important;
-  font-weight: 500 !important;
-  line-height: normal !important;
-  padding: 4px 10px !important;
+@keyframes section-fade-in {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
-
-.el-table__row {
-  height: 48px;
+.el-card, .temp-el-card {
+  background: rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.16) !important;
+  border: none !important;
+  transition: all 0.3s ease;
+  margin-bottom: 32px;
 }
 
-el-table th,
-.el-table td {
-  padding: 12px 16px !important;
-  white-space: nowrap;
+.el-card:hover {
+  background: rgba(255,255,255,0.18) !important;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18) !important;
 }
 
-.el-table .cell {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.action-buttons {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-}
-
-.resource-name-cell {
-  display: flex;
+.el-button, .btn, button {
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 500;
+  padding: 12px 24px !important;
+  transition: all 0.3s ease;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.type-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  color: #fff;
+.el-button:hover {
+  background: rgba(255,255,255,0.3) !important;
+  transform: translateY(-2px);
 }
 
-.name-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: #000;
+.el-input, .el-date-editor, .el-textarea {
+  background: rgba(255,255,255,0.15) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  border-radius: 8px !important;
+}
+.el-input__inner, .el-textarea__inner {
+  background: transparent !important;
 }
 
-.download-count {
-  color: #67c23a;
-  font-weight: 600;
-}
-
-.temp-el-card {
-  background-color: rgba(255, 255, 255, 0.25);
-  border-radius: 12px;
-}
-
-.editor-section {
-  margin-bottom: 24px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(20px);
-  border-radius: 18px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  color: #222;
-}
-
-
-/* 题目块样式 */
-.question-block {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(16px);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-
-.empty-hint {
-  margin-bottom: 20px;
-}
-
-.question-block {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(18px);
-  border-radius: 18px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-  padding: 20px;
-  margin-bottom: 20px;
-  color: #222;
-  transition: all 0.3s ease;
-}
-
-.question-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-
-
-.question-header h4 {
-  font-size: 16px;
-  font-weight: bold;
-  color: white;
-  margin: 0;
-}
-
-.question-header .el-tag {
-  font-weight: 600;
-  margin-left: 4px;
+.el-tag {
+  background: rgba(161,140,209,0.7) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  padding: 2px 10px !important;
 }
 
 .header-actions {
@@ -1226,160 +1209,95 @@ el-table th,
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-
-/* 所有按钮基础玻璃风格 */
 .header-actions .el-button {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #222;
-  border-radius: 10px;
-  font-weight: 600;
-  transition: all 0.3s ease;
   min-width: 110px;
   padding: 10px 20px;
   font-size: 15px;
 }
 
-
-/* 悬浮时强化视觉 */
-.header-actions .el-button:hover {
-  background: rgba(255, 255, 255, 0.25);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
+.question-block {
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 24px 24px 16px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  color: #fff;
+  transition: all 0.3s ease;
+}
+.question-block:hover {
+  background: rgba(255,255,255,0.18);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
 }
 
-/* 保存按钮颜色变化 */
-.header-actions .el-button.el-button--success {
-  color: #28a745;
-  border-color: rgba(40, 167, 69, 0.4);
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.question-header h4 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0;
 }
 
-.header-actions .el-button.el-button--success:hover {
-  background: rgba(40, 167, 69, 0.12);
+.empty-hint {
+  color: #e0e0e0;
+  padding: 60px 30px;
+  text-align: center;
+  font-size: 16px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 12px;
+  border: 2px dashed #d9d9d9;
+  margin-bottom: 24px;
 }
 
-/* 清空按钮颜色调整 */
-.header-actions .el-button.el-button--warning {
-  color: #e67e22;
-  border-color: rgba(230, 126, 34, 0.4);
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important; 
+  white-space: nowrap;
 }
 
-.header-actions .el-button.el-button--warning:hover {
-  background: rgba(230, 126, 34, 0.12);
+.form-tips {
+  font-size: 13px;
+  color: #e0e0e0;
+  margin-top: 8px;
 }
 
 .side-panel {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 32px;
 }
 
-.side-panel .el-card {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(16px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-  color: #222;
-}
-
-.control-header h3 {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: white;
-}
-
-.side-panel .el-form-item__label {
-  color: #222 !important;
-  font-weight: 600;
-}
-
-.el-input,
-.el-date-editor {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  color: #222;
-  border-radius: 8px;
-}
-
-.el-tag {
-  background: rgba(255, 255, 255, 0.2);
-  color: #222;
-  border: none;
-}
-
-.side-panel .el-button {
-  margin-top: 12px;
-  font-size: 16px;
-  font-weight: bold;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(10px);
-  color: #222;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.side-panel .el-button:hover {
-  background: rgba(255, 255, 255, 0.5);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.form-tips {
-  font-size: 13px;
-  color: #444;
+.right-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
   margin-top: 8px;
 }
 
-
-
-/* 删除按钮区域 */
-.question-actions {
+.saved-tip {
+  color:rgb(255, 255, 255);
+  font-size: 14px;
+  margin-top: 8px;
   text-align: right;
-  margin-top: 12px;
 }
 
-/* 删除按钮样式 */
-.question-actions .el-button {
-  background: rgba(255, 0, 0, 0.12);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 0, 0, 0.3);
-  color: #ff4d4f;
-  border-radius: 8px;
-  font-weight: 600;
-}
-
-.question-actions .el-button:hover {
-  background: rgba(255, 0, 0, 0.2);
-  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.2);
-}
-
-/* el-divider 增加透明背景 */
-.el-divider {
-  background-color: rgba(255, 255, 255, 0.2);
-  height: 1px;
-  margin: 24px 0;
-}
-
-
-.vertical-layout.practise-layout {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(24px);
-  border-radius: 20px;
-  padding: clamp(24px, 4vw, 48px);
-  color: #222;
-}
-
-
-/* 标准字体色彩 */
-.el-input,
-.el-select,
-.el-textarea,
-.el-button {
-  color: #222;
+@media (max-width: 900px) {
+  .vertical-layout.practise-layout {
+    padding: 12px;
+  }
+  .el-card, .temp-el-card {
+    padding: 8px;
+  }
+  .side-panel {
+    gap: 16px;
+  }
+  .question-block {
+    padding: 12px 8px 8px 8px;
+    margin-bottom: 16px;
+  }
 }
 </style>
