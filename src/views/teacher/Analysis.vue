@@ -336,7 +336,7 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">平均得分率</div>
-                <div class="card-value"><el-icon><TrendCharts /></el-icon>  {{ overviewData.avgScore }}</div>
+                <div class="card-value"><el-icon><TrendCharts /></el-icon>  {{ overviewData.avgScore * 100}}%</div>
               </div>
       
             </div>
