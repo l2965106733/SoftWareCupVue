@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getAiQuestionHistoryApi, getChatApi, recordAiQuestionApi,  } from '@/api/student'
+import { getAiQuestionHistoryApi, getChatApi, recordAiQuestionApi, } from '@/api/student'
 
 
 // AI聊天相关
@@ -86,9 +86,40 @@ const removeFile = (file) => {
   } else {
     // 清空所有文件
     selectedFiles.value = []
-    if (fileUpload.value) {
-      fileUpload.value.clearFiles()
+  }
+}
+
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  files.forEach(file => {
+    // 检查文件大小（限制10MB）
+    const maxSize = 10 * 1024 * 1024
+    if (file.size > maxSize) {
+      ElMessage.error('文件大小不能超过10MB')
+      return
     }
+
+    // 检查文件数量（限制5个文件）
+    if (selectedFiles.value.length >= 5) {
+      ElMessage.error('最多只能上传5个文件')
+      return
+    }
+
+    // 添加文件到列表
+    selectedFiles.value.push({
+      uid: Date.now() + Math.random(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      file: file
+    })
+  })
+
+  // 清空input值，允许重复选择同一文件
+  event.target.value = ''
+
+  if (files.length > 0) {
+    ElMessage.success(`已选择${files.length}个文件`)
   }
 }
 
@@ -161,7 +192,7 @@ const sendMessage = async () => {
         console.error('记录AI提问失败:', error)
       }
 
-  
+
     } else {
       ElMessage.error(result.msg || '生成失败')
     }
@@ -226,238 +257,216 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="student-study-layout">
-    <!-- 左侧AI助手区域 -->
-    <div class="left-panel">
-      <!-- AI互动提问区域 -->
-      <div class="ai-section">
-        <el-card shadow="hover">
-          <div class="section-header">
-            <h3>
-              <el-icon>
-                <ChatDotRound />
-              </el-icon>
-              AI学习助手
-            </h3>
-          </div>
+  <div class="student-container">
+    <!-- 页面标题 -->
+    <div class="student-section">
+      <h1 class="student-title large">
+        <i class="fas fa-robot"></i>
+        AI助手
+      </h1>
+      <p class="student-text secondary">智能AI助手，解答学习问题</p>
+    </div>
 
-          <div class="chat-container">
-            <div ref="chatMessages" class="chat-messages">
-              <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
-                <!-- 用户消息 -->
-                <div v-if="message.sender === 'user'" class="user-message">
-                  <div class="message-content">
-                    {{ message.content }}
-                    <!-- 显示上传的文件信息 -->
-                    <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
-                      <div class="files-indicator">
-                        <el-icon>
-                          <Paperclip />
-                        </el-icon>
-                        附件 ({{ message.fileNames.length }})
-                      </div>
-                      <div class="file-names">
-                        <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
-                          {{ fileName }}
-                        </span>
-                      </div>
+    <!-- AI聊天区域 -->
+    <div class="student-section">
+      <div class="student-card chat-card">
+        <div class="chat-header">
+          <div class="chat-title">
+            <i class="fas fa-comments"></i>
+            AI学习助手
+          </div>
+          <div class="chat-status">
+            <i class="fas fa-circle" :class="{ 'status-online': !aiTyping, 'status-typing': aiTyping }"></i>
+            {{ aiTyping ? 'AI正在思考...' : 'AI在线' }}
+          </div>
+        </div>
+
+        <div class="chat-container">
+          <div ref="chatMessages" class="chat-messages">
+            <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
+              <!-- 用户消息 -->
+              <div v-if="message.sender === 'user'" class="user-message">
+                <div class="message-content">
+                  {{ message.content }}
+                  <!-- 显示上传的文件信息 -->
+                  <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
+                    <div class="files-indicator">
+                      <i class="fas fa-paperclip"></i>
+                      附件 ({{ message.fileNames.length }})
+                    </div>
+                    <div class="file-names">
+                      <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
+                        {{ fileName }}
+                      </span>
                     </div>
                   </div>
-                  <div class="message-time">{{ message.time }}</div>
                 </div>
-
-                <!-- AI回复 -->
-                <div v-else class="ai-message">
-                  <div class="message-content">{{ message.content }}</div>
-                  <div class="message-time">{{ message.time }}</div>
-                </div>
+                <div class="message-time">{{ message.time }}</div>
               </div>
 
-              <!-- AI正在输入 -->
-              <div v-if="aiTyping" class="message-item ai typing">
-                <div class="ai-message">
-                  <div class="typing-indicator">
-                    <span></span>
-                    <span></span>
-                    <span></span>
-                  </div>
-                </div>
+              <!-- AI回复 -->
+              <div v-else class="ai-message">
+                <div class="message-content">{{ message.content }}</div>
+                <div class="message-time">{{ message.time }}</div>
               </div>
             </div>
 
-            <!-- 输入区域 -->
-            <div class="chat-input">
-              <div class="input-toolbar">
-                <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
-                  :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
-                  class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
-                  <el-button type="info" size="small" text>
-                    <el-icon>
-                      <Paperclip />
-                    </el-icon>
-                    上传文件 (最多5个)
-                  </el-button>
-                </el-upload>
-
-                <div class="file-preview" v-if="selectedFiles.length > 0">
-                  <div class="file-list-header">
-                    <span>已选择 {{ selectedFiles.length }} 个文件</span>
-                    <el-button type="danger" size="small" text @click="removeFile()">
-                      <el-icon>
-                        <Delete />
-                      </el-icon>
-                      清空全部
-                    </el-button>
-                  </div>
-                  <div class="file-list">
-                    <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
-                      <div class="file-preview-icon">
-                        <el-icon v-if="file.type?.includes('image')">
-                          <Picture />
-                        </el-icon>
-                        <el-icon v-else-if="file.type?.includes('pdf')">
-                          <Document />
-                        </el-icon>
-                        <el-icon v-else>
-                          <Paperclip />
-                        </el-icon>
-                      </div>
-                      <div class="file-preview-info">
-                        <span class="file-preview-name">{{ file.name }}</span>
-                        <span class="file-preview-size">{{ formatFileSize(file.size) }}</span>
-                      </div>
-                      <el-button type="danger" size="small" text @click="removeFile(file)">
-                        <el-icon>
-                          <Close />
-                        </el-icon>
-                      </el-button>
-                    </div>
-                  </div>
+            <!-- AI正在输入 -->
+            <div v-if="aiTyping" class="message-item ai typing">
+              <div class="ai-message">
+                <div class="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div class="message-input">
-                <el-input v-model="inputMessage" type="textarea" :rows="3" placeholder="请输入您的问题..."
-                  @keydown.ctrl.enter="sendMessage" :disabled="sending" />
-                <el-button type="primary" @click="sendMessage" :loading="sending" class="send-button">
+          <!-- 输入区域 -->
+          <div class="chat-input">
+
+            <div class="input-toolbar">
+              <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
+                :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
+                class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
+                <el-button type="info" size="small" text>
                   <el-icon>
-                    <Promotion />
+                    <Paperclip />
                   </el-icon>
-                  发送
+                  上传文件 (最多5个)
                 </el-button>
+              </el-upload>
+
+              <div class="file-preview" v-if="selectedFiles.length > 0">
+                <div class="file-list-header">
+                  <span>已选择 {{ selectedFiles.length }} 个文件</span>
+                  <button class="clear-btn" @click="removeFile()">
+                    <i class="fas fa-trash"></i>
+                    清空全部
+                  </button>
+                </div>
+                <div class="file-list">
+                  <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
+                    <div class="file-preview-icon">
+                      <i v-if="file.type?.includes('image')" class="fas fa-image"></i>
+                      <i v-else-if="file.type?.includes('pdf')" class="fas fa-file-pdf"></i>
+                      <i v-else class="fas fa-paperclip"></i>
+                    </div>
+                    <div class="file-preview-info">
+                      <span class="file-preview-name">{{ file.name }}</span>
+                      <span class="file-preview-size">{{ formatFileSize(file.size) }}</span>
+                    </div>
+                    <button class="remove-btn" @click="removeFile(file)">
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+
+            <div class="message-input">
+              <textarea v-model="inputMessage" class="message-textarea" placeholder="请输入您的问题..."
+                @keydown.ctrl.enter="sendMessage" :disabled="sending" rows="3"></textarea>
+              <button class="send-btn" @click="sendMessage"
+                :disabled="sending || (!inputMessage.trim() && selectedFiles.length === 0)">
+                <i class="fas fa-paper-plane"></i>
+                {{ sending ? '发送中...' : '发送' }}
+              </button>
+            </div>
           </div>
-        </el-card>
+        </div>
       </div>
     </div>
   </div>
-
-
 </template>
 
 <style scoped>
-.student-study-layout {
-  display: flex;
-  gap: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.left-panel {
-  flex: 2;
+/* 聊天卡片样式 */
+.chat-card {
+  padding: 0;
+  overflow: hidden;
+  height: 90vh;
   display: flex;
   flex-direction: column;
-  min-width: 0;
 }
 
-.right-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
-}
-
-/* 卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-/* 区块头部 */
-.section-header {
+.chat-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
+  padding: 20px 24px;
+  background: var(--student-glass);
+  border-bottom: 1px solid var(--student-glass-border);
 }
 
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
+.chat-title {
+  font-size: 18px;
   font-weight: 600;
+  color: var(--student-text);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* AI聊天区域 */
-.ai-section {
-  flex: 1;
+.chat-status {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--student-text-secondary);
 }
 
-.ai-section .el-card {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.status-online {
+  color: #67c23a;
+  animation: pulse 2s infinite;
 }
 
-.ai-section .el-card :deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+.status-typing {
+  color: #e6a23c;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .chat-container {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  overflow: hidden;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #f9f9f9;
-  margin-bottom: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .message-item {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .message-item.user {
-  text-align: right;
+  align-items: flex-end;
 }
 
 .message-item.ai {
-  text-align: left;
+  align-items: flex-start;
 }
 
 .user-message,
@@ -468,26 +477,26 @@ onMounted(() => {
 }
 
 .user-message .message-content {
-  background: #409eff;
-  color: white;
+  background: var(--gradient-primary);
+  color: var(--student-text);
   padding: 12px 16px;
   border-radius: 18px 18px 4px 18px;
   word-wrap: break-word;
 }
 
 .ai-message .message-content {
-  background: white;
-  color: #333;
+  background: var(--student-glass);
+  color: var(--student-text);
   padding: 12px 16px;
   border-radius: 18px 18px 18px 4px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--student-glass-border);
   word-wrap: break-word;
   white-space: pre-wrap;
 }
 
 .message-time {
   font-size: 12px;
-  color: #999;
+  color: var(--student-text-muted);
   margin-top: 4px;
 }
 
@@ -530,16 +539,16 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   padding: 12px 16px;
-  background: white;
+  background: var(--student-glass);
   border-radius: 18px 18px 18px 4px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--student-glass-border);
 }
 
 .typing-indicator span {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #409eff;
+  background: var(--student-text);
   animation: typing 1.4s infinite ease-in-out;
 }
 
@@ -568,20 +577,40 @@ onMounted(() => {
 
 /* 输入区域 */
 .chat-input {
-  border-top: 1px solid #e0e0e0;
-  padding-top: 16px;
+  border-top: 1px solid var(--student-glass-border);
+  padding: 20px;
+  background: var(--student-glass);
 }
 
 .input-toolbar {
   margin-bottom: 12px;
 }
 
+.upload-btn {
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  color: var(--student-text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--student-border-radius-small);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--student-animation);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.upload-btn:hover {
+  background: var(--student-card-hover);
+  color: var(--student-text);
+}
+
 .file-preview {
   margin-top: 12px;
   padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  background: var(--student-glass);
+  border-radius: var(--student-border-radius-small);
+  border: 1px solid var(--student-glass-border);
 }
 
 .file-list-header {
@@ -592,10 +621,23 @@ onMounted(() => {
   padding: 0 4px;
   font-size: 13px;
   font-weight: 500;
+  color: var(--student-text);
 }
 
-.file-list-header span {
-  color: #2c3e50;
+.clear-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all var(--student-animation);
+}
+
+.clear-btn:hover {
+  color: #ff4757;
 }
 
 .file-list {
@@ -611,20 +653,20 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
-  background: white;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--student-border-radius-small);
   font-size: 13px;
-  border: 1px solid #e8e8e8;
-  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all var(--student-animation);
 }
 
 .file-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .file-preview-icon {
-  color: #409eff;
+  color: var(--student-text);
+  font-size: 16px;
 }
 
 .file-preview-info {
@@ -635,12 +677,28 @@ onMounted(() => {
 
 .file-preview-name {
   font-weight: 600;
-  color: #333;
+  color: var(--student-text);
+  font-size: 12px;
 }
 
 .file-preview-size {
-  font-size: 12px;
-  color: #666;
+  font-size: 11px;
+  color: var(--student-text-secondary);
+}
+
+.remove-btn {
+  background: none;
+  border: none;
+  color: #ff6b6b;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all var(--student-animation);
+}
+
+.remove-btn:hover {
+  background: rgba(255, 107, 107, 0.1);
+  color: #ff4757;
 }
 
 .message-input {
@@ -649,12 +707,87 @@ onMounted(() => {
   align-items: flex-end;
 }
 
-.message-input .el-textarea {
+.message-textarea {
   flex: 1;
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  border-radius: var(--student-border-radius-small);
+  color: var(--student-text);
+  padding: 12px 16px;
+  font-size: 14px;
+  resize: none;
+  transition: all var(--student-animation);
+  backdrop-filter: blur(10px);
 }
 
-.send-button {
-  height: 40px;
+.message-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
 }
 
+.message-textarea::placeholder {
+  color: var(--student-text-muted);
+}
+
+.send-btn {
+  background: var(--gradient-primary);
+  color: var(--student-text);
+  border: none;
+  border-radius: var(--student-border-radius-small);
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--student-animation);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 80px;
+  justify-content: center;
+}
+
+.send-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  filter: brightness(1.05);
+}
+
+.send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .chat-card {
+    height: 60vh;
+  }
+
+  .chat-header {
+    padding: 16px 20px;
+  }
+
+  .chat-messages {
+    padding: 16px;
+  }
+
+  .chat-input {
+    padding: 16px;
+  }
+
+  .message-input {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .send-btn {
+    width: 100%;
+  }
+
+  .user-message,
+  .ai-message {
+    max-width: 85%;
+  }
+}
 </style>

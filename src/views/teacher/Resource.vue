@@ -344,119 +344,109 @@ onMounted(() => {
 
 
 <template>
-  <div class="lesson-plan-container">
+  <div class="lesson-plan-container vertical-layout">
 
     <div class="top-toolbar">
 
-      <el-button type="success" @click="aiDialogVisible = true">🧠 AI生成教学内容</el-button>
-      <el-button type="danger" @click="clearPlan">🧹 清空</el-button>
+      <el-button type="success" @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button>
+      <el-button type="danger" @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button>
     </div>
 
-    <el-row :gutter="20">
-
-      <el-col :span="16">
-        <el-card class="lesson-section" shadow="never">
-          <h3>📘 教学内容结构</h3>
-          <div v-if="teachingPlan">
-            <el-timeline>
-              <el-timeline-item v-for="(item, index) in teachingPlan" :key="index" :timestamp="item.duration || '待设定'">
-                <div class="lesson-block">
-                  <strong>第{{ index + 1 }}讲：{{ item.title }}</strong>
-                  <el-button link type="primary" @click="editLesson(index)" v-if="!item.downloadUrl">编辑</el-button>
-
-                  <!-- 如果有下载链接，显示下载按钮 -->
-                  <el-button type="success" @click="downloadTeachingPlan(item.downloadUrl)" v-if="item.downloadUrl">
-                    <el-icon>
-                      <Download />
-                    </el-icon>
-                    下载完整文档
-                  </el-button>
-
-                  <p><strong>摘要：</strong>{{ item.summary }}</p>
-                  <p v-if="!item.practice && !item.downloadUrl">❌ 无练习题（请前往"作业模块"添加）</p>
-
-                  <!-- 如果有下载链接，显示额外信息 -->
-                  <div v-if="item.downloadUrl" class="download-info">
-                    <p>📄 完整的教学计划已生成为Word文档</p>
-                    <p>💡 包含详细的教学目标、重点难点、教学方法等内容</p>
-                  </div>
-                </div>
-              </el-timeline-item>
-            </el-timeline>
-          </div>
-          <div v-else>
-            <el-empty description="尚未生成教学节次结构"></el-empty>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :span="8">
-        <el-card class="upload-section" shadow="never">
-          <h3>📂 课程资料管理</h3>
-
-          <!-- 上传区域 -->
-          <div class="upload-area">
-            <div class="upload-controls">
-              <el-upload v-model:file-list="teachingFileList" action="/api/upload" :before-upload="beforeUpload"
-                :on-success="handleSuccess" :on-preview="handlePreview" :on-remove="handleRemove"
-                :show-file-list="false">
-                <el-button type="primary">
+    <div class="vertical-blocks">
+      <el-card class="lesson-section" shadow="never">
+        <h3 style = "color #777"><i class="fas fa-book-open"></i> 教学内容结构</h3>
+        <div v-if="teachingPlan">
+          <div class="vertical-plan-list">
+            <div v-for="(item, index) in teachingPlan" :key="index" class="vertical-plan-item">
+              <div class="plan-title-row">
+                <strong>第{{ index + 1 }}讲：{{ item.title }}</strong>
+                <el-button link type="primary" @click="editLesson(index)" v-if="!item.downloadUrl">编辑</el-button>
+                <el-button type="success" @click="downloadTeachingPlan(item.downloadUrl)" v-if="item.downloadUrl">
                   <el-icon>
-                    <Upload />
+                    <Download />
                   </el-icon>
-                  上传文件
+                  下载完整文档
                 </el-button>
-              </el-upload>
-              <span class="upload-tip">支持上传课程资料，多文件，最大100MB</span>
+              </div>
+              <p class="plan-summary"><strong>摘要：</strong>{{ item.summary }}</p>
+              <p v-if="!item.practice && !item.downloadUrl" class="plan-no-practice">❌ 无练习题（请前往"作业模块"添加）</p>
+              <div v-if="item.downloadUrl" class="download-info">
+                <p>📄 完整的教学计划已生成为Word文档</p>
+                <p>💡 包含详细的教学目标、重点难点、教学方法等内容</p>
+              </div>
             </div>
           </div>
+        </div>
+        <div v-else>
+          <el-empty>
+            <template #description>
+              <span style="color: #fff; font-weight: 600;">尚未生成教学节次结构</span>
+            </template>
+          </el-empty>
+        </div>
+      </el-card>
 
-          <!-- 资源列表 -->
-          <div v-if="teachingFileList.length > 0" class="resource-list">
-            <h4>📋 资源列表</h4>
-            <div v-for="file in teachingFileList" :key="file.uid" class="resource-item">
-              <div class="resource-name">
+      <el-card class="upload-section" shadow="never">
+        <h3><i class="fas fa-folder-open"></i> 课程资料管理</h3>
+        <div class="upload-area">
+          <div class="upload-controls">
+            <el-upload v-model:file-list="teachingFileList" action="/api/upload" :before-upload="beforeUpload"
+              :on-success="handleSuccess" :on-preview="handlePreview" :on-remove="handleRemove" :headers="uploadHeaders"
+              :show-file-list="false">
+              <el-button type="primary">
                 <el-icon>
-                  <Document />
+                  <Upload />
                 </el-icon>
-                {{ file.name }}
-              </div>
-              <div class="resource-meta">
-                <span v-if="file.size">大小: {{ formatFileSize(file.size) }}</span>
-                <span v-if="file.uploadTime">上传时间: {{ file.uploadTime }}</span>
-              </div>
-              <div class="resource-actions">
-                <el-button size="small" type="info" @click="handlePreview(file)">预览</el-button>
-                <el-button size="small" type="success" @click="handleDownload(file)">下载</el-button>
-                <el-button size="small" type="primary" @click="editResource(file)">编辑</el-button>
-                <el-button size="small" type="danger" @click="handleRemove(file)">删除</el-button>
-              </div>
+                上传文件
+              </el-button>
+            </el-upload>
+            <span class="upload-tip">支持上传课程资料，多文件，最大100MB</span>
+          </div>
+        </div>
+        <div v-if="teachingFileList.length > 0" class="resource-list">
+          <h4><i class="fas fa-list"></i> 资源列表</h4>
+          <div v-for="file in teachingFileList" :key="file.uid" class="resource-item">
+            <div class="resource-name">
+              <i class="fas fa-file-alt"></i>
+              {{ file.name }}
+            </div>
+            <div class="resource-meta">
+              <span v-if="file.size">大小: {{ formatFileSize(file.size) }}</span>
+              <span v-if="file.uploadTime">上传时间: {{ file.uploadTime }}</span>
+            </div>
+            <div class="resource-actions">
+              <el-button size="small" type="info" @click="handlePreview(file)">预览</el-button>
+              <el-button size="small" type="success" @click="handleDownload(file)">下载</el-button>
+              <el-button size="small" type="primary" @click="editResource(file)">编辑</el-button>
+              <el-button size="small" type="danger" @click="handleRemove(file)">删除</el-button>
             </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
+        </div>
+      </el-card>
+    </div>
 
     <!-- AI生成教学内容对话框 -->
-    <el-dialog v-model="aiDialogVisible" title="AI教学设计说明" width="500px">
-      <p>你可以上传额外文件用于 AI 分析（不影响课程资料），或单独填写备注。</p>
-
-      <el-form label-width="80px">
-        <el-form-item label="备注">
-          <el-input v-model="aiRemark" placeholder="如重点章节、教学目标等" />
-        </el-form-item>
-        <el-form-item label="上传资料">
-          <el-upload :headers="uploadHeaders" v-model:file-list="aiFiles" action="/api/upload" list-type="text" :on-success="(res, file) => {
-            if (res.code === 1) file.url = res.data.url || res.data
-          }">
-            <el-button>选择文件</el-button>
-          </el-upload>
-        </el-form-item>
-      </el-form>
-
+    <el-dialog v-model="aiDialogVisible" title="AI教学设计说明" width="500px" class="ai-dialog home-style-dialog">
+      <div class="ai-dialog-content">
+        <div class="ai-dialog-desc home-style-desc">你可以上传额外文件用于 AI 分析（不影响课程资料），或单独填写备注。</div>
+        <el-form label-width="80px">
+          <el-form-item label="备注">
+            <el-input v-model="aiRemark" placeholder="如重点章节、教学目标等" class="home-style-input" />
+          </el-form-item>
+          <el-form-item label="上传资料">
+            <el-upload :headers="uploadHeaders" v-model:file-list="aiFiles" action="/api/upload" list-type="text" :on-success="(res, file) => {
+              if (res.code === 1) file.url = res.data.url || res.data
+            }" class="home-style-upload">
+              <el-button class="home-style-btn">选择文件</el-button>
+            </el-upload>
+          </el-form-item>
+        </el-form>
+      </div>
       <template #footer>
-        <el-button @click="aiDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="generateTeachingPlan">生成节次结构</el-button>
+        <span class="dialog-footer">
+          <el-button class="home-style-btn" @click="aiDialogVisible = false">取消</el-button>
+          <el-button class="home-style-btn primary" type="primary" @click="generateTeachingPlan">生成节次结构</el-button>
+        </span>
       </template>
     </el-dialog>
 
@@ -470,23 +460,89 @@ onMounted(() => {
           <el-input v-model="editingResource.description" type="textarea" :rows="3" placeholder="请输入资源描述" />
         </el-form-item>
       </el-form>
-
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveResourceEdit">保存</el-button>
       </template>
     </el-dialog>
-
-
   </div>
 </template>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 .lesson-plan-container {
-  padding: 30px;
-  background: linear-gradient(to right, #7b2ff7, #f107a3);
-  min-height: 100vh;
-  color: #333;
+    min-height: 100%;
+    animation: page-fade-in 0.8s ease-out;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: clamp(24px, 4vw, 48px);
+    border-radius: 24px;
+    color: #fff;
+}
+
+@keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.section-title, h3, h4 {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(16px, 3vw, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    animation: section-fade-in 0.8s ease-out;
+}
+
+@keyframes section-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+.card, .el-card, .resource-item, .download-info, .upload-section, .lesson-section {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+    padding: clamp(20px, 4vw, 32px);
+    transition: all 0.3s ease;
+    color: #fff;
+}
+
+.lesson-plan-container:hover,
+.el-card:hover,
+.upload-section:hover,
+.lesson-section:hover {
+    /* 不改变背景色 */
+    /* background: none !important; */
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+}
+
+.el-button, .btn, button {
+    background: rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    border-radius: 12px !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    padding: 12px 24px !important;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.el-button:hover, .btn:hover, button:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: translateY(-2px);
+}
+
+.icon, .fa, .fas, .far, .fal, .fab {
+    color: #fff !important;
+    font-size: 20px !important;
 }
 
 .top-toolbar {
@@ -498,7 +554,18 @@ onMounted(() => {
 
 .upload-section,
 .lesson-section {
-  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 24px;
+  border: none;
+}
+
+.lesson-section h3,
+.upload-section h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #222;
+  margin-bottom: 18px;
 }
 
 .lesson-block {
@@ -511,17 +578,17 @@ onMounted(() => {
 
 /* 下载信息样式 */
 .download-info {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f1f8e9 100%);
+  background: #f8f9fa;
   padding: 12px 16px;
   border-radius: 8px;
-  border-left: 4px solid #4caf50;
+  border-left: 4px solid #409eff;
   margin-top: 10px;
 }
 
 .download-info p {
   margin: 4px 0;
   font-size: 14px;
-  color: #2e7d32;
+  color: #1761a0;
 }
 
 .download-info p:first-child {
@@ -543,7 +610,7 @@ onMounted(() => {
 
 .upload-tip {
   font-size: 12px;
-  color: #666;
+  color: #fff;
   line-height: 1.4;
 }
 
@@ -553,8 +620,9 @@ onMounted(() => {
 
 .resource-list h4 {
   margin-bottom: 15px;
-  color: #333;
+  color: #222;
   font-size: 16px;
+  font-weight: bold;
 }
 
 .resource-item {
@@ -562,16 +630,16 @@ onMounted(() => {
   flex-direction: column;
   padding: 16px;
   margin-bottom: 16px;
-  background: #f8f9fa;
+  background: #fff;
   border-radius: 12px;
   border: 2px solid #e9ecef;
-  transition: all 0.3s ease;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  transition: box-shadow 0.3s;
 }
 
 .resource-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
-  transform: translateY(-2px);
+  box-shadow: 0 4px 24px rgba(64,158,255,0.10);
+  border-color: #b3c6e0;
 }
 
 .resource-name {
@@ -579,7 +647,7 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   font-weight: 600;
-  color: #333;
+  color: #a18cd1;
   margin-bottom: 8px;
   font-size: 15px;
 }
@@ -599,14 +667,243 @@ onMounted(() => {
 
 .resource-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: nowrap;
 }
 
 .resource-actions .el-button {
-  flex: 1;
-  min-width: 45px;
-  font-size: 12px;
-  padding: 4px 8px;
+  background: transparent !important;
+  color: #a18cd1 !important;
+  border: 1.5px solid #a18cd1 !important;
+  border-radius: 8px !important;
+  font-size: 13px;
+  padding: 4px 10px;
+  transition: all 0.2s;
+}
+.resource-actions .el-button:hover {
+  background: #a18cd1 !important;
+  color: #fff !important;
+  border-color: #a18cd1 !important;
+}
+
+/* 统一el-dialog圆角 */
+.el-dialog {
+  border-radius: 16px !important;
+}
+.vertical-plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 8px;
+}
+.vertical-plan-item {
+  background: rgba(255,255,255,0.08);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  padding: 18px 20px;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: box-shadow 0.3s;
+}
+.vertical-plan-item:hover {
+  box-shadow: 0 6px 24px rgba(64,158,255,0.10);
+  border-color: #b3c6e0;
+}
+.plan-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.plan-summary {
+  margin: 6px 0 0 0;
+  color: #e0e0e0;
+  font-size: 15px;
+}
+.plan-no-practice {
+  color: #ffb300;
+  font-size: 14px;
+  margin: 4px 0 0 0;
+}
+.vertical-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+.vertical-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+@media (max-width: 900px) {
+  .vertical-layout, .vertical-blocks {
+    gap: 16px;
+  }
+}
+.ai-dialog .el-dialog__wrapper,
+.ai-dialog .el-dialog {
+  background: none !important;
+  box-shadow: none !important;
+}
+.ai-dialog .el-dialog__header,
+.ai-dialog .el-dialog__body {
+  background: rgba(161,140,209,0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 20px 20px 0 0;
+  color: #fff;
+}
+.ai-dialog .el-dialog__body {
+  border-radius: 0 0 20px 20px;
+  padding: 32px 32px 18px 32px;
+}
+.ai-dialog .el-dialog__title {
+  color: #fff;
+  font-weight: 700;
+  font-size: 22px;
+}
+.ai-dialog-content {
+  color: #fff;
+}
+.ai-dialog-desc {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 22px;
+  text-shadow: 0 2px 8px rgba(80,0,80,0.10);
+}
+.ai-input .el-input__inner {
+  background: rgba(255,255,255,0.15) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(161,140,209,0.08);
+}
+.ai-upload .el-upload {
+  background: rgba(255,255,255,0.10);
+  border-radius: 12px;
+  padding: 10px 0;
+}
+.ai-upload .el-upload-list {
+  color: #fff;
+}
+.ai-btn {
+  background: linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%) !important;
+  color: #fff !important;
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 600;
+  font-size: 15px !important;
+  padding: 10px 28px !important;
+  box-shadow: 0 2px 12px rgba(161,140,209,0.10);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.ai-btn.primary {
+  background: linear-gradient(120deg, #a18cd1 0%, #fbc2eb 100%) !important;
+  color: #fff !important;
+}
+.ai-btn:hover {
+  background: linear-gradient(120deg, #b993d6 0%, #8ca6db 100%) !important;
+  box-shadow: 0 4px 24px rgba(161,140,209,0.18);
+}
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 10px 24px 18px 24px;
+}
+.home-style-dialog .el-dialog__wrapper,
+.home-style-dialog .el-dialog {
+  background: none !important;
+  box-shadow: none !important;
+}
+.home-style-dialog .el-dialog__header,
+.home-style-dialog .el-dialog__body {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(18px);
+  border-radius: 20px 20px 0 0;
+  color: #222;
+}
+.home-style-dialog .el-dialog__body {
+  border-radius: 0 0 20px 20px;
+  padding: 32px 32px 18px 32px;
+}
+.home-style-dialog .el-dialog__title {
+  color: #222;
+  font-weight: 700;
+  font-size: 22px;
+}
+.home-style-desc {
+  color: #444;
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 22px;
+  text-shadow: none;
+}
+.home-style-input .el-input__inner {
+  background: rgba(255,255,255,0.7) !important;
+  color: #222 !important;
+  border-radius: 12px !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(161,140,209,0.04);
+}
+.home-style-upload .el-upload {
+  background: rgba(255,255,255,0.7);
+  border-radius: 12px;
+  padding: 10px 0;
+}
+.home-style-upload .el-upload-list {
+  color: #222;
+}
+.home-style-btn {
+  background: rgba(255,255,255,0.7) !important;
+  color: #7c4dff !important;
+  border-radius: 12px !important;
+  border: 1px solid #a18cd1 !important;
+  font-weight: 600;
+  font-size: 15px !important;
+  padding: 10px 28px !important;
+  box-shadow: 0 2px 12px rgba(161,140,209,0.06);
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.home-style-btn.primary {
+  background: rgba(161,140,209,0.12) !important;
+  color: #7c4dff !important;
+  border: 1px solid #a18cd1 !important;
+}
+.home-style-btn:hover {
+  background: rgba(161,140,209,0.18) !important;
+  color: #4f277e !important;
+  box-shadow: 0 4px 24px rgba(161,140,209,0.12);
+}
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 10px 24px 18px 24px;
+}
+.home-style-upload .el-upload .el-button,
+.home-style-upload .el-upload .el-button.home-style-btn {
+  background: rgba(255,255,255,0.7) !important;
+  color: #7c4dff !important;
+  border-radius: 12px !important;
+  border: 1px solid #a18cd1 !important;
+  font-weight: 600;
+  font-size: 15px !important;
+  padding: 10px 28px !important;
+  box-shadow: 0 2px 12px rgba(161,140,209,0.06);
+  transition: background 0.2s, box-shadow 0.2s, color 0.2s;
+}
+.home-style-upload .el-upload .el-button:hover,
+.home-style-upload .el-upload .el-button.home-style-btn:hover {
+  background: rgba(161,140,209,0.18) !important;
+  color: #4f277e !important;
+  box-shadow: 0 4px 24px rgba(161,140,209,0.12);
+}
+/* 让主要标题和el-empty描述为白色 */
+.lesson-section h3,
+.upload-section h3,
+.resource-list h4,
+::v-deep(.el-empty__description) {
+  color: #fff !important;
 }
 </style>

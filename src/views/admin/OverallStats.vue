@@ -304,7 +304,7 @@ onMounted(() => {
   <div class="overall-stats-container">
     <!-- 页面标题和刷新按钮 -->
     <div class="page-header">
-      <h2>📊 系统总体统计</h2>
+      <h2> <i class="fas fa-chart-pie nav-icon"></i> 系统总体统计</h2>
       <div class="header-actions">
         <el-button type="primary" @click="refreshData" :loading="loading.overview">
           <el-icon><Refresh /></el-icon>
@@ -486,7 +486,7 @@ onMounted(() => {
 }
 
 /* 概览卡片 */
-.overview-section {
+/* .overview-section {
   margin-bottom: 24px;
 }
 
@@ -541,10 +541,82 @@ onMounted(() => {
   font-size: 40px;
   color: #409eff;
   opacity: 0.3;
+} */
+.overview-section {
+  margin-bottom: 24px;
 }
 
+.overview-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* 玻璃卡片核心 */
+.overview-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  transition: transform 0.25s ease;
+}
+
+.overview-card:hover {
+  transform: translateY(-4px);
+}
+
+.overview-card :deep(.el-card__body) {
+  padding: 20px;
+}
+
+/* 布局 */
+.card-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 信息文本区域 */
+.card-info {
+  flex: 1;
+}
+
+.card-title {
+  font-size: 13px;
+  color: #ffffffcc; /* 半透明白 */
+  margin-bottom: 6px;
+}
+
+.card-value {
+  font-size: 26px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.card-change {
+  font-size: 12px;
+  color: #ffffffb0;
+}
+
+.card-change.positive {
+  color: #67c23a;
+}
+.card-change.negative {
+  color: #f56c6c;
+}
+
+/* 图标美化 */
+.card-icon {
+  font-size: 36px;
+  color: #ffffff80;
+  opacity: 0.8;
+}
+
+
 /* 用户活跃度 */
-.activity-section {
+/* .activity-section {
   margin-bottom: 24px;
 }
 
@@ -576,7 +648,65 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 600;
   color: #2c3e50;
+} */
+.activity-section {
+  margin-bottom: 24px;
 }
+
+/* 卡片容器改为玻璃风 */
+.activity-card {
+  margin-top: 25px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.25s ease;
+  color: #fff;
+}
+
+.activity-card:hover {
+  transform: translateY(-4px);
+}
+
+/* 统计项网格布局保持 */
+.activity-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+/* 每项居中显示 */
+.activity-item {
+  text-align: center;
+}
+
+/* 标签文字改为浅白色 */
+.activity-label {
+  font-size: 14px;
+  color: #ffffffcc;
+  margin-bottom: 8px;
+}
+
+/* 数值更亮白字 */
+.activity-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+}
+.card-header {
+  font-size: 20px;
+  padding: 10px 15px;         /* 原可能是 12px */
+  min-height: 60px;           /* 强制拉高容器高度 */
+  display: flex;
+  align-items: left;
+  justify-content: space-between;
+}
+
+
+
+
 
 /* 趋势图样式 */
 .trend-chart-container {
@@ -594,6 +724,15 @@ onMounted(() => {
   text-align: center;
 }
 
+.trend-chart-container {
+  margin-top: 20px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.12);  /* 更柔和透明 */
+  backdrop-filter: blur(14px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
 
 
 /* 响应式设计 */
@@ -641,4 +780,7 @@ onMounted(() => {
 .el-progress {
   flex: 1;
 }
+
+
+
 </style>

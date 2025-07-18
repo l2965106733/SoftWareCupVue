@@ -24,6 +24,22 @@ const interactStats = ref({
   avgResponseTime: 0
 })
 
+// 互动统计数据
+const interactStatsData = ref([
+  { label: '总提问数', value: '0', icon: 'fas fa-comments', color: '#667eea' },
+  { label: '已回答', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
+  { label: '待回答', value: '0', icon: 'fas fa-clock', color: '#4facfe' },
+  { label: '平均评分', value: '0', icon: 'fas fa-star', color: '#26d0ce' },
+  { label: '评分次数', value: '0', icon: 'fas fa-medal', color: '#ffd700' }
+])
+
+// 筛选选项
+const filterOptions = ref([
+  { label: '全部', value: 'all', icon: 'fas fa-list' },
+  { label: '待回答', value: 'pending', icon: 'fas fa-clock' },
+  { label: '已回答', value: 'answered', icon: 'fas fa-check' }
+])
+
 // 评分统计数据
 const ratingStats = ref({
   totalRatings: 0,
@@ -107,6 +123,10 @@ const getStatusType = (status) => {
   return status === 1 ? 'success' : 'warning'
 }
 
+const getStatusClass = (status) => {
+  return status === 1 ? 'status-success' : 'status-warning'
+}
+
 const getStatusText = (status) => {
   return status === 1 ? '已回答' : '待回答'
 }
@@ -167,6 +187,15 @@ const loadInteractStats = async () => {
         avgRating: result.data.avgRating || 0,
         avgResponseTime: result.data.avgResponseTime || 0
       }
+      
+      // 更新互动统计数据
+      interactStatsData.value = [
+        { label: '总提问数', value: interactStats.value.totalQuestions.toString(), icon: 'fas fa-comments', color: '#667eea' },
+        { label: '已回答', value: interactStats.value.answeredQuestions.toString(), icon: 'fas fa-check-circle', color: '#f5576c' },
+        { label: '待回答', value: interactStats.value.pendingQuestions.toString(), icon: 'fas fa-clock', color: '#4facfe' },
+        { label: '平均评分', value: interactStats.value.avgRating.toFixed(1), icon: 'fas fa-star', color: '#26d0ce' },
+        { label: '评分次数', value: ratingStats.value.totalRatings.toString(), icon: 'fas fa-medal', color: '#ffd700' }
+      ]
     }
   } catch (error) {
     console.error('加载统计数据失败：', error)
@@ -403,470 +432,459 @@ onMounted(() => {
   loadInteractStats()
   loadRatingStats()
 })
+
+const hoverRating = ref(0)
 </script>
 
 <template>
-  <div class="student-interact-layout">
-    <!-- 左侧主要区域 -->
-    <div class="main-panel">
-      <!-- 顶部统计概览 -->
-      <div class="stats-section">
-        <div class="stats-cards">
-          <el-card shadow="hover" class="stat-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">总提问数</div>
-                <div class="card-value">{{ interactStats.totalQuestions }}</div>
-                <div class="card-desc">累计提问</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><ChatDotSquare /></el-icon>
-              </div>
-            </div>
-          </el-card>
+  <div class="student-container">
+    <!-- 页面标题 -->
+    <div class="student-section">
+      <h1 class="student-title large">
+        <i class="fas fa-comments"></i>
+        互动模块
+      </h1>
+      <p class="student-text secondary">与教师交流，解决学习问题</p>
+    </div>
 
-          <el-card shadow="hover" class="stat-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">已回答</div>
-                <div class="card-value">{{ interactStats.answeredQuestions }}</div>
-                <div class="card-desc">获得解答</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Check /></el-icon>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card shadow="hover" class="stat-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">待回答</div>
-                <div class="card-value">{{ interactStats.pendingQuestions }}</div>
-                <div class="card-desc">等待中</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Clock /></el-icon>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card shadow="hover" class="stat-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">平均评分</div>
-                <div class="card-value">{{ interactStats.avgRating.toFixed(1) }}</div>
-                <div class="card-desc">满意度</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Star /></el-icon>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card shadow="hover" class="stat-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">评分次数</div>
-                <div class="card-value">{{ ratingStats.totalRatings }}</div>
-                <div class="card-desc">已评价</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Medal /></el-icon>
-              </div>
-            </div>
-          </el-card>
+    <!-- 互动统计区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-chart-bar"></i>
+        互动统计
+      </h2>
+      <div class="student-grid three-columns">
+        <div class="student-card stat-card" v-for="(stat, index) in interactStatsData" :key="index">
+          <div class="stat-icon" :style="{ color: stat.color }">
+            <i :class="stat.icon"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </div>
         </div>
-      </div>
-
-      <!-- 提问区域 -->
-      <div class="question-section">
-        <el-card shadow="hover">
-          <div class="section-header">
-            <h3>
-              <el-icon><ChatDotSquare /></el-icon>
-              提问学习
-            </h3>
-            <div class="header-tips">
-              <el-icon><InfoFilled /></el-icon>
-              <span>详细描述问题，获得更好的回答</span>
-            </div>
-          </div>
-
-          <el-form @submit.prevent="submitQuestion" class="question-form">
-            <el-form-item label="问题类型：">
-              <el-input
-                v-model="newQuestion.type"
-                placeholder="请输入问题类型，如：java、vue、database、frontend、other等"
-                style="width: 400px"
-                maxlength="50"
-                show-word-limit
-              />
-            </el-form-item>
-
-            <el-form-item label="问题标题：">
-              <el-input
-                v-model="newQuestion.title"
-                placeholder="请简要描述你的问题..."
-                maxlength="100"
-                show-word-limit
-              />
-            </el-form-item>
-
-            <el-form-item label="详细描述：">
-              <el-input
-                v-model="newQuestion.content"
-                type="textarea"
-                :rows="4"
-                placeholder="请详细描述你遇到的问题，包括具体的错误信息、代码片段等..."
-                maxlength="2500"
-                show-word-limit
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <el-button
-                type="primary"
-                @click="submitQuestion"
-                :loading="submitting"
-                size="large"
-              >
-                <el-icon><Promotion /></el-icon>
-                提交问题
-              </el-button>
-              <el-button @click="resetForm" size="large">
-                <el-icon><RefreshLeft /></el-icon>
-                重置
-              </el-button>
-            </el-form-item>
-          </el-form>
-        </el-card>
-      </div>
-
-      <!-- 问题列表 -->
-      <div class="questions-section">
-        <el-card shadow="hover">
-          <div class="section-header">
-            <h3>
-              <el-icon><List /></el-icon>
-              我的问题
-            </h3>
-            <div class="header-actions">
-              <el-radio-group v-model="filterStatus" size="small">
-                <el-radio-button value="all">全部</el-radio-button>
-                <el-radio-button value="pending">待回答</el-radio-button>
-                <el-radio-button value="answered">已回答</el-radio-button>
-              </el-radio-group>
-            </div>
-          </div>
-
-          <div v-if="filteredQuestions.length === 0" class="empty-state">
-            <el-empty description="暂无问题数据" />
-          </div>
-
-          <div v-else class="questions-list">
-            <div v-for="question in filteredQuestions" :key="question.id" class="question-item">
-              <div class="question-header">
-                <div class="question-info">
-                  <div class="question-title-row">
-                    <h4>{{ question.title }}</h4>
-                    <div class="question-meta">
-                              <el-tag :type="getTypeColor(question.type)" size="small">
-          {{ question.type }}
-        </el-tag>
-                      <el-tag :type="getStatusType(question.status)" size="small">
-                        {{ getStatusText(question.status) }}
-                      </el-tag>
-                    </div>
-                  </div>
-                  <div class="question-time">
-                    <el-icon><Clock /></el-icon>
-                    <span>提问时间：{{ formatTime(question.createdTime) }}</span>
-                    <span v-if="question.answeredTime" class="response-time">
-                      · 响应时间：{{ getResponseTime(question.createdTime, question.answeredTime) }}
-                    </span>
-                  </div>
-                </div>
-                <div class="question-actions">
-                  <el-button 
-                    type="primary" 
-                    size="small" 
-                    @click="viewQuestion(question)"
-                  >
-                    查看详情
-                  </el-button>
-                </div>
-              </div>
-
-              <div class="question-preview">
-                <p class="question-desc">{{ question.content }}</p>
-                
-                <!-- 已回答的显示教师信息 -->
-                <div v-if="question.status === 1" class="answer-preview">
-                  <div class="teacher-info">
-                    <el-icon><User /></el-icon>
-                    <span>{{ question.teacherName }}</span>
-                    <span v-if="question.rating > 0" class="rating-display">
-                      <el-rate 
-                        v-model="question.rating" 
-                        disabled 
-                        size="small"
-                        show-score
-                      />
-                    </span>
-                  </div>
-                  <div class="answer-snippet">
-                    {{ question.answer ? question.answer.substring(0, 100) + '...' : '查看完整回答' }}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </el-card>
       </div>
     </div>
-  </div>
 
-  <!-- 问题详情对话框 -->
-  <el-dialog 
-    v-model="showQuestionDialog" 
-    :title="currentQuestion?.title" 
-    width="80%"
-    :close-on-click-modal="false"
-  >
-    <div v-if="currentQuestion" class="question-detail">
-      <div class="question-info-panel">
-        <el-descriptions :column="2" border>
-          <el-descriptions-item label="问题类型">
-            <el-tag :type="getTypeColor(currentQuestion.type)" size="small">
-              {{ currentQuestion.type }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="提问时间">
-            {{ formatTime(currentQuestion.createdTime) }}
-          </el-descriptions-item>
-          <el-descriptions-item label="回答状态">
-            <el-tag :type="getStatusType(currentQuestion.status)" size="small">
-              {{ getStatusText(currentQuestion.status) }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item label="响应时间" v-if="currentQuestion.answeredTime">
-            {{ getResponseTime(currentQuestion.createdTime, currentQuestion.answeredTime) }}
-          </el-descriptions-item>
-        </el-descriptions>
-      </div>
-
-      <div class="question-content-section">
-        <h4>问题描述：</h4>
-        <div class="content-display">
-          {{ currentQuestion.content }}
+    <!-- 提问区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-question-circle"></i>
+        提问学习
+      </h2>
+      <div class="student-card question-form-card">
+        <div class="form-header">
+          <div class="form-title">
+            <i class="fas fa-edit"></i>
+            提交新问题
+          </div>
+          <div class="form-tips">
+            <i class="fas fa-info-circle"></i>
+            详细描述问题，获得更好的回答
+          </div>
         </div>
-      </div>
-
-      <div v-if="currentQuestion.status === 1" class="answer-section">
-        <h4>教师回答：</h4>
-        <div class="teacher-info">
-          <el-icon><User /></el-icon>
-          <span>{{ currentQuestion.teacherName }}</span>
-          <span class="answer-time">回答于 {{ formatTime(currentQuestion.answeredTime) }}</span>
-        </div>
-        <div class="answer-content">
-          {{ currentQuestion.answer }}
-        </div>
-
-        <!-- 评价区域 -->
-        <div class="rating-section">
-          <h5>评价回答质量：</h5>
-          <div class="rating-controls">
-            <el-rate 
-              v-model="ratingForm.rating" 
-              :disabled="currentQuestion.rating && currentQuestion.rating > 0"
-              size="large"
-              show-text
-              :texts="['很差', '较差', '一般', '较好', '很好']"
-              @change="currentRating = ratingForm.rating"
+        
+        <form @submit.prevent="submitQuestion" class="question-form">
+          <div class="form-group">
+            <label class="form-label">问题类型</label>
+            <input
+              v-model="newQuestion.type"
+              type="text"
+              class="student-input"
+              placeholder="请输入问题类型，如：java、vue、database、frontend、other等"
+              maxlength="50"
             />
-            
-
-            
-            <div v-if="!currentQuestion.rating || currentQuestion.rating === 0" class="rating-buttons">
-              <el-button 
-                type="primary" 
-                size="small" 
-                @click="submitRating"
-                :disabled="ratingForm.rating === 0"
-              >
-                <el-icon><Check /></el-icon>
-                确认评价
-              </el-button>
-              <el-button 
-                size="small" 
-                @click="resetRating"
-              >
-                <el-icon><RefreshLeft /></el-icon>
-                重置
-              </el-button>
-            </div>
-            <div v-else class="rated-info">
-              <span class="rated-text">
-                <el-icon><CircleCheck /></el-icon>
-                已评价 {{ currentQuestion.rating }} 分
-              </span>
-
-            </div>
           </div>
-        </div>
 
+          <div class="form-group">
+            <label class="form-label">问题标题</label>
+            <input
+              v-model="newQuestion.title"
+              type="text"
+              class="student-input"
+              placeholder="请简要描述你的问题..."
+              maxlength="100"
+            />
+          </div>
 
-      </div>
+          <div class="form-group">
+            <label class="form-label">详细描述</label>
+            <textarea
+              v-model="newQuestion.content"
+              class="student-input"
+              rows="4"
+              placeholder="请详细描述你遇到的问题，包括具体的错误信息、代码片段等..."
+              maxlength="2500"
+            ></textarea>
+          </div>
 
-      <div v-else class="waiting-section">
-        <el-result icon="clock" title="等待回答中" sub-title="教师会尽快为您解答问题">
-        </el-result>
+          <div class="form-actions">
+            <button
+              type="submit"
+              class="student-button"
+              :disabled="submitting"
+            >
+              <i class="fas fa-paper-plane"></i>
+              {{ submitting ? '提交中...' : '提交问题' }}
+            </button>
+            <button
+              type="button"
+              class="student-button secondary"
+              @click="resetForm"
+            >
+              <i class="fas fa-redo"></i>
+              重置
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
-    <template #footer>
-      <div class="dialog-footer">
-        <el-button @click="showQuestionDialog = false">关闭</el-button>
+    <!-- 问题列表区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-list"></i>
+        我的问题
+      </h2>
+      
+      <!-- 筛选区域 -->
+      <div class="student-card filter-card">
+        <div class="filter-header">
+          <div class="filter-title">
+            <i class="fas fa-filter"></i>
+            问题筛选
+          </div>
+          <div class="filter-controls">
+            <button 
+              v-for="filter in filterOptions" 
+              :key="filter.value"
+              class="filter-btn"
+              :class="{ active: filterStatus === filter.value }"
+              @click="filterStatus = filter.value"
+            >
+              <i :class="filter.icon"></i>
+              {{ filter.label }}
+            </button>
+          </div>
+        </div>
       </div>
-    </template>
-  </el-dialog>
+      
+      <div v-if="filteredQuestions.length === 0" class="student-card empty-card">
+        <div class="empty-content">
+          <i class="fas fa-inbox"></i>
+          <p class="student-text secondary">暂无问题数据</p>
+        </div>
+      </div>
+      
+      <div v-else class="student-grid auto-fit">
+        <div 
+          v-for="question in filteredQuestions" 
+          :key="question.id" 
+          class="student-card question-card"
+        >
+          <div class="question-header">
+            <div class="question-title">{{ question.title }}</div>
+            <div class="question-status">
+              <span class="status-badge" :class="getStatusClass(question.status)">
+                {{ getStatusText(question.status) }}
+              </span>
+            </div>
+          </div>
+          
+          <div class="question-content">
+            <div class="question-meta">
+              <div class="meta-item">
+                <i class="fas fa-tag"></i>
+                <span>{{ question.type }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ formatTime(question.createdTime) }}</span>
+              </div>
+              <div v-if="question.answeredTime" class="meta-item">
+                <i class="fas fa-clock"></i>
+                <span class="response-time">{{ getResponseTime(question.createdTime, question.answeredTime) }}</span>
+              </div>
+            </div>
+            
+            <p class="question-desc">{{ question.content }}</p>
+          
+          </div>
+          
+          <div class="question-actions">
+            <button 
+              class="student-button"
+              @click="viewQuestion(question)"
+            >
+              <i class="fas fa-eye"></i>
+              查看详情
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <!-- 问题详情对话框 -->
+    <el-dialog 
+      v-model="showQuestionDialog" 
+      :title="currentQuestion?.title" 
+      width="80%"
+      :close-on-click-modal="false"
+    >
+      <div v-if="currentQuestion" class="question-detail">
+        <div class="question-info-panel">
+          <p><strong>问题类型：</strong>{{ currentQuestion.type }}</p>
+          <p><strong>提问时间：</strong>{{ formatTime(currentQuestion.createdTime) }}</p>
+          <p v-if="currentQuestion.answeredTime"><strong>回答时间：</strong>{{ formatTime(currentQuestion.answeredTime) }}</p>
+        </div>
+        
+        <div class="question-content-section">
+          <h4>问题内容</h4>
+          <div class="content-display">{{ currentQuestion.content }}</div>
+        </div>
+        
+        <div v-if="currentQuestion.status === 1" class="answer-section">
+          <h4>教师回答</h4>
+          <div class="answer-section">
+            <div class="teacher-info">
+              <i class="fas fa-user-tie"></i>
+              <span>{{ currentQuestion.teacherName }}</span>
+              <span class="answer-time">{{ formatTime(currentQuestion.answeredTime) }}</span>
+            </div>
+            <div class="answer-content">{{ currentQuestion.answer }}</div>
+          </div>
+        </div>
+        
+        <div v-if="currentQuestion.status === 1" class="rating-section">
+          <h5>评价回答质量</h5>
+          <div class="rating-controls">
 
+            <div v-if="currentRating === 0" class="rating-buttons">
+            <button 
+              v-for="rating in 5" 
+              :key="rating"
+              class="rating-btn"
+              @click="currentRating = rating; ratingForm.rating = rating"
+              @mouseover="hoverRating = rating"
+              @mouseleave="hoverRating = 0"
+            >
+              <i 
+                class="fas fa-star"
+                :style="{ color: rating <= hoverRating ? '#f7ba2a' : '#ccc' }"
+              ></i>
+            </button>
+          </div>
+
+            <div v-else class="rated-text">
+              <i class="fas fa-star"></i>
+              已评价：{{ currentRating }} 星
+            </div>
+          </div>
+        </div>
+        
+        <div v-else class="waiting-section">
+          <i class="fas fa-clock"></i>
+          <p>等待教师回答中...</p>
+        </div>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="showQuestionDialog = false">关闭</el-button>
+          <el-button 
+            v-if="!ratingForm.rating"
+            type="primary" 
+            @click="submitRating"
+          >
+            提交评价
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <style scoped>
-.student-interact-layout {
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.main-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 统计卡片 */
-.stats-section {
-  margin-bottom: 24px;
-}
-
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
-}
-
+/* 统计卡片样式 */
 .stat-card {
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-.card-content {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
 }
 
-.card-info {
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.stat-content {
   flex: 1;
+  min-width: 0;
 }
 
-.card-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.card-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
+.stat-value {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: var(--student-text);
   margin-bottom: 4px;
+  line-height: 1.2;
 }
 
-.card-desc {
-  font-size: 12px;
-  color: #999;
+.stat-label {
+  font-size: clamp(11px, 2vw, 14px);
+  color: var(--student-text-secondary);
+  line-height: 1.3;
 }
 
-.card-icon {
-  font-size: 32px;
-  color: #409eff;
-  opacity: 0.8;
+/* 提问表单卡片样式 */
+.question-form-card {
+  padding: 24px;
 }
 
-/* 通用卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-.section-header {
+.form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--student-glass-border);
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
+.form-title {
   font-size: 18px;
   font-weight: 600;
+  color: var(--student-text);
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.header-tips {
+.form-tips {
+  font-size: 14px;
+  color: var(--student-text-secondary);
   display: flex;
   align-items: center;
-  gap: 4px;
-  color: #666;
-  font-size: 14px;
+  gap: 6px;
 }
 
-/* 提问表单 */
 .question-form {
-  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.question-form .el-form-item {
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--student-text);
+}
+
+.student-input {
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  border-radius: var(--student-border-radius-small);
+  color: var(--student-text);
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all var(--student-animation);
+  backdrop-filter: blur(10px);
+  resize: vertical;
+}
+
+.student-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.student-input::placeholder {
+  color: var(--student-text-muted);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* 筛选卡片样式 */
+.filter-card {
+  padding: 20px;
   margin-bottom: 20px;
 }
 
-.question-form .el-form-item__label {
-  font-weight: 600;
-  color: #2c3e50;
-}
-
-/* 问题列表 */
-.questions-list {
+.filter-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
-.question-item {
-  padding: 20px;
-  border: 1px solid #e8f4fd;
-  border-radius: 12px;
-  background: #f8fcff;
-  transition: all 0.3s ease;
+.filter-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--student-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.question-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
+.filter-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  color: var(--student-text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--student-border-radius-small);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--student-animation);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn:hover {
+  background: var(--student-card-hover);
+  color: var(--student-text);
+}
+
+.filter-btn.active {
+  background: var(--gradient-primary);
+  color: var(--student-text);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 问题卡片样式 */
+.question-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
 }
 
 .question-header {
@@ -876,85 +894,77 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
-.question-info {
-  flex: 1;
-}
-
-.question-title-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.question-title-row h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
+.question-title {
+  font-size: 18px;
   font-weight: 600;
+  color: var(--student-text);
+  line-height: 1.4;
   flex: 1;
+  margin-right: 12px;
+}
+
+.question-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--student-text);
+}
+
+.status-warning {
+  background: var(--gradient-warning);
+}
+
+.status-success {
+  background: var(--gradient-success);
+}
+
+.question-content {
+  margin-bottom: 16px;
 }
 
 .question-meta {
   display: flex;
+  flex-direction: column;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
-.question-time {
+.meta-item {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 8px;
   font-size: 12px;
-  color: #999;
+  color: var(--student-text-secondary);
+}
+
+.meta-item i {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .response-time {
-  color: #67c23a;
-}
-
-.question-preview {
-  margin-top: 12px;
+  color: var(--student-text);
+  font-weight: 500;
 }
 
 .question-desc {
-  color: #666;
+  color: var(--student-text-secondary);
   line-height: 1.6;
   margin-bottom: 12px;
 }
 
 .answer-preview {
   padding: 12px;
-  background: #f0f9ff;
-  border-radius: 8px;
-  border-left: 4px solid #409eff;
+  background: var(--student-glass);
+  border-radius: var(--student-border-radius-small);
+  border: 1px solid var(--student-glass-border);
 }
-
-/* 新增评分相关样式 */
-
-.rating-reason {
-  margin: 12px 0;
-}
-
-.rating-reason-input {
-  width: 100%;
-}
-
-.rating-reason-display {
-  margin-top: 8px;
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  font-size: 14px;
-  color: #666;
-}
-
-.rated-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-
 
 .teacher-info {
   display: flex;
@@ -962,28 +972,55 @@ onMounted(() => {
   gap: 8px;
   margin-bottom: 8px;
   font-size: 14px;
-  color: #2c3e50;
+  color: var(--student-text);
   font-weight: 600;
 }
 
-.rating-display {
-  margin-left: auto;
-}
-
 .answer-snippet {
-  color: #666;
+  color: var(--student-text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* 问题详情对话框 */
+.question-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 空状态卡片 */
+.empty-card {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-content i {
+  font-size: 48px;
+  color: var(--student-text-muted);
+}
+
+/* 问题详情对话框样式 */
 .question-detail {
   max-height: 70vh;
   overflow-y: auto;
 }
 
 .question-info-panel {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
   margin-bottom: 20px;
+}
+
+.question-info-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
 }
 
 .question-content-section {
@@ -1055,6 +1092,25 @@ onMounted(() => {
   align-items: center;
 }
 
+.rating-btn {
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  color: var(--student-text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--student-border-radius-small);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--student-animation);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating-btn:hover {
+  background: var(--student-card-hover);
+  color: var(--student-text);
+}
+
 .rated-text {
   color: #67c23a;
   font-size: 14px;
@@ -1064,32 +1120,36 @@ onMounted(() => {
   font-weight: 600;
 }
 
-
-
 .waiting-section {
   text-align: center;
   padding: 40px 20px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
+.waiting-section i {
+  font-size: 48px;
+  color: var(--student-text-muted);
+  margin-bottom: 16px;
 }
 
-/* 响应式 */
+.waiting-section p {
+  color: var(--student-text-secondary);
+  font-size: 16px;
+}
+
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .student-interact-layout {
-    padding: 16px;
-  }
-  
-  .stats-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .section-header {
+  .form-header {
     flex-direction: column;
-    gap: 16px;
     align-items: stretch;
+  }
+  
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-controls {
+    justify-content: center;
   }
   
   .question-header {
@@ -1097,10 +1157,47 @@ onMounted(() => {
     gap: 12px;
   }
   
-  .question-title-row {
+  .question-actions {
     flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .rating-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
+
+.student-title.medium {
+  margin-bottom: 20px;
+}
+
+.student-grid.three-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.student-grid.three-columns .stat-card {
+  flex: 1 1 0;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .student-grid.three-columns {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .student-grid.three-columns .stat-card {
+    min-width: 140px;
+    max-width: 100%;
+  }
+}
+
 </style>

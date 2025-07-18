@@ -397,14 +397,15 @@ onMounted(() => {
   <div class="admin-resource-container">
     <!-- 页面标题和统计概览 -->
     <div class="header-section">
-      <h2>📂 资源管理中心</h2>
+      <h2><i class="fas fa-folder-open nav-icon"></i> 资源管理中心</h2>
       <div class="stats-cards" v-loading="loading.stats">
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
             <div class="stat-value">{{ resourceStats.totalResources }}</div>
+
             <div class="stat-label">总资源数</div>
+            <el-icon class="stat-icon"><Files /></el-icon>
           </div>
-          <el-icon class="stat-icon"><Files /></el-icon>
         </el-card>
         
         <el-card shadow="hover" class="stat-card">
@@ -495,9 +496,7 @@ onMounted(() => {
             <el-icon><Refresh /></el-icon>
             重置
           </el-button>
-        </div>
-        
-        <div class="actions">
+    
           <el-button 
             type="danger" 
             :disabled="selectedResources.length === 0"
@@ -521,9 +520,9 @@ onMounted(() => {
         border
         @selection-change="handleSelectionChange"
       >
-        <el-table-column type="selection" width="55" />
+        <el-table-column type="selection" width="45" />
         
-        <el-table-column prop="resourceName" label="资源名称" min-width="200">
+        <el-table-column prop="resourceName" label="资源名称" min-width="180">
           <template #default="scope">
             <div class="resource-name-cell">
               <el-icon 
@@ -537,21 +536,17 @@ onMounted(() => {
           </template>
         </el-table-column>
         
-        <el-table-column prop="teacherName" label="上传教师" width="120" />
+        <el-table-column prop="teacherName" label="上传教师" width="90" />
         
-        <el-table-column prop="resourceType" label="类型" width="100">
+        <el-table-column prop="resourceType" label="类型" width="80">
           <template #default="scope">
-            <el-tag 
-              :color="getTypeColor(scope.row.resourceType)"
-              effect="light"
-              size="small"
-            >
+            <el-tag>
               {{ scope.row.resourceType }}
             </el-tag>
           </template>
         </el-table-column>
         
-        <el-table-column prop="fileSize" label="大小" width="120" sortable>
+        <el-table-column prop="fileSize" label="大小" width="100" sortable>
           <template #default="scope">
             {{ formatFileSize(scope.row.fileSize) }}
           </template>
@@ -584,10 +579,10 @@ onMounted(() => {
                 下载
               </el-button>
               
-              <el-button size="small" type="primary" @click="editResource(scope.row)">
+              <!-- <el-button size="small" type="primary" @click="editResource(scope.row)">
                 <el-icon><Edit /></el-icon>
                 编辑
-              </el-button>
+              </el-button> -->
               
               <el-button size="small" type="danger" @click="deleteResource(scope.row)">
                 <el-icon><Delete /></el-icon>
@@ -658,6 +653,47 @@ onMounted(() => {
 .stats-cards {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
+  gap: 16px; /* 原本20px */
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px; /* 原本16px */
+  padding: 14px 16px;  /* 原本20px */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* 更轻的阴影 */
+  color: #fff;
+  transition: transform 0.25s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.stat-icon {
+  font-size: 20px; /* 原本28px */
+  margin-bottom: 4px;
+  color: white;
+}
+
+.stat-value {
+  font-size: 24px; /* 原本32px */
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 20px; /* 原本16px */
+  opacity: 0.75;
+}
+
+
+
+/* 
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -696,10 +732,11 @@ onMounted(() => {
   font-size: 40px;
   color: #409eff;
   opacity: 0.3;
-}
+} */
+
 
 /* 工具栏 */
-.toolbar-card {
+/* .toolbar-card {
   margin-bottom: 20px;
   border-radius: 12px;
   border: none;
@@ -712,14 +749,97 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 16px;
+} */
+.toolbar-card {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
 }
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* 针对 Element Plus 按钮和输入框的玻璃风样式 */
+.toolbar .el-button,
+.toolbar .el-input__inner,
+.toolbar button,
+.toolbar select,
+.toolbar input {
+  background: rgba(255, 255, 255, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+  color: #fff !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+/* 悬停状态 */
+.toolbar .el-button:hover,
+.toolbar .el-input__inner:hover,
+.toolbar button:hover,
+.toolbar select:hover,
+.toolbar input:hover {
+  background: rgba(255, 255, 255, 0) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+
+/* .filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+} */
 
 .filters {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
 }
+
+/* 筛选按钮或下拉组件样式（假设是 button 或 select） */
+.filters button,
+.filters select,
+.filters input {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.filters button:hover,
+.filters select:hover,
+.filters input:hover {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+
+
 
 .actions {
   display: flex;
@@ -728,7 +848,7 @@ onMounted(() => {
 }
 
 /* 表格样式 */
-.table-card {
+/* .table-card {
   border-radius: 12px;
   border: none;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -769,10 +889,136 @@ onMounted(() => {
 }
 
 /* 分页 */
-.pagination-wrapper {
+/* .pagination-wrapper {
   margin-top: 20px;
   text-align: right;
+}  */
+
+.table-card {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
 }
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important; 
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+} 
+
+
+
+
+/* 表格内容布局保持不变 */
+.resource-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #fff; /* 玻璃背景下字体亮色更清晰 */
+}
+
+.name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: black;
+}
+
+.download-count {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* 按钮风格改成玻璃拟态 */
+/* .action-buttons .el-button {
+  min-width: 50px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.action-buttons .el-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+} */
+.action-buttons{
+  min-width: 50px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.5); 
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5); 
+  color: #fff;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.el-button {
+  min-width: 50px;
+  padding: 4px 8px;
+}
+
+.action-buttons {
+  background: rgba(255, 255, 255, 0.65); 
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.pagination-wrapper .el-pagination {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: inline-flex;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-wrapper .el-pager li,
+.pagination-wrapper .el-pagination__sizes,
+.pagination-wrapper .el-pagination__jump {
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: #fff;
+  margin: 0 2px;
+  transition: all 0.2s ease;
+}
+
+.pagination-wrapper .el-pager li:hover,
+.pagination-wrapper .el-pagination__sizes:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+
+
 
 /* 响应式设计 */
 @media (max-width: 1400px) {

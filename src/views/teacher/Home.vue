@@ -415,9 +415,8 @@ const refreshData = () => {
 }
 
 .action-card:hover {
-    transform: translateY(-8px);
-    background: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+    /* transform: translateY(-8px) scale(1.1); */
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
 }
 
 .card-icon {
@@ -508,7 +507,7 @@ const refreshData = () => {
 
 .stat-card:hover {
     background: rgba(255, 255, 255, 0.15);
-    transform: translateY(-4px);
+    /* transform: translateY(-4px); */
 }
 
 .stat-icon {

@@ -391,6 +391,28 @@ const getTypeColor = (type) => {
 // 历史记录
 const history = ref([])
 
+const formatTimeLeft = (deadline) => {
+  if (!deadline) return '未设置'
+  
+  const now = new Date()
+  const deadlineDate = new Date(deadline)
+  
+  // 检查日期是否有效
+  if (isNaN(deadlineDate.getTime())) return '无效日期'
+  
+  const timeDiff = deadlineDate - now
+  
+  if (timeDiff < 0) return '已逾期'
+  
+  const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
+  const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
+  
+  if (days > 0) return `${days}天${hours}小时`
+  if (hours > 0) return `${hours}小时`
+  
+  const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
+  return `${minutes}分钟`
+}
 
 
 // 加载作业历史记录
@@ -405,7 +427,8 @@ const loadHomeworkHistory = async () => {
         id: item.id,
         title: item.title,
         publishTime: item.createdTime,
-        status: item.status
+        status: item.status,
+        timeLeft: formatTimeLeft(item.endTime)
       }))
     }
   } catch (error) {
@@ -552,142 +575,120 @@ const getScoreClass = (score, totalScore) => {
   if (percentage >= 70) return 'average'
   return 'poor'
 }
-
-
 </script>
 
 <template>
-  <div class="homework-layout">
-    <!-- 左侧主要区域 -->
-    <div class="main-panel">
-      <!-- 操作栏 -->
-      <div class="control-section">
-        <el-card shadow="hover">
-          <div class="control-header">
-            <h3>题目生成</h3>
+  <div class="vertical-layout practise-layout">
+    <!-- 题目编辑区域 -->
+    <div class="editor-section">
+      <el-card shadow="hover">
+        <div class="control-header">
+          <h3>题目编辑区</h3>
           </div>
-
-          <div class="button-group">
-            <el-button type="primary" @click="showAIDialog" size="large">
-              <el-icon>
-                <MagicStick />
-              </el-icon>
-              AI 生成题目
-            </el-button>
-
-            <el-button type="info" @click="handleManualAdd" size="large">
-              <el-icon>
-                <EditPen />
-              </el-icon>
-              人工出题
-            </el-button>
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 题目编辑区域 -->
-      <div class="editor-section">
-        <el-card shadow="hover">
-          <div class="card-header">
-            <h3>题目编辑区</h3>
-            <div class="header-actions">
-              <el-button
-                :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
-                size="small" @click="saveQuestions" :disabled="isSaveButtonDisabled" :loading="isSaving">
-                <el-icon>
-                  <Check />
-                </el-icon>
-                {{
-                  isSaving ? '保存中...' :
-                    hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? '已保存' : '保存题目'}} </el-button>
-                  <el-button type="warning" size="small" @click="clearQuestions" :disabled="questions.length === 0">
-                    <el-icon>
-                      <Delete />
-                    </el-icon>
-                    清空
-                  </el-button>
-            </div>
-          </div>
-
-          <template v-if="questions.length === 0">
             <div class="empty-hint">
-              <el-icon>
-                <DocumentAdd />
-              </el-icon>
-              <p>请点击上方按钮生成题目或手动出题</p>
+              <el-button type="primary" @click="showAIDialog" size="large">
+                <el-icon>
+                  <MagicStick />
+                </el-icon>
+                AI 生成题目
+              </el-button>
+
+              <el-button type="info" @click="handleManualAdd" size="large">
+                <el-icon>
+                  <EditPen />
+                </el-icon>
+                人工出题
+              </el-button>
             </div>
-          </template>
-          <template v-else>
-            <div v-for="(q, index) in questions" :key="q.id" class="question-block">
-              <div class="question-header">
-                <h4>题目 {{ index + 1 }}</h4>
-                <div>
-                  <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
-                  <el-tag v-if="q.id && q.id > 0" type="success" size="small" style="margin-left: 8px">已保存</el-tag>
-                  <el-tag v-else type="warning" size="small" style="margin-left: 8px">未保存</el-tag>
-                </div>
+  
+          <div v-for="(q, index) in questions" :key="q.id" class="question-block">
+            <div class="question-header">
+              <h4>题目 {{ index + 1 }}</h4>
+              <div>
+                <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
+                <el-tag v-if="q.id && q.id > 0" type="success" size="small" style="margin-left: 8px">已保存</el-tag>
+                <el-tag v-else type="warning" size="small" style="margin-left: 8px">未保存</el-tag>
               </div>
-
-              <el-form label-width="60px">
-                <el-form-item label="题型">
-                  <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="handleTypeChange(q)">
-                    <el-option label="选择题" value="choice">
-                      <span>选择题</span>
-                      <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
-                    </el-option>
-                    <el-option label="简答题" value="short">
-                      <span>简答题</span>
-                      <span style="float: right; color: #8492a6; font-size: 13px">15分</span>
-                    </el-option>
-                    <el-option label="编程题" value="code">
-                      <span>编程题</span>
-                      <span style="float: right; color: #8492a6; font-size: 13px">25分</span>
-                    </el-option>
-                  </el-select>
-                </el-form-item>
-
-                <el-form-item label="题干">
-                  <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="3" />
-                </el-form-item>
-
-                <el-form-item label="知识点">
-                  <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" />
-                </el-form-item>
-
-                <el-form-item label="答案">
-                  <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
-                    :rows="getAnswerRows(q.type)" />
-                </el-form-item>
-
-                <el-form-item label="解析">
-                  <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" />
-                </el-form-item>
-
-                <el-form-item label="分值">
-                  <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" />
-                </el-form-item>
-              </el-form>
-
-              <div class="question-actions">
-                <el-button type="danger" size="small" @click="removeQuestion(q.id)">
-                  <el-icon>
-                    <Close />
-                  </el-icon>
-                  删除
-                </el-button>
-              </div>
-
-              <el-divider />
             </div>
-          </template>
-        </el-card>
-      </div>
+
+            <el-form label-width="60px">
+              <el-form-item label="题型">
+                <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="handleTypeChange(q)">
+                  <el-option label="选择题" value="choice">
+                    <span>选择题</span>
+                    <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
+                  </el-option>
+                  <el-option label="简答题" value="short">
+                    <span>简答题</span>
+                    <span style="float: right; color: #8492a6; font-size: 13px">15分</span>
+                  </el-option>
+                  <el-option label="编程题" value="code">
+                    <span>编程题</span>
+                    <span style="float: right; color: #8492a6; font-size: 13px">25分</span>
+                  </el-option>
+                </el-select>
+              </el-form-item>
+
+              <el-form-item label="题干">
+                <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="3" />
+              </el-form-item>
+
+              <el-form-item label="知识点">
+                <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" />
+              </el-form-item>
+
+              <el-form-item label="答案">
+                <el-input type="textarea" v-model="q.answer" :placeholder="getAnswerPlaceholder(q.type)"
+                  :rows="getAnswerRows(q.type)" />
+              </el-form-item>
+
+              <el-form-item label="解析">
+                <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" />
+              </el-form-item>
+
+              <el-form-item label="分值">
+                <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" />
+              </el-form-item>
+            </el-form>
+
+            <div class="question-actions">
+              <el-button type="danger" size="small" @click="removeQuestion(q.id)">
+                <el-icon>
+                  <Close />
+                </el-icon>
+                删除
+              </el-button>
+            </div>
+
+            <el-divider />
+          </div>
+      
+        <div class="header-actions" style="margin-top: 16px;">
+          <el-button
+            :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
+            size="small" @click="saveQuestions" :disabled="isSaveButtonDisabled" :loading="isSaving">
+            <el-icon>
+              <Check />
+            </el-icon>
+            {{
+              isSaving ? '保存中...' :
+                hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? '已保存' : '保存题目'}} </el-button>
+          <el-button type="warning" size="small" @click="clearQuestions" :disabled="questions.length === 0">
+            <el-icon>
+              <Delete />
+            </el-icon>
+            清空
+          </el-button>
+        </div>
+      </el-card>
     </div>
 
     <!-- 右侧发布与预览 -->
     <div class="side-panel">
       <el-card shadow="hover">
-        <h4 style="margin-bottom: 15px">作业设置</h4>
+        <div class="control-header">
+          <h3>作业设置</h3>
+        </div>
         <el-form label-width="80px">
           <el-form-item label="作业标题">
             <el-input v-model="homeworkTitle" placeholder="请输入作业标题" />
@@ -748,12 +749,9 @@ const getScoreClass = (score, totalScore) => {
 
       <!-- 预览区域 -->
       <el-card style="margin-top: 20px" shadow="hover" v-if="questions.length > 0">
-        <h4 style="margin-bottom: 10px">
-          <el-icon>
-            <View />
-          </el-icon>
-          题目预览
-        </h4>
+        <div class="control-header">
+          <h3>题目预览</h3>
+        </div>
         <div class="preview-container">
           <div class="list-preview">
             <div v-for="(q, index) in questions" :key="q.id" class="preview-item">
@@ -766,21 +764,17 @@ const getScoreClass = (score, totalScore) => {
         </div>
       </el-card>
 
-      <!-- 历史记录 -->
-      <el-card style="margin-top: 20px" shadow="hover">
-        <h4 style="margin-bottom: 15px">
-          <el-icon>
-            <Clock />
-          </el-icon>
-          发布记录
-        </h4>
-        <el-table :data="history" size="small" stripe :row-key="row => row.id">
-          <el-table-column prop="title" label="作业名称" />
-          <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" />
-          <el-table-column prop="status" label="状态">
+      <!-- 发布记录区块 -->
+      <el-card class="publish-history-card" shadow="never">
+        <h3 class="section-title"><el-icon><List /></el-icon> 发布记录</h3>
+        <el-table :data="history" size="small" stripe :row-key="row => row.id" class="publish-table">
+          <el-table-column prop="title" label="作业名称" :cell-class-name="() => 'text-dark'" />
+          <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" :cell-class-name="() => 'text-dark'" />
+          <el-table-column prop="endTime" label="截至时间" :formatter="formatDate" :cell-class-name="() => 'text-dark'" />
+          <el-table-column prop="timeLeft" label="剩余时间" :cell-class-name="() => 'text-dark'">
             <template #default="scope">
-              <el-tag :type="scope.row.status === '进行中' ? 'success' : 'info'" size="small">
-                {{ scope.row.status }}
+              <el-tag :type="scope.row.timeLeft === '已逾期' ? 'danger' : 'info'" size="small">
+                {{ scope.row.timeLeft }}
               </el-tag>
             </template>
           </el-table-column>
@@ -1066,397 +1060,459 @@ const getScoreClass = (score, totalScore) => {
   </div>
 </template>
 
-<style scoped>
-.homework-layout {
-  display: flex;
-  gap: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+<!-- <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+.practise-layout {
+  min-height: 100%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(15px);
+  border-radius: 24px;
+  padding: clamp(24px, 4vw, 48px);
+  color: #222;
+  animation: page-fade-in 0.8s cubic-bezier(.4,0,.2,1);
 }
-
-.main-panel {
-  flex: 1;
+.vertical-blocks {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  min-width: 0;
+  gap: 36px;
+  margin-top: 28px;
 }
-
-.side-panel {
-  width: 380px;
-  flex-shrink: 0;
-}
-
-/* 卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-/* 控制区域 */
-.control-section {
-  flex-shrink: 0;
-}
-
-.control-header {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.control-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.button-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-.button-group .el-button {
-  height: 60px;
-  font-size: 16px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.button-group .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-/* 编辑区域 */
-.editor-section {
-  flex: 1;
-}
-
-.card-header {
+.top-toolbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.section-title, h3, h4 {
+  font-size: clamp(20px, 3vw, 24px);
+  font-weight: 700;
+  color: #4f277e;
+  margin: 0 0 clamp(16px, 3vw, 24px) 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 2vw, 14px);
+  letter-spacing: 1px;
+  transition: color 0.2s;
+}
+.section-title el-icon, .section-title .el-icon {
+  font-size: 1.2em;
+  color: #a18cd1;
+}
+.publish-history-card, .preview-card {
+  border-radius: 20px;
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 4px 24px 0 rgba(79,39,126,0.10);
+  border: none;
+  transition: box-shadow 0.25s, transform 0.25s, background 0.25s;
+  animation: card-fade-in 0.7s cubic-bezier(.4,0,.2,1);
+}
+.publish-history-card:hover, .preview-card:hover {
+  box-shadow: 0 8px 32px 0 rgba(161,140,209,0.18);
+  transform: translateY(-2px) scale(1.015);
+  background: rgba(255,255,255,0.98);
+}
+.publish-table {
+  background: transparent;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.text-dark {
+  color: #4f277e !important;
+  font-weight: 500;
+}
+::v-deep(.text-dark) {
+  color: #4f277e !important;
+  font-weight: 500;
+}
+.el-table th {
+  background: rgba(79,39,126,0.08) !important;
+  color: #4f277e !important;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 1px;
+  transition: background 0.2s;
+}
+.el-table td {
+  background: transparent !important;
+  transition: background 0.2s;
+}
+.el-table__body tr:hover > td {
+  background: #f3e8ff !important;
+}
+.el-button--primary {
+  background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
+  border: none;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px 0 rgba(161,140,209,0.10);
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+.el-button--primary:hover {
+  background: linear-gradient(90deg, #b993d6 0%, #fbc2eb 100%);
+  box-shadow: 0 4px 16px 0 rgba(161,140,209,0.18);
+  transform: translateY(-1px) scale(1.03);
+}
+.el-tag--success {
+  background: #e0e7ff;
+  color: #4f277e;
+  border: none;
+  font-weight: 600;
+}
+.el-tag--info {
+  background: #f3e8ff;
+  color: #4f277e;
+  border: none;
+  font-weight: 600;
+}
+.preview-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+  color: #222;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+}
+.item-num {
+  font-weight: 700;
+  color: #4f277e;
+}
+.item-score {
+  color: #a18cd1;
+  font-size: 15px;
+}
+@keyframes page-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes card-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+</style> -->
+
+
+<style scoped>
+.editor-section {
   margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  color: #222;
 }
 
-.card-header h3 {
-  margin: 0;
+/* 题目块样式 */
+.question-block {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* 标题 */
+.question-header h4 {
+  font-size: 16px;
+  font-weight: bold;
   color: #2c3e50;
-  font-size: 18px;
+  margin: 0 0 8px 0;
+}
+
+/* 标题右侧标签 */
+.question-header .el-tag {
   font-weight: 600;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
+/* 表单字体 */
+.el-form-item__label {
+  color: #333;
+  font-weight: 500;
 }
 
-.empty-hint {
-  text-align: center;
-  padding: 60px 20px;
-  color: #666;
-}
-
-.empty-hint .el-icon {
-  font-size: 64px;
-  color: #ddd;
-  margin-bottom: 16px;
-}
-
-.empty-hint p {
-  font-size: 16px;
-  margin: 0;
+.empty-hint{
+  margin-bottom: 20px;
 }
 
 .question-block {
-  margin-bottom: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(18px);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   padding: 20px;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  background: #fafafa;
+  margin-bottom: 20px;
+  color: #222;
+  transition: all 0.3s ease;
 }
 
 .question-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
   margin-bottom: 16px;
 }
 
+
+
 .question-header h4 {
-  margin: 0;
-  color: #2c3e50;
   font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
 }
 
-.question-actions {
-  text-align: right;
-  margin-top: 16px;
+.question-header .el-tag {
+  font-weight: 600;
+  margin-left: 4px;
 }
 
-/* 预览区域 */
-.preview-container {
-  max-height: 400px;
-  overflow-y: auto;
+.header-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
-.list-preview {
+/* 所有按钮基础玻璃风格 */
+.header-actions .el-button {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #222;
+  border-radius: 10px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  min-width: 110px;
+  padding: 10px 20px;
+  font-size: 15px;
+}
+
+
+/* 悬浮时强化视觉 */
+.header-actions .el-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* 保存按钮颜色变化 */
+.header-actions .el-button.el-button--success {
+  color: #28a745;
+  border-color: rgba(40, 167, 69, 0.4);
+}
+
+.header-actions .el-button.el-button--success:hover {
+  background: rgba(40, 167, 69, 0.12);
+}
+
+/* 清空按钮颜色调整 */
+.header-actions .el-button.el-button--warning {
+  color: #e67e22;
+  border-color: rgba(230, 126, 34, 0.4);
+}
+
+.header-actions .el-button.el-button--warning:hover {
+  background: rgba(230, 126, 34, 0.12);
+}
+
+.side-panel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 20px;
 }
 
-.preview-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  border-bottom: 1px solid #f0f0f0;
+.side-panel .el-card {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  color: #222;
 }
 
-.item-num {
-  font-weight: 600;
-  color: #409eff;
-  min-width: 20px;
+.control-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #222;
 }
 
-.item-content {
-  flex: 1;
-  color: #333;
+.el-form-item .el-form-item__label {
+  color: #222;
+  font-weight: 500;
 }
 
-.item-score {
-  color: #f56c6c;
-  font-size: 12px;
-  font-weight: 600;
+.el-input,
+.el-date-editor {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #222;
+  border-radius: 8px;
 }
 
-/* AI对话框样式 */
-.ai-dialog-content {
-  padding: 10px 0;
+.el-tag {
+  background: rgba(255, 255, 255, 0.2);
+  color: #222;
+  border: none;
+}
+
+.side-panel .el-button {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  color: #222;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.side-panel .el-button:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .form-tips {
-  font-size: 12px;
-  color: #999;
-  margin-top: 6px;
-  line-height: 1.4;
+  font-size: 13px;
+  color: #444;
+  margin-top: 8px;
 }
 
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+
+
+
+
+
+
+
+/* 表单项字体调整 */
+.el-form-item__label {
+  color: #444;
+  font-weight: 500;
 }
 
-/* 响应式设计 */
-@media (max-width: 1400px) {
-  .homework-layout {
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .side-panel {
-    width: 320px;
-  }
+/* 删除按钮区域 */
+.question-actions {
+  text-align: right;
+  margin-top: 12px;
 }
 
-@media (max-width: 1200px) {
-  .homework-layout {
-    flex-direction: column;
-  }
-
-  .main-panel,
-  .side-panel {
-    width: 100%;
-  }
-
-  .button-group {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .header-actions {
-    justify-content: center;
-  }
-}
-
-/* 作业详情样式 */
-.question-detail .question-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.question-detail .question-content {
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 4px;
-  line-height: 1.6;
-}
-
-.question-detail .question-answer {
-  margin-top: 10px;
-  padding: 10px;
-  background: #e9f7ef;
-  border-radius: 4px;
-  border-left: 4px solid #67c23a;
-}
-
-.question-detail .question-explain {
-  margin-top: 10px;
-  padding: 10px;
-  background: #f0f9ff;
-  border-radius: 4px;
-  border-left: 4px solid #409eff;
-}
-
-.el-descriptions {
-  margin-bottom: 20px;
-}
-
-.el-statistic {
-  text-align: center;
-}
-
-/* 反馈文本样式 */
-.feedback-text {
-  font-size: 12px;
-  color: #666;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* 批改对话框样式 */
-.grade-container {
-  max-height: 70vh;
-  overflow-y: auto;
-}
-
-.student-info {
-  margin-bottom: 20px;
-}
-
-.questions-grade {
-  margin-bottom: 20px;
-}
-
-.grade-question-item .question-content {
-  margin-bottom: 16px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 4px solid #409eff;
-}
-
-.grade-question-item h5 {
-  margin: 0 0 8px 0;
-  color: #2c3e50;
-  font-size: 14px;
+/* 删除按钮样式 */
+.question-actions .el-button {
+  background: rgba(255, 0, 0, 0.12);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  color: #ff4d4f;
+  border-radius: 8px;
   font-weight: 600;
 }
 
-.student-answer-section {
+.question-actions .el-button:hover {
+  background: rgba(255, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.2);
+}
+
+/* el-divider 增加透明背景 */
+.el-divider {
+  background-color: rgba(255, 255, 255, 0.2);
+  height: 1px;
+  margin: 24px 0;
+}
+
+
+
+
+.vertical-layout.practise-layout {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: clamp(24px, 4vw, 48px);
+  color: #222;
+}
+
+/* 顶部工具栏 */
+.top-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 16px;
+  background: rgba(255,255,255,0.15);
+  padding: 12px 16px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+}
+
+/* 卡片风格 */
+.el-card {
+  background: rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(14px);
+  border: none !important;
+  border-radius: 16px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+  color: #222;
+}
+
+/* 卡片内容内边距 */
+.el-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+/* 标题统一样式 */
+h3, h4 {
+  color: #2c3e50;
+  font-weight: 700;
   margin-bottom: 16px;
 }
 
-.answer-display {
-  padding: 12px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
-  min-height: 60px;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  color: #333;
-}
-
-.score-input-section {
-  padding: 16px;
-  background: #f0f9ff;
-  border-radius: 6px;
-}
-
-.feedback-section {
-  margin-bottom: 20px;
-}
-
-.feedback-section h4 {
-  margin: 0 0 12px 0;
-  color: #2c3e50;
-}
-
-.grade-summary {
-  margin-bottom: 20px;
-}
-
-.summary-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-}
-
-.total-score {
-  font-size: 18px;
+/* 表格头部 */
+.el-table th {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #222;
   font-weight: 600;
 }
 
-.label {
-  color: #666;
+/* 表格单元格 */
+.el-table td {
+  background: transparent !important;
+  color: #222;
 }
 
-.score-value {
-  color: #2c3e50;
-  font-size: 24px;
-  margin: 0 4px;
+/* 表格 hover 行 */
+.el-table__body tr:hover > td {
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-.total-possible {
-  color: #999;
-  font-size: 16px;
+/* 操作区按钮 */
+.action-buttons .el-button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #222;
+  border-radius: 8px;
+  padding: 5px 12px;
+  transition: all 0.2s ease;
 }
 
-.percentage {
-  font-size: 20px;
-  font-weight: 600;
+.action-buttons .el-button:hover {
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
-/* 得分等级样式 */
-.excellent {
-  color: #67c23a;
+/* 标准字体色彩 */
+.el-input,
+.el-select,
+.el-textarea,
+.el-button {
+  color: #222;
 }
 
-.good {
-  color: #409eff;
-}
 
-.average {
-  color: #e6a23c;
-}
-
-.poor {
-  color: #f56c6c;
-}
 </style>

@@ -316,12 +316,10 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">总学生数</div>
-                <div class="card-value">{{ overviewData.totalStudents }}</div>
+                <div class="card-value"><el-icon><User /></el-icon>{{ overviewData.totalStudents }}</div>
                 <div class="card-change positive">+{{ overviewData.newStudentsWeek }} 本周新增</div>
               </div>
-              <div class="card-icon">
-                <el-icon><User /></el-icon>
-              </div>
+    
             </div>
           </el-card>
 
@@ -329,14 +327,12 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">作业完成率</div>
-                <div class="card-value">{{ overviewData.homeworkRate }}%</div>
+                <div class="card-value"><el-icon><Document /></el-icon>{{ overviewData.homeworkRate }}%</div>
                 <div class="card-change" :class="overviewData.homeworkTrend > 0 ? 'positive' : 'negative'">
                   {{ overviewData.homeworkTrend > 0 ? '+' : '' }}{{ overviewData.homeworkTrend }}% 较上周
                 </div>
               </div>
-              <div class="card-icon">
-                <el-icon><Document /></el-icon>
-              </div>
+              
             </div>
           </el-card>
 
@@ -344,14 +340,12 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">平均得分率</div>
-                <div class="card-value">{{ overviewData.avgScore }}</div>
+                <div class="card-value"><el-icon><TrendCharts /></el-icon>{{ overviewData.avgScore }}</div>
                 <div class="card-change" :class="overviewData.scoreTrend > 0 ? 'positive' : 'negative'">
                   {{ overviewData.scoreTrend > 0 ? '+' : '' }}{{ overviewData.scoreTrend }} 较上次
                 </div>
               </div>
-              <div class="card-icon">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
+      
             </div>
           </el-card>
 
@@ -359,12 +353,10 @@ onMounted(() => {
             <div class="card-content">
               <div class="card-info">
                 <div class="card-title">学生活跃度</div>
-                <div class="card-value">{{ overviewData.activeRate }}%</div>
+                <div class="card-value"><el-icon><ChatLineRound /></el-icon>{{ overviewData.activeRate }}%</div>
                 <div class="card-change positive">+{{ overviewData.activeIncrease }}% 本周</div>
               </div>
-              <div class="card-icon">
-                <el-icon><ChatLineRound /></el-icon>
-              </div>
+          
             </div>
           </el-card>
         </div>
@@ -643,7 +635,7 @@ onMounted(() => {
               <template #default="scope">
                 <div class="question-count-cell">
                   <el-icon><ChatLineSquare /></el-icon>
-                  <span>{{ scope.row.questionCount || 0 }}</span>
+                  <span>{{ scope.row.questionCount || 0 }} </span>
                 </div>
               </template>
             </el-table-column>
@@ -669,11 +661,87 @@ onMounted(() => {
 </template>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 .analysis-layout {
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100%;
+    animation: page-fade-in 0.8s ease-out;
+    background: linear-gradient(120deg, #4f8cff 0%, #6a82fb 100%);
+    padding: clamp(24px, 4vw, 48px);
+    border-radius: 24px;
+    color: #fff;
+}
+
+@keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.section-title, h4 {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(16px, 3vw, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    animation: section-fade-in 0.8s ease-out;
+}
+
+@keyframes section-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+.card, .el-card, .overview-cards > div, .stats-grid > div, .resource-item, .question-item {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+    padding: clamp(20px, 4vw, 32px);
+    transition: all 0.3s ease;
+    color: #fff;
+}
+
+.card:hover, .el-card:hover, .overview-cards > div:hover, .stats-grid > div:hover, .resource-item:hover, .question-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+}
+
+.el-button, .btn, button {
+    background: rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    border-radius: 12px !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    padding: 12px 24px !important;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.el-button:hover, .btn:hover, button:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: translateY(-2px);
+}
+
+.icon, .fa, .fas, .far, .fal, .fab {
+    color: #fff !important;
+    font-size: 20px !important;
+}
+
+.stats-grid, .overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: clamp(16px, 3vw, 20px);
+}
+
+.table-section, .resource-list, .question-list {
+    background: rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: clamp(16px, 3vw, 24px);
+    color: #fff;
 }
 
 .main-panel {
@@ -688,6 +756,7 @@ onMounted(() => {
   border-radius: 12px !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
   border: none !important;
+  background: rgba(255,255,255,0.08) !important;
 }
 
 .el-card :deep(.el-card__body) {
@@ -706,7 +775,10 @@ onMounted(() => {
 }
 
 .overview-card {
-  background: white;
+  background: rgba(255,255,255,0.12) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.10) !important;
+  color: #fff !important;
 }
 
 .card-content {
@@ -720,15 +792,15 @@ onMounted(() => {
 }
 
 .card-title {
-  font-size: 14px;
-  color: #666;
+  font-size:15px;
+  color: #e0e0e0;
   margin-bottom: 8px;
 }
 
 .card-value {
   font-size: 28px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #fff;
   margin-bottom: 4px;
 }
 
@@ -746,20 +818,16 @@ onMounted(() => {
 
 .card-icon {
   font-size: 40px;
-  color: #409eff;
+  color: #fff;
   opacity: 0.3;
 }
 
-/* 分析区域 */
+/* 分析区块 */
 .charts-section {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
-
-
-
-
 
 .chart-header {
   display: flex;
@@ -772,68 +840,17 @@ onMounted(() => {
 
 .chart-header h4 {
   margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  color: #fff;
 }
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-
-
-
-
-/* 作业统计专区 */
-.homework-stats-section {
-  margin-bottom: 20px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.stat-item:hover {
-  background: #e9ecef;
-  transform: translateY(-2px);
-}
-
-.stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #409eff;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
-
+/* 成绩分布条 */
 .score-distribution {
   margin-bottom: 24px;
 }
 
 .score-distribution h5 {
   margin-bottom: 16px;
-  color: #2c3e50;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
 }
@@ -853,14 +870,14 @@ onMounted(() => {
 .range-label {
   width: 100px;
   font-size: 14px;
-  color: #333;
+  color: #e0e0e0;
   text-align: right;
 }
 
 .range-bar {
   flex: 1;
   height: 20px;
-  background: #f0f0f0;
+  background: #2c3e50;
   border-radius: 10px;
   overflow: hidden;
 }
@@ -875,13 +892,13 @@ onMounted(() => {
 .range-count {
   width: 50px;
   font-size: 14px;
-  color: #666;
+  color: #e0e0e0;
   text-align: center;
 }
 
 .recent-homework h5 {
   margin-bottom: 16px;
-  color: #2c3e50;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
 }
@@ -897,39 +914,37 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f8f9fa;
+  background: rgba(255,255,255,0.08);
   border-radius: 8px;
   transition: all 0.3s ease;
+  color: #fff;
 }
 
 .homework-item:hover {
-  background: #e9ecef;
+  background: rgba(255,255,255,0.15);
 }
 
 .homework-title {
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: #fff;
 }
 
 .homework-stats {
   display: flex;
   gap: 16px;
   font-size: 13px;
-  color: #666;
+  color: #e0e0e0;
 }
 
 .empty-placeholder {
   text-align: center;
   padding: 20px;
-  background: #f8f9fa;
+  background: rgba(255,255,255,0.08);
   border-radius: 8px;
   border: 1px dashed #e0e0e0;
+  color: #fff;
 }
-
-
-
-
 
 /* 学生详细数据表格样式 */
 .progress-cell {
@@ -940,7 +955,7 @@ onMounted(() => {
 
 .progress-text {
   font-size: 12px;
-  color: #666;
+  color: #e0e0e0;
   font-weight: 500;
   min-width: 40px;
 }
@@ -949,7 +964,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #409eff;
+  color: #fff;
 }
 
 .question-count-cell {
@@ -967,7 +982,7 @@ onMounted(() => {
 
 .completion-text {
   font-size: 12px;
-  color: #666;
+  color: #e0e0e0;
   font-weight: 500;
   min-width: 40px;
 }
@@ -985,7 +1000,7 @@ onMounted(() => {
 .popular-resources h5,
 .recent-questions h5 {
   font-size: 14px;
-  color: #2c3e50;
+  color: #fff;
   margin-bottom: 12px;
   font-weight: 600;
 }
@@ -1000,15 +1015,16 @@ onMounted(() => {
 .resource-item,
 .question-item {
   padding: 12px;
-  background: #f8f9fa;
+  background: rgba(255,255,255,0.08);
   border-radius: 6px;
   border-left: 3px solid #409eff;
+  color: #fff;
 }
 
 .resource-name,
 .question-title {
   font-size: 14px;
-  color: #333;
+  color: #fff;
   margin-bottom: 4px;
   font-weight: 500;
 }
@@ -1018,7 +1034,7 @@ onMounted(() => {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #666;
+  color: #e0e0e0;
 }
 
 /* 互动统计专区 */
@@ -1027,7 +1043,7 @@ onMounted(() => {
 }
 
 /* 表格区域 */
-.table-section {
+/* .table-section {
   flex: 1;
 }
 
@@ -1040,7 +1056,7 @@ onMounted(() => {
 
 .table-header h4 {
   margin: 0;
-  color: #2c3e50;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
   display: flex;
@@ -1057,67 +1073,119 @@ onMounted(() => {
 .table-pagination {
   margin-top: 20px;
   text-align: right;
+} */
+.table-section {
+  flex: 1;
 }
+
+/* 表格头部容器样式玻璃化 */
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 标题文字样式 */
+.table-header h4 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 动作按钮区域 */
+/* .table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+} */
+.table-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+/* 分页区样式统一玻璃风 */
+/* .table-pagination {
+  margin-top: 20px;
+  text-align: right;
+} */
+.table-pagination {
+  margin-top: 20px;
+  text-align: right;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  display: inline-block;
+}
+
+/* 深度覆盖分页组件按钮 */
+.table-pagination :deep(.el-pager li),
+.table-pagination :deep(.el-pagination__sizes),
+.table-pagination :deep(.el-pagination__jump),
+.table-pagination :deep(button) {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 6px;
+  color: #fff;
+  margin: 2 2px;
+  margin-right: 5px;
+  transition: all 0.2s ease;
+}
+
+/* hover 效果更亮 */
+.table-pagination :deep(.el-pager li:hover),
+.table-pagination :deep(.el-pagination__sizes:hover),
+.table-pagination :deep(.el-pagination__jump:hover),
+.table-pagination :deep(button:hover) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+
 
 /* 通用标题样式 */
 h4 {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #fff;
   margin-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-
-
-
-
-/* 响应式 */
-@media (max-width: 1400px) {
-  .analysis-layout {
-    padding: 16px;
-  }
-  
+/* 响应式设计 */
+@media (max-width: 900px) {
   .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .stats-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 1fr 1fr;
   }
 }
-
-@media (max-width: 1200px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
+@media (max-width: 600px) {
   .overview-cards {
     grid-template-columns: 1fr;
   }
-  
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
-  .chart-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  
-  .table-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  
-  .table-actions {
-    flex-wrap: wrap;
+  .analysis-layout {
+    padding: 12px;
+    border-radius: 12px;
   }
 }
 </style> 

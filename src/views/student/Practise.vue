@@ -23,6 +23,22 @@ const homeworkStats = ref({
   overallProgress: 0
 })
 
+// 作业统计数据
+const homeworkStatsData = ref([
+  { label: '总作业数', value: '0', icon: 'fas fa-file-alt', color: '#667eea' },
+  { label: '已完成', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
+  { label: '待完成', value: '0', icon: 'fas fa-clock', color: '#4facfe' },
+  { label: '平均得分', value: '0', icon: 'fas fa-chart-line', color: '#26d0ce' }
+])
+
+// 筛选选项
+const filterOptions = ref([
+  { label: '全部', value: 'all', icon: 'fas fa-list' },
+  { label: '待完成', value: 'pending', icon: 'fas fa-clock' },
+  { label: '已提交', value: 'submitted', icon: 'fas fa-paper-plane' },
+  { label: '已批改', value: 'graded', icon: 'fas fa-check-double' }
+])
+
 // 作业列表
 const homeworkList = ref([])
 
@@ -68,6 +84,15 @@ const getStatusType = (status) => {
     2: 'success'    // 已批改
   }
   return types[status] || 'info'
+}
+
+const getStatusClass = (status) => {
+  const classes = {
+    0: 'status-warning',   // 未提交(草稿)
+    1: 'status-primary',   // 已提交
+    2: 'status-success'    // 已批改
+  }
+  return classes[status] || 'status-info'
 }
 
 const getStatusText = (status) => {
@@ -218,6 +243,14 @@ const loadHomeworkStats = async () => {
         overallProgress: totalHomework > 0 ? Math.round((submittedHomework / totalHomework) * 100) : 0 // 整体进度基于提交率
       }
       
+      // 更新作业统计数据
+      homeworkStatsData.value = [
+        { label: '总作业数', value: homeworkStats.value.totalHomework.toString(), icon: 'fas fa-file-alt', color: '#667eea' },
+        { label: '已完成', value: homeworkStats.value.completedHomework.toString(), icon: 'fas fa-check-circle', color: '#f5576c' },
+        { label: '待完成', value: homeworkStats.value.pendingHomework.toString(), icon: 'fas fa-clock', color: '#4facfe' },
+        { label: '平均得分率', value: (homeworkStats.value.averageScore.toFixed(2)*100).toString() + "%", icon: 'fas fa-chart-line', color: '#26d0ce' }
+      ]
+      
       console.log('作业统计数据:', homeworkStats.value) // 调试日志
     }
   } catch (error) {
@@ -353,154 +386,151 @@ const fetchQuestionAnalysis = async (question) => {
 </script>
 
 <template>
-  <div class="student-homework-layout">
-    <!-- 左侧主要区域 -->
-    <div class="main-panel">
-      <!-- 顶部状态概览 -->
-      <div class="status-section">
-        <div class="status-cards">
-          <el-card shadow="hover" class="status-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">总作业数</div>
-                <div class="card-value">{{ homeworkStats.totalHomework }}</div>
-                <div class="card-desc">本学期发布</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Document /></el-icon>
-              </div>
-            </div>
-          </el-card>
+  <div class="student-container">
+    <!-- 页面标题 -->
+    <div class="student-section">
+      <h1 class="student-title large">
+        <i class="fas fa-tasks"></i>
+        作业模块
+      </h1>
+      <p class="student-text secondary">完成课程作业，提升学习效果</p>
+    </div>
 
-          <el-card shadow="hover" class="status-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">已完成</div>
-                <div class="card-value">{{ homeworkStats.completedHomework }}</div>
-                <div class="card-desc">完成率 {{ completionRate }}%</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Check /></el-icon>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card shadow="hover" class="status-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">待完成</div>
-                <div class="card-value">{{ homeworkStats.pendingHomework }}</div>
-                <div class="card-desc">需要关注</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><Clock /></el-icon>
-              </div>
-            </div>
-          </el-card>
-
-          <el-card shadow="hover" class="status-card">
-            <div class="card-content">
-              <div class="card-info">
-                <div class="card-title">平均得分率</div>
-                <div class="card-value">{{ homeworkStats.averageScore.toFixed(2) }}</div>
-                <div class="card-desc">学习进度</div>
-              </div>
-              <div class="card-icon">
-                <el-icon><TrendCharts /></el-icon>
-              </div>
-            </div>
-          </el-card>
+    <!-- 作业统计区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-chart-bar"></i>
+        作业统计
+      </h2>
+      <div class="student-grid three-columns">
+        <div class="student-card stat-card" v-for="(stat, index) in homeworkStatsData" :key="index">
+          <div class="stat-icon" :style="{ color: stat.color }">
+            <i :class="stat.icon"></i>
+          </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </div>
         </div>
       </div>
+    </div>
 
-      <!-- 筛选和搜索 -->
-      <div class="filter-section">
-        <el-card shadow="hover">
-          <div class="filter-header">
-            <h3>
-              <el-icon><List /></el-icon>
-              作业列表
-            </h3>
-            <div class="filter-controls">
-              <el-radio-group v-model="filterStatus" size="small">
-                <el-radio-button value="all">全部</el-radio-button>
-                <el-radio-button value="pending">待完成</el-radio-button>
-                <el-radio-button value="submitted">已提交</el-radio-button>
-                <el-radio-button value="graded">已批改</el-radio-button>
-              </el-radio-group>
+    <!-- 筛选区域 -->
+    <div class="student-section">
+      <div class="student-card filter-card">
+        <div class="filter-header">
+          <h3 class="student-title small">
+            <i class="fas fa-filter"></i>
+            作业筛选
+          </h3>
+          <div class="filter-controls">
+            <button 
+              v-for="filter in filterOptions" 
+              :key="filter.value"
+              class="filter-btn"
+              :class="{ active: filterStatus === filter.value }"
+              @click="filterStatus = filter.value"
+            >
+              <i :class="filter.icon"></i>
+              {{ filter.label }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 作业列表区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-list"></i>
+        作业列表
+      </h2>
+      
+      <div v-if="filteredHomework.length === 0" class="student-card empty-card">
+        <div class="empty-content">
+          <i class="fas fa-inbox"></i>
+          <p class="student-text secondary">暂无作业数据</p>
+        </div>
+      </div>
+      
+      <div v-else class="student-grid auto-fit">
+        <div 
+          v-for="homework in filteredHomework" 
+          :key="homework.id" 
+          class="student-card homework-card"
+        >
+          <div class="homework-header">
+            <div class="homework-title">{{ homework.title }}</div>
+            <div class="homework-status">
+              <span class="status-badge" :class="getStatusClass(homework.status)">
+                {{ getStatusText(homework.status) }}
+              </span>
             </div>
           </div>
-        </el-card>
-      </div>
-
-      <!-- 作业列表 -->
-      <div class="homework-section">
-        <div v-if="filteredHomework.length === 0" class="empty-state">
-          <el-empty description="暂无作业数据" />
-        </div>
-        
-        <div v-else class="homework-list">
-          <el-card 
-            v-for="homework in filteredHomework" 
-            :key="homework.id" 
-            shadow="hover" 
-            class="homework-item"
-          >
-            <div class="homework-header">
-              <div class="homework-info">
-                <h4>{{ homework.title }}</h4>
-                <p class="homework-desc">作业备注：{{ homework.description }}</p>
-                <div class="homework-meta">
-                  <span class="teacher">发布教师：{{ homework.teacherName }}</span>
-                  <span class="deadline">截止时间：{{ formatDeadline(homework.deadline) }}</span>
-                  <span 
-                    class="time-left" 
-                    :class="getTimeLeftClass(homework.deadline)"
-                  >
-                    剩余：{{ homework.timeLeft }}
-                  </span>
-                </div>
+          
+          <div class="homework-content">
+            <p class="homework-desc">{{ homework.description }}</p>
+            <div class="homework-meta">
+              <div class="meta-item">
+                <i class="fas fa-user"></i>
+                <span>{{ homework.teacherName }}</span>
               </div>
-              
-              <div class="homework-status">
-                <el-tag 
-                  :type="getStatusType(homework.status)" 
-                  size="large"
-                >
-                  {{ getStatusText(homework.status) }}
-                </el-tag>
-                
-                <div v-if="homework.status === 2" class="score-display">
-                  <span 
-                    class="score" 
-                    :class="getScoreClass(homework.score, homework.totalScore)"
-                  >
-                    {{ homework.score }}/{{ homework.totalScore }}
-                  </span>
-                </div>
+              <div class="meta-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ formatDeadline(homework.deadline) }}</span>
+              </div>
+              <div class="meta-item">
+                <i class="fas fa-clock"></i>
+                <span :class="getTimeLeftClass(homework.deadline)">
+                  {{ homework.timeLeft }}
+                </span>
               </div>
             </div>
             
-            <div class="homework-actions">
-              <el-button 
-                v-if="homework.status === 0" 
-                type="primary" 
-                @click="startHomework(homework)"
-              >
-                <el-icon><Edit /></el-icon>
-                开始作业
-              </el-button>
-              
-              <el-button 
-                v-if="homework.status === 1 || homework.status === 2" 
-                type="info" 
-                @click="viewHomework(homework)"
-              >
-                <el-icon><View /></el-icon>
-                查看详情
-              </el-button>
+            <div v-if="homework.status === 2" class="score-section">
+              <div class="score-display">
+                <span class="score-label">得分:</span>
+                <span class="score-value" :class="getScoreClass(homework.score, homework.totalScore)">
+                  {{ homework.score }}/{{ homework.totalScore }}
+                </span>
+                <span v-if="homework.totalScore > 0" class="score-rate" :class="getScoreClass(homework.score, homework.totalScore)">
+                  得分率：{{ Math.round((homework.score / homework.totalScore) * 100) }}%
+                </span>
+              </div>
             </div>
-          </el-card>
+            <div v-else-if="homework.status === 1" class="score-section">
+              <div class="score-display">
+                <span class="score-label">状态:</span>
+                <span class="score-value">暂未批改</span>
+              </div>
+            </div>
+            <div v-else-if="homework.status === 0" class="score-section">
+              <div class="score-display">
+                <span class="score-label">状态:</span>
+                <span class="score-value">暂未提交</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="homework-actions">
+            <button 
+              v-if="homework.status === 0" 
+              class="student-button"
+              @click="startHomework(homework)"
+            >
+              <i class="fas fa-edit"></i>
+              开始作业
+            </button>
+            
+            <button 
+              v-if="homework.status === 1 || homework.status === 2" 
+              class="student-button secondary"
+              @click="viewHomework(homework)"
+            >
+              <i class="fas fa-eye"></i>
+              查看详情
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -552,42 +582,42 @@ const fetchQuestionAnalysis = async (question) => {
                 />
               </div>
               
+    
 
-              
-              <!-- 显示得分（已批改） -->
               <div v-if="currentHomework.status === 2 && question.score !== undefined" class="question-score-display">
                 
-                <div v-if="!analysisMap[question.id]">
+                <!-- <div v-if="!analysisMap[question.id]">
                   <span :data-id="question.id" v-once>
                     {{ fetchQuestionAnalysis(question) }}
                   </span>
-                </div>
+                </div>   需要吗？？-->
                 
-                <div class="question-explain" style="margin-top: 8px;">
+                <div class="question-section question-explain">
                   <strong>错误诊断：</strong>
-                  <div style="white-space: pre-wrap; color: #666;">{{analysisMap[question.id] || '诊断中...'}}</div>
+                  <div>{{ analysisMap[question.id] || '诊断中...' }}</div>
                 </div>
                 
-                
-                <div class="question-answer" style="margin-top: 8px;">
+                <div class="question-section question-answer">
                 <strong>标准答案：</strong>
-                <div style="white-space: pre-wrap; color: #409eff;">{{ question.answer || '暂无' }}</div>
-              
-                <div class="question-explain" style="margin-top: 8px;">
+                <div style="color: #409eff;">{{ question.answer || '暂无' }}</div>
+              </div>
+
+                <div class="question-section question-analysis">
                   <strong>解析：</strong>
-                  <div style="white-space: pre-wrap; color: #666;">{{ question.explain || '暂无' }}</div>
+                  <div>{{ question.explain || '暂无' }}</div>
                 </div>
               
-        
+              
               </div>
 
               
+              <div v-if="currentHomework.status === 2" class="question-score-display">
                 <span class="score-label">得分：</span>
-                <span 
-                  class="score-value" 
-                  :class="getScoreClass(question.score, question.totalScore)"
-                >
-                  {{ question.score }}/{{ question.totalScore }}
+                <span class="score-value" :class="getScoreClass(question.score, question.totalScore)">
+                  {{ question.score || 0 }}/{{ question.totalScore }}
+                </span>
+                <span v-if="question.totalScore > 0" class="score-rate" :class="getScoreClass(question.score, question.totalScore)">
+                  得分率：{{ Math.round(((question.score || 0) / question.totalScore) * 100) }}%
                 </span>
               </div>
             </div>
@@ -598,18 +628,16 @@ const fetchQuestionAnalysis = async (question) => {
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="showHomeworkDialog = false">关闭</el-button>
-          
           <el-button 
-            v-if="currentHomework?.status === 0" 
-            type="info" 
+            v-if="currentHomework?.status === 0"
+            type="primary" 
             @click="saveDraft"
           >
             保存草稿
           </el-button>
-          
           <el-button 
-            v-if="currentHomework?.status === 0" 
-            type="primary" 
+            v-if="currentHomework?.status === 0"
+            type="success" 
             @click="submitHomework"
           >
             提交作业
@@ -621,112 +649,133 @@ const fetchQuestionAnalysis = async (question) => {
 </template>
 
 <style scoped>
-.student-homework-layout {
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9; /* 默认背景 */
 }
 
-.main-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+.question-explain {
+  background-color: #fdf6ec; /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
 }
 
-/* 状态卡片 */
-.status-section {
-  margin-bottom: 24px;
+.question-answer {
+  background-color: #ecf5ff; /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
 }
 
-.status-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+.question-analysis {
+  background-color: #f0f9eb; /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
 }
 
-.status-card {
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-.card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-info {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.card-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
+.question-section strong {
+  display: block;
   margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
 }
 
-.card-desc {
-  font-size: 12px;
-  color: #999;
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
 }
 
-.card-icon {
-  font-size: 32px;
-  color: #409eff;
-  opacity: 0.8;
+
+/* 统计卡片样式 */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
 }
 
-/* 筛选区域 */
-.filter-section .el-card {
-  border-radius: 12px !important;
-  border: none !important;
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: var(--student-text);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: clamp(11px, 2vw, 14px);
+  color: var(--student-text-secondary);
+  line-height: 1.3;
+}
+
+/* 筛选卡片样式 */
+.filter-card {
+  padding: 24px;
 }
 
 .filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.filter-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* 作业列表 */
-.homework-section {
-  flex: 1;
-}
-
-.homework-list {
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
-.homework-item {
-  border-radius: 12px !important;
-  border: none !important;
-  transition: all 0.3s ease;
+.filter-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.homework-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+.filter-btn {
+  background: var(--student-glass);
+  border: 1px solid var(--student-glass-border);
+  color: var(--student-text-secondary);
+  padding: 8px 16px;
+  border-radius: var(--student-border-radius-small);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--student-animation);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn:hover {
+  background: var(--student-card-hover);
+  color: var(--student-text);
+}
+
+.filter-btn.active {
+  background: var(--gradient-primary);
+  color: var(--student-text);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 作业卡片样式 */
+.homework-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
 }
 
 .homework-header {
@@ -736,59 +785,141 @@ const fetchQuestionAnalysis = async (question) => {
   margin-bottom: 16px;
 }
 
-.homework-info {
-  flex: 1;
-}
-
-.homework-info h4 {
-  margin: 0 0 8px 0;
-  color: #2c3e50;
+.homework-title {
   font-size: 18px;
   font-weight: 600;
+  color: var(--student-text);
+  line-height: 1.4;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.homework-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--student-text);
+}
+
+.status-warning {
+  background: #bfa600;
+}
+
+.status-primary {
+  background: #1761a0;
+}
+
+.status-success {
+  background: #137a2b;
+}
+
+.status-info {
+  background: #444;
+}
+
+.homework-content {
+  margin-bottom: 16px;
 }
 
 .homework-desc {
-  margin: 0 0 12px 0;
-  color: #666;
-  font-size: 14px;
+  color: var(--student-text-secondary);
+  margin-bottom: 12px;
   line-height: 1.5;
 }
 
 .homework-meta {
   display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #999;
-}
-
-.homework-status {
-  display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 8px;
+  margin-bottom: 12px;
 }
 
-.score-display .score {
-  font-size: 16px;
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--student-text-secondary);
+}
+
+.meta-item i {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.time-left.urgent {
+  color: #ff6b6b;
   font-weight: 600;
 }
 
-.score.excellent { color: #67c23a; }
-.score.good { color: #409eff; }
-.score.average { color: #e6a23c; }
-.score.poor { color: #f56c6c; }
+.time-left.overdue {
+  color: #ff6b6b;
+  font-weight: 600;
+}
 
-.time-left.urgent { color: #f56c6c; font-weight: 600; }
-.time-left.overdue { color: #f56c6c; font-weight: 600; }
-.time-left.normal { color: #409eff; }
+.time-left.normal {
+  color: var(--student-text-secondary);
+}
+
+.score-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--student-glass-border);
+}
+
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* 统一得分相关字体样式 */
+.score-label,
+.score-value,
+.score-rate {
+  font-size: 15px !important;
+  font-weight: bold !important;
+  color: #fff !important;
+  font-family: 'Microsoft YaHei', 'Arial', 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'sans-serif' !important;
+  margin: 0 !important;
+  letter-spacing: 0.5px;
+}
+
+.score-value,
+.score-rate {
+  margin-left: 8px !important;
+}
 
 .homework-actions {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  gap: 8px;
 }
 
-/* 作业详情对话框 */
+/* 空状态卡片 */
+.empty-card {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-content i {
+  font-size: 48px;
+  color: var(--student-text-muted);
+}
+
+/* 作业详情对话框样式 */
 .homework-detail {
   max-height: 70vh;
   overflow-y: auto;
@@ -845,8 +976,6 @@ const fetchQuestionAnalysis = async (question) => {
   border-left: 4px solid #409eff;
 }
 
-
-
 .submitted-answer {
   margin-top: 16px;
   padding: 12px;
@@ -881,25 +1010,15 @@ const fetchQuestionAnalysis = async (question) => {
   margin-left: 8px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-}
-
-/* 响应式 */
+/* 响应式设计 */
 @media (max-width: 768px) {
-  .student-homework-layout {
-    padding: 16px;
-  }
-  
-  .status-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  
   .filter-header {
     flex-direction: column;
-    gap: 16px;
     align-items: stretch;
+  }
+  
+  .filter-controls {
+    justify-content: center;
   }
   
   .homework-header {
@@ -908,7 +1027,15 @@ const fetchQuestionAnalysis = async (question) => {
   }
   
   .homework-actions {
-    justify-content: center;
+    flex-direction: column;
   }
+  
+  .homework-meta {
+    flex-direction: column;
+  }
+}
+
+.student-title.medium {
+  margin-bottom: 20px;
 }
 </style>

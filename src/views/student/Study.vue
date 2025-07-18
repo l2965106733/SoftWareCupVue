@@ -132,6 +132,15 @@ const aiQuestions = ref(0)
 const totalStudyTime = ref(0)      // 总学习时长（分钟）
 const todayStudyTime = ref(0)      // 今日学习时长（分钟）
 
+// 学习统计数据
+const studyStats = ref([
+    { label: '课件总数', value: '0', icon: 'fas fa-folder', color: '#667eea' },
+    { label: '已学习', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
+    { label: 'AI提问数', value: '0', icon: 'fas fa-robot', color: '#4facfe' },
+    { label: '总学习时长', value: '0分钟', icon: 'fas fa-clock', color: '#26d0ce' },
+    { label: '今日学习', value: '0分钟', icon: 'fas fa-calendar-day', color: '#ffd700' }
+])
+
 // 学习统计详情对话框
 const showStatsDialog = ref(false)
 const todayStudyResources = ref(0)
@@ -494,11 +503,16 @@ const loadStudyStats = async () => {
     const result = await getStudyStatsApi(studentId)
     if (result.code === 1) {
       const data = result.data
-      totalCourseware.value = data.totalCourseware || 0
-      studiedCourseware.value = data.studiedCourseware || 0
-      aiQuestions.value = data.aiQuestions || 0
-      totalStudyTime.value = Math.floor((data.totalStudyTime || 0) / 60) // 转换为分钟
-      todayStudyTime.value = Math.floor((data.todayStudyTime || 0) / 60) // 转换为分钟
+      studyStats.value[0].value = String(data.totalCourseware || 0)
+      studyStats.value[1].value = String(data.studiedCourseware || 0)
+      studyStats.value[2].value = String(data.aiQuestions || 0)
+      studyStats.value[3].value = `${Math.floor((data.totalStudyTime || 0) / 60)}分钟`
+      studyStats.value[4].value = `${Math.floor((data.todayStudyTime || 0) / 60)}分钟`
+      // totalCourseware.value = data.totalCourseware || 0
+      // studiedCourseware.value = data.studiedCourseware || 0
+      // aiQuestions.value = data.aiQuestions || 0
+      // totalStudyTime.value = Math.floor((data.totalStudyTime || 0) / 60) // 转换为分钟
+      // todayStudyTime.value = Math.floor((data.todayStudyTime || 0) / 60) // 转换为分钟
     }
   } catch (error) {
     console.error('加载学习统计失败:', error)
@@ -609,160 +623,142 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="student-study-layout">
+  <div class="student-container">
+    <!-- 页面标题 -->
+    <div class="student-section">
+      <h1 class="student-title large">
+        <i class="fas fa-book"></i>
+        学习模块
+      </h1>
+      <p class="student-text secondary">探索丰富的学习资源</p>
+    </div>
 
-    <!-- 右侧内容区域 -->
-    <div class="right-panel">
-      <!-- 学习计时器 -->
-      <div class="study-timer-section" v-if="activeStudyResources.size > 0">
-        <el-card shadow="hover">
-          <div class="timer-header">
-            <h4>
-              <el-icon>
-                <Timer />
-              </el-icon>
-              正在学习
-            </h4>
-            <el-button type="danger" size="small" @click="stopAllStudyTimers">
-              <el-icon>
-                <CircleClose />
-              </el-icon>
-              全部停止
-            </el-button>
+    <!-- 学习统计区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-chart-bar"></i>
+        学习统计
+      </h2>
+      <div class="student-grid three-columns stat-row">
+        <div class="student-card stat-card" v-for="(stat, index) in studyStats" :key="index">
+          <div class="stat-icon" :style="{ color: stat.color }">
+            <i :class="stat.icon"></i>
           </div>
-          <div class="active-timers">
-            <div v-for="resourceId in Array.from(activeStudyResources)" :key="resourceId" class="timer-item">
-              <div class="timer-info">
-                <div class="resource-title">{{ getResourceName(resourceId) }}</div>
-                <div class="timer-display">{{ formatRealTimeStudyTime(resourceId) }}</div>
-              </div>
-              <div class="timer-actions">
-                <el-button type="warning" size="small" @click="pauseStudyTimer(resourceId)">
-                  <el-icon>
-                    <VideoPause />
-                  </el-icon>
-                  暂停
-                </el-button>
-                <el-button type="danger" size="small" @click="stopStudyTimer(resourceId)">
-                  <el-icon>
-                    <CircleClose />
-                  </el-icon>
-                  停止
-                </el-button>
-              </div>
-            </div>
+          <div class="stat-content">
+            <div class="stat-value">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
           </div>
-        </el-card>
+        </div>
       </div>
+    </div>
 
-      <!-- 学习统计 -->
-      <div class="stats-section">
-        <el-card shadow="hover">
-          <div class="card-header">
-            <h4>
-              <el-icon>
-                <DataAnalysis />
-              </el-icon>
-              学习统计
-            </h4>
-            <el-button type="primary" size="small" @click="showStudyStatsDetail">
-              <el-icon>
-                <View />
-              </el-icon>
-              查看详情
-            </el-button>
+    <!-- 学习计时器区域 -->
+    <div class="student-section" v-if="activeStudyResources.size > 0">
+      <h2 class="student-title medium">
+        <i class="fas fa-clock"></i>
+        正在学习
+      </h2>
+      <div class="student-card timer-card">
+        <div class="timer-header">
+          <div class="timer-title">
+            <i class="fas fa-play-circle"></i>
+            学习计时器
           </div>
-          <div class="study-stats">
-            <div class="stat-item">
-              <div class="stat-value">{{ totalCourseware }}</div>
-              <div class="stat-label">课件总数</div>
+          <button class="student-button danger" @click="stopAllStudyTimers">
+            <i class="fas fa-stop"></i>
+            全部停止
+          </button>
+        </div>
+        <div class="timer-list">
+          <div v-for="resourceId in Array.from(activeStudyResources)" :key="resourceId" class="timer-item">
+            <div class="timer-info">
+              <div class="resource-title">{{ getResourceName(resourceId) }}</div>
+              <div class="timer-display">{{ formatRealTimeStudyTime(resourceId) }}</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ studiedCourseware }}</div>
-              <div class="stat-label">已学习</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ aiQuestions }}</div>
-              <div class="stat-label">AI提问数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ totalStudyTime }}分钟</div>
-              <div class="stat-label">总学习时长</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-value">{{ todayStudyTime }}分钟</div>
-              <div class="stat-label">今日学习</div>
+            <div class="timer-actions">
+              <button class="student-button warning" @click="pauseStudyTimer(resourceId)">
+                <i class="fas fa-pause"></i>
+                暂停
+              </button>
+              <button class="student-button danger" @click="stopStudyTimer(resourceId)">
+                <i class="fas fa-stop"></i>
+                停止
+              </button>
             </div>
           </div>
-        </el-card>
+        </div>
       </div>
+    </div>
 
-      <!-- 课件学习区域 -->
-      <div class="courseware-section">
-        <el-card shadow="hover">
-          <div class="section-header">
-            <h3>
-              <el-icon>
-                <FolderOpened />
-              </el-icon>
-              课程课件
-            </h3>
+    <!-- 课件学习区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-folder-open"></i>
+        课程课件
+      </h2>
+      <div class="student-grid auto-fit">
+        <div
+          v-for="courseware in coursewareList"
+          :key="courseware.id"
+          class="student-card courseware-card"
+        >
+          <div class="courseware-header">
+            <div class="file-icon">
+              <i v-if="courseware.type === 'pdf'" class="fas fa-file-pdf"></i>
+              <i v-else-if="courseware.type === 'ppt'" class="fas fa-file-powerpoint"></i>
+              <i v-else-if="courseware.type === 'video'" class="fas fa-file-video"></i>
+              <i v-else class="fas fa-file"></i>
+            </div>
+            <div class="courseware-title">{{ courseware.title }}</div>
           </div>
-
-          <div class="courseware-list">
-            <div
-              v-for="courseware in coursewareList"
-              :key="courseware.id"
-              class="courseware-item"
-            >
-            
-              <div class="courseware-info">
-                <div class="file-icon">
-                  <el-icon v-if="courseware.type === 'pdf'">
-                    <Document />
-                  </el-icon>
-                  <el-icon v-else-if="courseware.type === 'ppt'">
-                    <Monitor />
-                  </el-icon>
-                  <el-icon v-else-if="courseware.type === 'video'">
-                    <VideoPlay />
-                  </el-icon>
-                  <el-icon v-else>
-                    <Files />
-                  </el-icon>
-                </div>
-                <div class="courseware-details">
-                  <h4>{{ courseware.title }}</h4>
-                  <div class="courseware-meta">
-                    <span class="teacher-name">发布教师：{{ courseware.teacher }}</span>
-                    <span class="upload-time">上传时间：{{ courseware.uploadTime }}</span>
-                    <span class="file-size">文件大小：{{ courseware.size }}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="courseware-actions">
-                <el-button
-                  type="primary"
-                  size="small"
-                  @click.stop="handlePreview(courseware)"
-                >
-                  <el-icon><View /></el-icon>
-                  预览
-                </el-button>
-                <el-button
-                  type="success"
-                  size="small"
-                  @click.stop="downloadCourseware(courseware)"
-                >
-                  <el-icon><Download /></el-icon>
-                  下载
-                </el-button>
-              </div>
+          <div class="courseware-meta">
+            <div class="meta-item">
+              <i class="fas fa-user"></i>
+              <span>{{ courseware.teacher }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="fas fa-calendar"></i>
+              <span>{{ courseware.uploadTime }}</span>
+            </div>
+            <div class="meta-item">
+              <i class="fas fa-weight-hanging"></i>
+              <span>{{ courseware.size }}</span>
             </div>
           </div>
+          <div class="courseware-actions">
+            <button class="student-button" @click.stop="handlePreview(courseware)">
+              <i class="fas fa-eye"></i>
+              预览
+            </button>
+            <button class="student-button secondary" @click.stop="downloadCourseware(courseware)">
+              <i class="fas fa-download"></i>
+              下载
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        </el-card>
+    <!-- AI题目生成区域 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-robot"></i>
+        AI题目生成
+      </h2>
+      <div class="student-card ai-card">
+        <div class="ai-header">
+          <div class="ai-title">
+            <i class="fas fa-magic"></i>
+            智能题目生成
+          </div>
+          <button class="student-button" @click="showAIDialog">
+            <i class="fas fa-plus"></i>
+            生成题目
+          </button>
+        </div>
+        <div class="ai-content">
+          <p class="student-text secondary">基于学习内容，AI可以为您生成个性化的练习题</p>
+        </div>
       </div>
     </div>
 
@@ -794,342 +790,222 @@ onBeforeUnmount(() => {
             <vue-echarts v-if="trendChartVisible" :option="trendOption" style="height: 300px; width: 100%" />
           </div>
         </div>
-
-
       </div>
-      <!-- 移除footer按钮 -->
     </el-dialog>
-  </div>
 
-  <div class="control-section">
-    <el-card shadow="hover">
-      <div class="control-header">
-        <h3>题目生成(自行保存)</h3>
-      </div>
-
-      <div class="button-group">
-        <el-button type="primary" @click="showAIDialog" size="large">
-          <el-icon>
-            <MagicStick />
-          </el-icon>
-          AI 生成题目
-        </el-button>
-        <el-button type="primary" @click="clearQuestions" size="large">
-          <el-icon>
-            <MagicStick />
-          </el-icon>
-          清空生成题目
-        </el-button>
-      </div>
-    </el-card>
-    
-  </div>
-
-  <div class="question-block" v-for="(q, index) in questions" :key="q.id">
-  <div class="question-header">
-    <h4>题目 {{ index + 1 }}</h4>
-    <div>
-      <el-tag :type="getTypeColor(q.type)" size="small">{{ getTypeName(q.type) }}</el-tag>
-    </div>
-  </div>
-
-  <div class="question-content">
-    <p><strong>题干：</strong>{{ q.content }}</p>
-    <p><strong>知识点：</strong>{{ q.knowledge }}</p>
-    <p><strong>答案：</strong>{{ q.answer }}</p>
-    <p><strong>解析：</strong>{{ q.explain }}</p>
-  </div>
-
-  <div class="question-actions">
-    <el-button type="danger" size="small" @click="removeQuestion(q.id)">
-      <el-icon><Close /></el-icon>
-      删除
-    </el-button>
-  </div>
-
-  <el-divider />
-</div>
-
-
-  <!-- AI生成题目对话框 -->
-  <el-dialog v-model="showAIDialogVisible" title="AI 生成题目" width="600px" :before-close="handleCloseAIDialog">
-    <div class="ai-dialog-content">
-      <el-form label-width="80px" :model="aiFormData" ref="aiFormRef">
-        <el-form-item label="知识点" prop="knowledge" :rules="[{ required: true, message: '请输入知识点', trigger: 'blur' }]">
-          <el-input v-model="aiFormData.knowledge" placeholder="请输入知识点，如：JAVA面向对象编程" type="textarea" :rows="3" />
-          <div class="form-tips">
-            💡 提示：请详细描述知识点内容，AI将根据此内容生成相关题目
-          </div>
+    <!-- AI对话框 -->
+    <el-dialog v-model="showAIDialogVisible" title="AI题目生成" width="600px" @close="handleCloseAIDialog">
+      <el-form ref="aiFormRef" :model="aiFormData" label-width="100px">
+        <el-form-item label="知识点" prop="knowledge" required>
+          <el-input v-model="aiFormData.knowledge" placeholder="请输入知识点，如：Java基础语法" />
         </el-form-item>
-
-        <el-form-item label="题型" prop="type" :rules="[{ required: true, message: '请选择题型', trigger: 'change' }]">
-          <el-select v-model="aiFormData.type" placeholder="请选择题型" style="width: 100%">
-            <el-option label="选择题" value="choice">
-              <span>选择题</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">快速判断基础知识</span>
-            </el-option>
-            <el-option label="简答题" value="short">
-              <span>简答题</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">考察理解和表达能力</span>
-            </el-option>
-            <el-option label="编程题" value="code">
-              <span>编程题</span>
-              <span style="float: right; color: #8492a6; font-size: 13px">实际编程能力测试</span>
-            </el-option>
+        <el-form-item label="题目类型" prop="type" required>
+          <el-select v-model="aiFormData.type" placeholder="请选择题目类型" style="width: 100%">
+            <el-option label="选择题" value="choice" />
+            <el-option label="简答题" value="short" />
+            <el-option label="编程题" value="code" />
           </el-select>
         </el-form-item>
-
-        <el-form-item label="题目数量">
-          <el-input-number v-model="aiFormData.count" :min="1" :max="10" placeholder="题目数量" style="width: 200px" />
-          <div class="form-tips">
-            建议：选择题 3-5道，简答题 2-3道，编程题 1-2道
-          </div>
+        <el-form-item label="题目数量" prop="count">
+          <el-input-number v-model="aiFormData.count" :min="1" :max="10" />
         </el-form-item>
-
-        <el-form-item label="额外要求">
-          <el-input v-model="aiFormData.remark" placeholder="可选：特殊要求或注意事项" type="textarea" :rows="2" />
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="aiFormData.remark" type="textarea" placeholder="可选：对题目的特殊要求" />
         </el-form-item>
       </el-form>
-    </div>
-
-    <template #footer>
-      <span class="dialog-footer">
+      <template #footer>
         <el-button @click="handleCloseAIDialog">取消</el-button>
         <el-button type="primary" @click="handleAIGenerate" :loading="isGenerating">
-          <el-icon>
-            <MagicStick />
-          </el-icon>
-          {{ isGenerating ? 'AI生成中...' : '开始生成' }}
+          {{ isGenerating ? '生成中...' : '生成题目' }}
         </el-button>
-      </span>
-    </template>
-  </el-dialog>
+      </template>
+    </el-dialog>
+  </div>
 </template>
 
 <style scoped>
-.student-study-layout {
+/* 统计卡片样式 */
+.stat-card {
   display: flex;
-  gap: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
 }
 
-.left-panel {
-  flex: 2;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
-.right-panel {
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.stat-content {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
   min-width: 0;
-}
-
-/* 卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-/* 区块头部 */
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-
-
-/* 卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-/* 控制区域 */
-.control-section {
-  flex-shrink: 0;
-}
-
-.control-header {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.control-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
-  font-weight: 600;
-}
-
-.button-group {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
-
-.button-group .el-button {
-  height: 60px;
-  font-size: 16px;
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.button-group .el-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-
-/* 学习统计 */
-.stats-section {
-  flex-shrink: 0;
-}
-
-h4 {
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.study-stats {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
-}
-
-.stat-item:hover {
-  transform: translateY(-2px);
 }
 
 .stat-value {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: white;
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: var(--student-text);
+  margin-bottom: 4px;
+  line-height: 1.2;
 }
 
 .stat-label {
-  font-size: 13px;
-  opacity: 0.9;
-  color: white;
+  font-size: clamp(11px, 2vw, 14px);
+  color: var(--student-text-secondary);
+  line-height: 1.3;
 }
 
-/* 课件列表 */
-.courseware-section {
-  flex: 1;
+/* 统计卡片横排布局 */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
 }
 
-.courseware-list {
+.stat-row .stat-card {
+  flex: 1 1 0;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .stat-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .stat-row .stat-card {
+    min-width: 140px;
+    max-width: 100%;
+  }
+}
+
+/* 计时器卡片样式 */
+.timer-card {
+  padding: 24px;
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--student-glass-border);
+}
+
+.timer-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--student-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.courseware-item {
-
+.timer-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  border: 2px solid #e8f4fd;
-  border-radius: 12px;
-  background: #f8fcff;
-  transition: all 0.3s ease;
-  cursor: default;
+  background: var(--student-glass);
+  border-radius: var(--student-border-radius-small);
+  border: 1px solid var(--student-glass-border);
+  transition: all var(--student-animation);
 }
 
-.courseware-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
-  transform: translateY(-2px);
+.timer-item:hover {
+  background: var(--student-card-hover);
+  /* transform: translateX(8px); */
 }
 
-.courseware-info {
+.timer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.resource-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--student-text);
+  margin-bottom: 4px;
+}
+
+.timer-display {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--student-text);
+}
+
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 课件卡片样式 */
+.courseware-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.courseware-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex: 1;
+  margin-bottom: 16px;
 }
 
 .file-icon {
-  font-size: 28px;
-  color: #409eff;
+  font-size: 24px;
+  margin-right: 12px;
+  color: var(--student-text);
+  flex-shrink: 0;
 }
 
-.courseware-details h4 {
-  margin: 0 0 6px 0;
-  color: #2c3e50;
-  font-size: 14px;
+.courseware-title {
+  font-size: 16px;
   font-weight: 600;
+  color: var(--student-text);
+  line-height: 1.4;
 }
 
 .courseware-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 12px;
-  color: #666;
-  margin-top: 8px;
+  color: var(--student-text-secondary);
 }
 
-.courseware-meta span {
-  padding: 2px 0;
-}
-
-.study-progress {
-  color: #409eff !important;
-  font-weight: 500;
-}
-
-.last-study-time {
-  color: #67c23a !important;
-  font-weight: 500;
+.meta-item i {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .courseware-actions {
@@ -1137,67 +1013,42 @@ h4 {
   gap: 8px;
 }
 
-/* 响应式 */
-@media (max-width: 1400px) {
-  .student-study-layout {
-    gap: 16px;
-    padding: 16px;
-  }
+/* AI卡片样式 */
+.ai-card {
+  padding: 24px;
 }
 
-@media (max-width: 1200px) {
-  .student-study-layout {
-    flex-direction: column;
-  }
-
-  .left-panel,
-  .right-panel {
-    flex: 1;
-  }
-
-  .study-stats {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .study-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .courseware-item {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-
-  .courseware-info {
-    justify-content: center;
-  }
-
-  .courseware-actions {
-    justify-content: center;
-  }
-}
-
-/* 学习统计区域样式 */
-.card-header {
+.ai-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
 }
 
-.card-header h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
+.ai-title {
+  font-size: 18px;
   font-weight: 600;
+  color: var(--student-text);
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.ai-content {
+  color: var(--student-text-secondary);
+}
+
+/* 按钮样式扩展 */
+.student-button.warning {
+  background: var(--gradient-warning);
+}
+
+.student-button.danger {
+  background: var(--gradient-danger);
+}
+
+.student-button.secondary {
+  background: var(--gradient-secondary);
 }
 
 /* 统计详情对话框样式 */
@@ -1276,155 +1127,38 @@ h4 {
   font-weight: 500;
 }
 
-.resource-progress {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .timer-header,
+  .ai-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .timer-actions {
+    flex-direction: column;
+  }
+  
+  .courseware-actions {
+    flex-direction: column;
+  }
+  
+  .today-stats {
+    grid-template-columns: 1fr;
+  }
+}
+.student-section > .student-title.medium {
+  font-size: clamp(18px, 4vw, 24px);
+  margin-bottom: 32px !important;
 }
 
-.progress-item {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #409eff;
+.student-section > .student-title.medium + .student-grid.three-columns {
+  margin-top: 32px !important;
 }
 
-.progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.resource-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.progress-percent {
-  font-size: 14px;
-  font-weight: 600;
-  color: #409eff;
-}
-
-.progress-time {
-  font-size: 12px;
-  color: #666;
-  margin-top: 8px;
-}
-
-.knowledge-analysis {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.knowledge-item {
-  padding: 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border-left: 4px solid #67c23a;
-}
-
-.knowledge-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.category-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
-}
-
-.mastery-rate {
-  font-size: 14px;
-  font-weight: 600;
-  color: #67c23a;
-}
-
-.knowledge-details {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #666;
-  margin-top: 8px;
-}
-
-.knowledge-details span {
-  padding: 2px 6px;
-  background: #e9ecef;
-  border-radius: 4px;
-}
-
-/* 学习计时器样式 */
-.study-timer-section {
+/* 针对作业模块标题（假设为“作业”或“作业统计”）增加间距 */
+.student-section > .student-title.homework {
   margin-bottom: 24px;
-}
-
-.timer-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.timer-header h4 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 16px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.active-timers {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.timer-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.timer-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.resource-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.timer-display {
-  font-size: 18px;
-  font-weight: 600;
-  color: #409eff;
-}
-
-.timer-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.timer-actions .el-button {
-  padding: 6px 12px;
 }
 </style>

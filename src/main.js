@@ -8,6 +8,7 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import VueECharts from 'vue-echarts'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
+import '@fortawesome/fontawesome-free/css/all.css'
 import { LineChart,BarChart,PieChart } from 'echarts/charts'
 import {
   TitleComponent,

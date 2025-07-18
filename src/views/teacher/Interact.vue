@@ -228,342 +228,326 @@ onMounted(() => {
 
 
 <template>
-  <div class="interact-layout">
-    <!-- 上方区域：操作栏和统计平分 -->
-    <div class="top-section">
-      <!-- 操作栏 -->
-      <div class="control-panel">
-        <el-card shadow="hover" class="panel-card">
-          <div class="panel-header">
-            <h3>
+  <div class="interact-layout vertical-layout">
+    <div class="vertical-blocks">
+      <!-- 统计区块 -->
+      <el-card class="stats-section" shadow="never">
+        <h3 class="section-title"><i class="fas fa-chart-bar"></i> 问答统计</h3>
+        <div class="stats-horizontal">
+          <div class="stat-item">
+            <div class="stat-value">{{ questions.length }}</div>
+            <div class="stat-label">总问题数</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ unAnsweredCount }}</div>
+            <div class="stat-label">待回答</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ answeredCount }}</div>
+            <div class="stat-label">已回答</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value">{{ responseRate }}%</div>
+            <div class="stat-label">回答率</div>
+          </div>
+        </div>
+        <el-divider style="margin: 18px 0 12px 0;" />
+        <div class="rating-stats-row">
+          <div class="avg-rating-block">
+            <span class="avg-value">{{ averageRating }}</span>
+            <span class="avg-stars" :style="{ color: getRatingColor(Math.round(averageRating)) }">
+              {{ getRatingStars(Math.round(averageRating)) }}
+            </span>
+            <span class="avg-label">平均评分</span>
+          </div>
+          <div class="rating-bars-block">
+            <div class="rating-bar">
+              <span>满意</span>
+              <el-progress :percentage="ratings.length > 0 ? Math.round((positiveRatingCount / ratings.length) * 100) : 0" :color="'#67c23a'" :stroke-width="8" />
+              <span>{{ positiveRatingCount }}</span>
+            </div>
+            <div class="rating-bar">
+              <span>一般</span>
+              <el-progress :percentage="ratings.length > 0 ? Math.round((neutralRatingCount / ratings.length) * 100) : 0" :color="'#e6a23c'" :stroke-width="8" />
+              <span>{{ neutralRatingCount }}</span>
+            </div>
+            <div class="rating-bar">
+              <span>不满意</span>
+              <el-progress :percentage="ratings.length > 0 ? Math.round((negativeRatingCount / ratings.length) * 100) : 0" :color="'#f56c6c'" :stroke-width="8" />
+              <span>{{ negativeRatingCount }}</span>
+            </div>
+          </div>
+        </div>
+      </el-card>
+      <!-- 问题列表区块 -->
+      <el-card class="question-section" shadow="never">
+        <h3 class="section-title"><i class="fas fa-comments"></i> 学生互动问答</h3>
+        
+        <div class="top-toolbar">
+        <el-radio-group v-model="filterType" size="small">
+          <el-radio-button value="all">全部</el-radio-button>
+          <el-radio-button value="unanswered">待回答</el-radio-button>
+          <el-radio-button value="answered">已回答</el-radio-button>
+        </el-radio-group>
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索学生姓名或问题内容"
+          prefix-icon="Search"
+          size="small"
+          style="width: 280px; margin-left: 16px"
+          clearable
+        />
+      </div>
+
+        <div class="question-list">
+          <template v-if="filteredQuestions.length === 0">
+            <div class="empty-hint">
               <el-icon><ChatDotRound /></el-icon>
-              学生互动问答
-            </h3>
-            <div class="header-stats">
-              <el-tag type="info" size="small">待回答 {{ unAnsweredCount }}</el-tag>
-              <el-tag type="success" size="small">已回答 {{ answeredCount }}</el-tag>
+              <p>暂无{{ filterType === 'all' ? '' : filterType === 'unanswered' ? '待回答的' : '已回答的' }}问题</p>
             </div>
-          </div>
-          
-          <div class="panel-content">
-            <div class="filter-section">
-              <el-radio-group v-model="filterType" size="small">
-                <el-radio-button value="all">全部</el-radio-button>
-                <el-radio-button value="unanswered">待回答</el-radio-button>
-                <el-radio-button value="answered">已回答</el-radio-button>
-              </el-radio-group>
-              
-              <el-input
-                v-model="searchKeyword"
-                placeholder="搜索学生姓名或问题内容"
-                prefix-icon="Search"
-                size="small"
-                style="width: 280px; margin-left: 16px"
-                clearable
-              />
-            </div>
-          </div>
-        </el-card>
-      </div>
-
-      <!-- 统计面板 -->
-      <div class="stats-panel">
-        <el-card shadow="hover" class="panel-card">
-          <div class="panel-header">
-            <h3>
-              <el-icon><DataAnalysis /></el-icon>
-              问答统计
-            </h3>
-          </div>
-          
-          <div class="panel-content">
-            <!-- 问答统计 -->
-            <div class="stats-horizontal">
-              <div class="stat-item">
-                <div class="stat-value">{{ questions.length }}</div>
-                <div class="stat-label">总问题数</div>
+          </template>
+          <template v-else>
+            <div v-for="q in filteredQuestions" :key="q.id" class="question-item">
+              <div class="question-header">
+                <div class="student-info">
+                  <div class="student-details">
+                    <h4>{{ q.name }}</h4>
+                    <span class="question-time">{{ q.createTime }}</span>
+                  </div>
+                </div>
+                <div class="question-status">
+                  <el-tag v-if="q.answered" type="success" size="small">
+                    <el-icon><Check /></el-icon>
+                    已回答
+                  </el-tag>
+                  <el-tag v-else type="warning" size="small">
+                    <el-icon><Clock /></el-icon>
+                    待回答
+                  </el-tag>
+                </div>
               </div>
-              <div class="stat-item">
-                <div class="stat-value">{{ unAnsweredCount }}</div>
-                <div class="stat-label">待回答</div>
+              <div class="question-content">
+                <div class="question-text">
+                  <el-icon><QuestionFilled /></el-icon>
+                  <span>{{ q.question }}</span>
+                </div>
               </div>
-              <div class="stat-item">
-                <div class="stat-value">{{ answeredCount }}</div>
-                <div class="stat-label">已回答</div>
-              </div>
-              <div class="stat-item">
-                <div class="stat-value">{{ responseRate }}%</div>
-                <div class="stat-label">回答率</div>
-              </div>
-            </div>
-
-            <el-divider style="margin: 18px 0 12px 0;" />
-
-            <!-- 评分统计优化 -->
-            <div class="rating-stats-row">
-              <div class="avg-rating-block">
-                <span class="avg-value">{{ averageRating }}</span>
-                <span class="avg-stars" :style="{ color: getRatingColor(Math.round(averageRating)) }">
-                  {{ getRatingStars(Math.round(averageRating)) }}
+              <!-- 评分展示 -->
+              <div class="question-rating" v-if="q.rating !== undefined && q.rating !== null">
+                <span class="rating-stars" :style="{ color: getRatingColor(q.rating) }">
+                  {{ getRatingStars(q.rating) }}
                 </span>
-                <span class="avg-label">平均评分</span>
+                <span class="rating-label">{{ getRatingText(q.rating) }}</span>
+                <span class="rating-time">{{ q.ratingTime }}</span>
               </div>
-              <div class="rating-bars-block">
-                <div class="rating-bar">
-                  <span>满意</span>
-                  <el-progress :percentage="ratings.length > 0 ? Math.round((positiveRatingCount / ratings.length) * 100) : 0" :color="'#67c23a'" :stroke-width="8" />
-                  <span>{{ positiveRatingCount }}</span>
-                </div>
-                <div class="rating-bar">
-                  <span>一般</span>
-                  <el-progress :percentage="ratings.length > 0 ? Math.round((neutralRatingCount / ratings.length) * 100) : 0" :color="'#e6a23c'" :stroke-width="8" />
-                  <span>{{ neutralRatingCount }}</span>
-                </div>
-                <div class="rating-bar">
-                  <span>不满意</span>
-                  <el-progress :percentage="ratings.length > 0 ? Math.round((negativeRatingCount / ratings.length) * 100) : 0" :color="'#f56c6c'" :stroke-width="8" />
-                  <span>{{ negativeRatingCount }}</span>
-                </div>
+              <div class="question-rating no-rating" v-else>
+                暂无评分
               </div>
-            </div>
-          </div>
-        </el-card>
-      </div>
-    </div>
-
-    <!-- 下方区域：标签页切换 -->
-    <div class="content-section">
-      <el-card shadow="hover">
-        <template v-if="filteredQuestions.length === 0">
-          <div class="empty-hint">
-            <el-icon><ChatDotRound /></el-icon>
-            <p>暂无{{ filterType === 'all' ? '' : filterType === 'unanswered' ? '待回答的' : '已回答的' }}问题</p>
-          </div>
-        </template>
-        <template v-else>
-          <div v-for="q in filteredQuestions" :key="q.id" class="question-item">
-            <div class="question-header">
-              <div class="student-info">
-                <div class="student-details">
-                  <h4>{{ q.name }}</h4>
-                  <span class="question-time">{{ q.createTime }}</span>
-                </div>
-              </div>
-              <div class="question-status">
-                <el-tag v-if="q.answered" type="success" size="small">
-                  <el-icon><Check /></el-icon>
-                  已回答
-                </el-tag>
-                <el-tag v-else type="warning" size="small">
-                  <el-icon><Clock /></el-icon>
-                  待回答
-                </el-tag>
-              </div>
-            </div>
-            <div class="question-content">
-              <div class="question-text">
-                <el-icon><QuestionFilled /></el-icon>
-                <span>{{ q.question }}</span>
-              </div>
-            </div>
-            <!-- 评分展示 -->
-            <div class="question-rating" v-if="q.rating !== undefined && q.rating !== null">
-              <span class="rating-stars" :style="{ color: getRatingColor(q.rating) }">
-                {{ getRatingStars(q.rating) }}
-              </span>
-              <span class="rating-label">{{ getRatingText(q.rating) }}</span>
-              <span class="rating-time">{{ q.ratingTime }}</span>
-            </div>
-            <div class="question-rating no-rating" v-else>
-              暂无评分
-            </div>
-            <!-- 其余操作按钮等内容保持不变 -->
-            <div class="answer-section">
-              <el-form label-width="60px">
-                <el-form-item label="回答">
-                  <el-input
-                    v-model="q.answer"
-                    type="textarea"
-                    :disabled="q.answered"
-                    placeholder="请输入回答内容，或点击AI生成回答..."
-                    :rows="4"
-                    maxlength="2500"
-                    show-word-limit
-                  />
-                </el-form-item>
-              </el-form>
-              <div class="action-buttons">
-                <div class="left-actions">
-                  <el-button
-                    type="primary"
-                    size="small"
-                    @click="generateAIAnswer(q)"
-                    :loading="loadingMap[q.id]"
-                    :disabled="q.answered"
-                  >
-                    <el-icon><MagicStick /></el-icon>
-                    AI生成回答
-                  </el-button>
-                  <el-button
-                    type="info"
-                    size="small"
-                    @click="clearAnswer(q)"
-                    :disabled="q.answered || !q.answer"
-                    plain
-                  >
-                    <el-icon><RefreshLeft /></el-icon>
-                    重新编辑
-                  </el-button>
-                </div>
-                <div class="right-actions">
-                  <el-button
-                    type="success"
-                    size="small"
-                    @click="sendAnswer(q)"
-                    :disabled="q.answered || !q.answer.trim()"
-                  >
-                    <el-icon><Promotion /></el-icon>
-                    发送回答
-                  </el-button>
+              <div class="answer-section">
+                <el-form label-width="60px">
+                  <el-form-item label="回答">
+                    <el-input
+                      v-model="q.answer"
+                      type="textarea"
+                      :disabled="q.answered"
+                      placeholder="请输入回答内容，或点击AI生成回答..."
+                      :rows="4"
+                      maxlength="2500"
+                      show-word-limit
+                    />
+                  </el-form-item>
+                </el-form>
+                <div class="action-buttons">
+                  <div class="left-actions">
+                    <el-button
+                      type="primary"
+                      size="small"
+                      @click="generateAIAnswer(q)"
+                      :loading="loadingMap[q.id]"
+                      :disabled="q.answered"
+                    >
+                      <el-icon><MagicStick /></el-icon>
+                      AI生成
+                    </el-button>
+                    <el-button
+                      type="warning"
+                      size="small"
+                      @click="clearAnswer(q)"
+                      :disabled="q.answered"
+                    >
+                      <el-icon><Delete /></el-icon>
+                      清空
+                    </el-button>
+                  </div>
+                  <div class="right-actions">
+                    <el-button
+                      type="success"
+                      size="small"
+                      @click="sendAnswer(q)"
+                      :disabled="q.answered || !q.answer.trim()"
+                    >
+                      <el-icon><Promotion /></el-icon>
+                      发送回答
+                    </el-button>
+                  </div>
                 </div>
               </div>
+              <el-divider />
             </div>
-            <el-divider />
-          </div>
-        </template>
+          </template>
+        </div>
       </el-card>
     </div>
   </div>
 </template>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 .interact-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  font-family: 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100%;
+    animation: page-fade-in 0.8s ease-out;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: clamp(24px, 4vw, 48px);
+    border-radius: 24px;
+    color: #fff;
 }
 
-.top-section {
-  display: flex;
-  gap: 24px;
-  flex-shrink: 0;
-  height: 200px;
+@keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
 }
 
-.control-panel {
-  flex: 1;
+.section-title, h3, h4 {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 clamp(16px, 3vw, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    animation: section-fade-in 0.8s ease-out;
 }
 
-.stats-panel {
-  flex: 1;
+@keyframes section-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
 }
 
-/* 面板卡片统一样式 */
-.panel-card {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+.card, .el-card, .question-item, .rating-stats-row, .avg-rating-block, .rating-bars-block {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
+    padding: clamp(20px, 4vw, 32px);
+    transition: all 0.3s ease;
+    color: #fff;
 }
 
-.panel-card :deep(.el-card__body) {
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+.card:hover, .el-card:hover, .question-item:hover {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10);
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 2px solid #f0f0f0;
-  flex-shrink: 0;
+.el-button, .btn, button {
+    background: rgba(255,255,255,0.2) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    border-radius: 12px !important;
+    color: #fff !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    padding: 12px 24px !important;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+.el-button:hover, .btn:hover, button:hover {
+    background: rgba(255,255,255,0.3) !important;
+    transform: translateY(-2px);
 }
 
-.panel-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 18px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.icon, .fa, .fas, .far, .fal, .fab {
+    color: #fff !important;
+    font-size: 20px !important;
 }
 
-.panel-content {
-  flex: 1;
-  display: flex;
-  align-items: center;
-}
-
-.content-section {
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* 卡片样式 */
-.el-card {
-  border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-  border: none !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.top-toolbar {
   margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f0f0f0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+/* 单选按钮组玻璃风 */
+.top-toolbar :deep(.el-radio-button__inner) {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  border-radius: 6px;
+  padding: 6px 12px;
+  transition: all 0.2s ease;
+  margin-right: 10px;
 }
 
-.card-header h3 {
-  margin: 0;
-  color: #2c3e50;
-  font-size: 20px;
+.top-toolbar :deep(.el-radio-button__inner:hover) {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.top-toolbar :deep(.el-radio-button__orig-radio:checked + .el-radio-button__inner) {
+  background: rgba(255, 255, 255, 0.4);
+  color: #000;
   font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-.header-stats {
-  display: flex;
-  gap: 8px;
+/* 搜索输入框玻璃风 */
+.top-toolbar :deep(.el-input) {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  color: #fff;
 }
 
-.filter-section {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
+.top-toolbar :deep(.el-input__inner) {
+  background: transparent !important;
+  color: #fff;
 }
 
-/* 问题项样式 */
+.top-toolbar :deep(.el-input__prefix),
+.top-toolbar :deep(.el-input__suffix) {
+  color: #fff;
+}
+
+
+
+.vertical-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
 .question-item {
   margin-bottom: 24px;
   padding: 20px;
-  border: 2px solid #e8f4fd;
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 12px;
-  background: #f8fcff;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
   transition: all 0.3s ease;
 }
 
 .question-item:hover {
   border-color: #409eff;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
+  background: rgba(255,255,255,0.15);
 }
 
 .question-header {
@@ -581,13 +565,13 @@ onMounted(() => {
 
 .student-details h4 {
   margin: 0;
-  color: #2c3e50;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
 }
 
 .question-time {
-  color: #999;
+  color: #e0e0e0;
   font-size: 12px;
 }
 
@@ -600,12 +584,12 @@ onMounted(() => {
   align-items: flex-start;
   gap: 8px;
   padding: 16px;
-  background: #ffffff;
+  background: rgba(255,255,255,0.12);
   border-radius: 8px;
   border-left: 4px solid #409eff;
   font-size: 15px;
   line-height: 1.6;
-  color: #333;
+  color: #fff;
 }
 
 .answer-section {
@@ -618,7 +602,7 @@ onMounted(() => {
   align-items: center;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid rgba(255,255,255,0.12);
 }
 
 .left-actions,
@@ -638,22 +622,23 @@ onMounted(() => {
 .stat-item {
   text-align: center;
   padding: 12px 8px;
-  background: #f8f9fa;
+  background: rgba(255,255,255,0.08);
   border-radius: 8px;
   flex: 1;
   min-width: 0;
+  color: #fff;
 }
 
 .stat-value {
   font-size: 18px;
   font-weight: 600;
-  color: #409eff;
+  color: #fff;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 11px;
-  color: #666;
+  color: #e0e0e0;
 }
 
 /* 评分统计样式 */
@@ -705,13 +690,13 @@ onMounted(() => {
 
 .rating-bar span:first-child {
   width: 40px;
-  color: #666;
+  color: #e0e0e0;
 }
 
 .rating-bar span:last-child {
   width: 20px;
   text-align: right;
-  color: #666;
+  color: #e0e0e0;
 }
 
 .rating-bar :deep(.el-progress) {
@@ -719,16 +704,16 @@ onMounted(() => {
 }
 
 .rating-bar :deep(.el-progress-bar__outer) {
-  background-color: #f0f0f0;
+  background-color: #2c3e50;
 }
 
 /* 空状态 */
 .empty-hint {
-  color: #8c8c8c;
+  color: #e0e0e0;
   padding: 80px 40px;
   text-align: center;
   font-size: 16px;
-  background: #fafafa;
+  background: rgba(255,255,255,0.08);
   border-radius: 12px;
   border: 2px dashed #d9d9d9;
 }
@@ -761,8 +746,16 @@ h4 {
 .el-button {
   font-size: 14px !important;
   padding: 8px 16px !important;
-  border-radius: 6px !important;
+  border-radius: 12px !important;
   font-weight: 500;
+  color: #fff !important;
+  background: rgba(255,255,255,0.2) !important;
+  border: 1px solid rgba(255,255,255,0.3) !important;
+  transition: all 0.3s ease;
+}
+.el-button:hover {
+  background: rgba(255,255,255,0.3) !important;
+  transform: translateY(-2px);
 }
 
 /* 表单样式 */
@@ -773,13 +766,17 @@ h4 {
 .el-form-item :deep(.el-form-item__label) {
   font-size: 14px;
   font-weight: 600;
-  color: #2c3e50;
+  color: #fff;
 }
 
 .el-textarea :deep(.el-textarea__inner) {
   font-size: 14px;
   line-height: 1.6;
   padding: 12px 15px;
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  border-radius: 8px;
+  border: none;
 }
 
 /* 分割线 */
@@ -805,20 +802,19 @@ h4 {
 
 /* 问题评分展示样式（简洁） */
 .question-rating {
-  margin: 8px 0 0 0;
-  font-size: 14px;
-  color: #888;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #fff;
 }
 .rating-stars {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: bold;
 }
 .rating-label {
   font-size: 13px;
-  color: #666;
+  color: #e0e0e0;
 }
 .rating-comment {
   color: #409eff;
@@ -826,12 +822,10 @@ h4 {
 }
 .rating-time {
   font-size: 12px;
-  color: #bbb;
-  margin-left: 8px;
+  color: #e0e0e0;
 }
-.no-rating {
-  color: #ccc;
-  font-size: 13px;
+.question-rating.no-rating {
+  color: #e0e0e0;
 }
 
 /* 响应式 */

@@ -319,7 +319,7 @@ const addUser = () => {
     <!-- 页面标题 -->
     <div class="page-header">
       <h1 class="page-title">
-        <i class="fas fa-users-cog"></i>
+        <i class="fas fa-users" style="color: white;"></i>
         {{ roleLabel }}管理
       </h1>
       <p class="page-subtitle">管理系统中的所有用户信息</p>
@@ -331,54 +331,47 @@ const addUser = () => {
         <i class="fas fa-search"></i>
         <span>筛选条件</span>
       </div>
-      <el-form :inline="true" :model="searchUser" class="search-form">
-        <el-form-item label="角色">
-          <el-select v-model="tempRole" placeholder="请选择查询角色" clearable class="form-select">
-            <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
-          </el-select>
-        </el-form-item>
+      <!-- 查询项 + 查询/重置按钮，第一行 -->
+<el-form :inline="true" :model="searchUser" class="search-form">
+  <!-- 查询字段 -->
+  <el-form-item label="角色">
+    <el-select v-model="tempRole" placeholder="请选择查询角色" clearable class="form-select">
+      <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
+    </el-select>
+  </el-form-item>
 
-        <el-form-item label="姓名">
-          <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable class="form-input" />
-        </el-form-item>
+  <el-form-item label="姓名">
+    <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable class="form-input" />
+  </el-form-item>
 
-        <el-form-item label="性别">
-          <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable class="form-select">
-            <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
-          </el-select>
-        </el-form-item>
+  <el-form-item label="性别">
+    <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable class="form-select">
+      <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
+    </el-select>
+  </el-form-item>
 
+  <!-- 所有按钮：查询、重置、新增、删除，一起放在右侧 -->
+  <div class="action-row">
+    <div class="action-left">
+      <el-button type="primary" @click="search" class="search-btn">
+        <i class="fas fa-search"></i> 查询
+      </el-button>
+      <el-button @click="clear" class="clear-btn">
+        <i class="fas fa-redo"></i> 重置
+      </el-button>
+      <el-button type="primary" @click="addUser" class="add-btn">
+        <i class="fas fa-plus"></i> 新增{{ roleLabel }}
+      </el-button>
+      <el-button type="danger" @click="deleteByIds" class="delete-btn">
+        <i class="fas fa-trash-alt"></i> 批量删除
+      </el-button>
+    </div>
+    <div class="record-count">共 {{ total }} 条记录</div>
+  </div>
+</el-form>
 
-
-        <el-form-item class="form-buttons">
-          <el-button type="primary" @click="search" class="search-btn">
-            <i class="fas fa-search"></i>
-            查询
-          </el-button>
-          <el-button @click="clear" class="clear-btn">
-            <i class="fas fa-redo"></i>
-            重置
-          </el-button>
-        </el-form-item>
-      </el-form>
     </div>
 
-    <!-- 操作按钮区域 -->
-    <div class="action-card">
-      <div class="action-buttons">
-        <el-button type="primary" @click="addUser" class="add-btn">
-          <i class="fas fa-plus"></i>
-          新增{{ roleLabel }}
-        </el-button>
-        <el-button type="danger" @click="deleteByIds" class="delete-btn">
-          <i class="fas fa-trash-alt"></i>
-          批量删除
-        </el-button>
-      </div>
-      <div class="table-info">
-        <span>共 {{ total }} 条记录</span>
-      </div>
-    </div>
 
     <!-- 数据表格 -->
     <div class="table-card">
@@ -592,12 +585,55 @@ const addUser = () => {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, box-shadow;
 }
+/* 覆盖分页按钮背景和边框 */
+.modern-pagination >>> .el-pager li,
+.modern-pagination >>> .el-pagination__sizes {
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  color: white;
+}
+
+/* 高亮页码 */
+.modern-pagination >>> .el-pager li.is-active {
+  background-color: #409eff !important;
+  color: white !important;
+  border: none;
+}
+
+/* hover 效果 */
+.modern-pagination >>> .el-pager li:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
 
 .search-card:hover,
 .action-card:hover,
 .table-card:hover {
   transform: translateY(-1px);
   box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
+}
+
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap; /* 小屏换行用 */
+  margin-top: 16px;
+  gap: 12px;
+}
+
+.action-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.record-count {
+  font-size: 14px;
+  color: white;
+  white-space: nowrap;
 }
 
 /* 搜索卡片 */
@@ -619,6 +655,7 @@ const addUser = () => {
   color: #f43f5e;
 }
 
+
 .search-form {
   display: flex;
   flex-wrap: wrap;
@@ -638,6 +675,20 @@ const addUser = () => {
 .form-buttons {
   display: flex;
   gap: 12px;
+}
+
+.form-buttons .form-action {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
 }
 
 .search-btn,
