@@ -304,12 +304,12 @@ onMounted(() => {
     <!-- 页面标题和刷新按钮 -->
     <div class="page-header">
       <h2> <i class="fas fa-chart-pie nav-icon"></i> 系统总体统计</h2>
-      <div class="header-actions">
+      <!-- <div class="header-actions">
         <el-button type="primary" @click="refreshData" :loading="loading.overview">
           <el-icon><Refresh /></el-icon>
           刷新数据
-        </el-button>
-      </div>
+        </el-button> -->
+      <!-- </div> -->
     </div>
 
     <!-- 系统概览卡片 -->
@@ -358,7 +358,7 @@ onMounted(() => {
           <div class="card-content">
             <div class="card-info">
               <div class="card-title">系统运行</div>
-              <div class="card-value" style="font-size: 24px;">{{ formatUptime(systemOverview.systemUptime || 0) }}</div>
+              <div class="card-value" style="font-size: 22px;">{{ formatUptime(systemOverview.systemUptime || 0) }}</div>
               <div class="card-change positive">稳定运行中</div>
             </div>
             <div class="card-icon">

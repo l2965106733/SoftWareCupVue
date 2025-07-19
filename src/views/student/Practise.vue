@@ -592,10 +592,10 @@ const fetchQuestionAnalysis = async (question) => {
                   </span>
                 </div>   需要吗？？-->
                 
-                <div class="question-section question-explain">
+                <!-- <div class="question-section question-explain">
                   <strong>错误诊断：</strong>
                   <div>{{ analysisMap[question.id] || '诊断中...' }}</div>
-                </div>
+                </div> -->
                 
                 <div class="question-section question-answer">
                 <strong>标准答案：</strong>

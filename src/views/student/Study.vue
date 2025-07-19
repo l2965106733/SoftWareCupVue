@@ -2,45 +2,12 @@
 import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, getQuestionApi, getStudyRecordsApi } from '@/api/student'
-import { CircleClose } from '@element-plus/icons-vue'
 
 // AI对话框相关
 const showAIDialogVisible = ref(false)
 const isGenerating = ref(false)
 const aiFormRef = ref()
-const questions = ref([
-  {
-    id: -1,
-    type: 'choice',
-    content: '以下哪个关键字用于创建 Java 类的实例？',
-    knowledge: 'Java基础语法',
-    answer: 'new',
-    explain: '在 Java 中，使用 new 关键字可以创建类的实例。',
-  },
-  {
-    id: -2,
-    type: 'short',
-    content: '简要说明 Java 中的多态特性。',
-    knowledge: 'Java面向对象',
-    answer: '多态是指相同的接口，不同的实现。可以通过方法重写或接口实现实现多态。',
-    explain: '多态提高了程序的扩展性和可维护性，是面向对象编程的重要特性。',
-  },
-  {
-    id: -3,
-    type: 'code',
-    content: '编写一个 Java 方法，判断一个整数是否为质数。',
-    knowledge: 'Java算法基础',
-    answer:
-`public boolean isPrime(int n) {
-  if (n <= 1) return false;
-  for (int i = 2; i <= Math.sqrt(n); i++) {
-    if (n % i == 0) return false;
-  }
-  return true;
-}`,
-    explain: '判断质数的常用方法是从 2 遍历到 √n，若存在能整除 n 的数，则不是质数。',
-  }
-])
+const questions = ref([])
 
 const tempIdCounter = ref(-1)
 
@@ -620,6 +587,15 @@ onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
   window.removeEventListener('beforeunload', stopAllStudyTimers)
 })
+
+
+const getParsedQuestion = (content) => {
+  const [questionText, ...options] = content.split(/(?=A\.)/); // 从 A. 开始截断
+  return {
+    text: questionText.trim(),
+    options: options.join('').trim().split(/(?=[A-D]\.)/),
+  };
+}
 </script>
 
 <template>
@@ -760,6 +736,57 @@ onBeforeUnmount(() => {
           <p class="student-text secondary">基于学习内容，AI可以为您生成个性化的练习题</p>
         </div>
       </div>
+
+
+
+      <div class="question-display-wrapper">
+        <div
+          class="question-display-card"
+          v-for="(q, index) in questions"
+          :key="q.id"
+        >
+          <div class="question-top">
+            <h4 class="question-title">题目 {{ index + 1 }}</h4>
+              <el-tag :type="getTypeColor(q.type)" size="small" class="question-tag" style="margin-left: 10px;">
+                {{ getTypeName(q.type) }}
+              </el-tag>
+              <el-button :type="getTypeColor(q.type)" size="small" class="question-tag" style=" margin-left: auto; color: red; font-weight: 400;"  @click="removeQuestion(q.id) ">
+               删除 
+              </el-button>
+          </div>
+
+          <div class="question-inner-content glass-box">
+
+            <div class="question-display" v-if="q.type === 'choice'">
+              <div class="question-text">{{ getParsedQuestion(q.content).text }}</div>
+              <ul class="option-list">
+                <li v-for="(opt, idx) in getParsedQuestion(q.content).options" :key="idx">{{ opt }}</li>
+              </ul>
+            </div>
+            <div class="question-content" v-else >{{ q.content }}</div>
+
+
+            <div class="question-meta">
+              <span class="label">知识点：</span>
+              <span class="value">{{ q.knowledge }}</span>
+            </div>
+
+            <div class="question-answer-block" v-if="q.answer">
+              <span class="label" style="margin-left: 6px;">参考答案：</span>
+              <div class="glass-answer">{{ q.answer }}</div>
+            </div>
+
+            <div class="question-explain-block glass-box" v-if="q.explain">
+              <span class="label">解析：</span>
+              <div class="explain-text">{{ q.explain }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+
     </div>
 
     <!-- 学习统计详情对话框 -->
@@ -824,6 +851,179 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.question-display {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  color: #222;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.question-text {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.option-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.option-list li {
+  padding: 6px 0;
+  font-size: 15px;
+  color: #333;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+
+.question-display-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.question-display-card {
+  background: linear-gradient(135deg, rgba(128, 183, 255, 0.4), rgba(102, 161, 255, 0.5));
+  backdrop-filter: blur(24px);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  color: #222;
+  transition: all 0.3s ease;
+}
+
+.question-top {
+  display: flex;
+  /* justify-content: space-between; */
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.question-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b1ea0;
+  margin: 0;
+}
+
+.question-tag {
+  font-weight: 100;
+  background: rgba(255, 255, 255, 0.25);
+  border: none; 
+  color: white;
+  font-size: 15px;
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+/* 内部内容整体玻璃壳 */
+.question-inner-content.glass-box {
+  padding: 20px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 单项内容 */
+.question-content {
+  margin-bottom: 12px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.question-meta {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  border-left: 4px solid #409eff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+  color: #2c3e50;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-meta .label {
+  font-weight: 600;
+  color: #333;
+}
+
+.question-meta .value {
+  font-weight: 500;
+  color: #222;
+}
+
+.question-answer-block {
+  margin-bottom: 16px;
+}
+
+/* 参考答案玻璃样式 */
+.glass-answer {
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  color: #2c3e50;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 解析区域玻璃样式 */
+.question-explain-block {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(14px);
+  border-left: 4px solid #e67e22;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.1);
+}
+
+.question-explain-block .label {
+  display: block;
+  font-weight: bold;
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.explain-text {
+  font-size: 15px;
+  color: #444;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.explain-text {
+  white-space: pre-wrap;
+  padding-top: 4px;
+}
+
+.label {
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+
+
+
+
+
 /* 统计卡片样式 */
 .stat-card {
   display: flex;

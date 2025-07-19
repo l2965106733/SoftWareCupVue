@@ -7,7 +7,7 @@ import { ElLoading } from 'element-plus'
 
 
 const clearPlan = () => {
-  teachingPlan.value = ''
+  teachingPlan.value = []
   ElMessage.success('已清空')
 }
 
@@ -155,8 +155,7 @@ const handleRemove = async (file) => {
 // AI 教学生成相关
 const aiFiles = ref([])
 const aiRemark = ref('')
-const teachingPlan = ref('')
-
+const teachingPlan = ref([])
 const isGenerating = ref(false)
 
 const generateTeachingPlan = async () => {
@@ -176,9 +175,9 @@ const generateTeachingPlan = async () => {
     const res = await getTeachingPlanApi(aiRemark.value, uploadedUrls)
     if (res.code === 1) {
       // 如果返回的是docx文件URL
-      if (res.data && typeof res.data === 'string' && res.data.endsWith('.docx')) {
+      if (res.data) {
         ElMessage.success('教学计划文档生成成功，提供下载连接')
-        showDocxDownload(docxUrl)
+        showDocxDownload(res.data.docxUrl)
       }
       else {
         ElMessage.error('返回数据格式不正确')
@@ -201,17 +200,15 @@ const generateTeachingPlan = async () => {
 
 // 显示docx下载链接
 const showDocxDownload = (docxUrl) => {
-  teachingPlan.value = [{
+  console.log(docxUrl)
+  teachingPlan.value.push({
     title: '📄 教学计划文档已生成',
     summary: '点击下方链接下载完整的教学计划文档',
     duration: '文档下载',
     practice: false,
     downloadUrl: docxUrl
-  }]
+  })
   ElMessage.info('教学计划文档已准备就绪，请点击下载')
-}
-const editLesson = (index) => {
-  ElMessage.info(`第 ${index + 1} 节编辑功能开发中...`)
 }
 
 const teachingFileList = ref([])
@@ -348,8 +345,8 @@ onMounted(() => {
 
     <div class="top-toolbar">
 
-      <el-button type="success" @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button>
-      <el-button type="danger" @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button>
+      <el-button type="success" size="large" @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button>
+      <el-button type="danger" size="large" @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button>
     </div>
 
     <div class="vertical-blocks">
@@ -505,6 +502,7 @@ onMounted(() => {
 .card, .el-card, .resource-item, .download-info, .upload-section, .lesson-section {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
+    margin-bottom: 25px;
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
     box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16);
@@ -546,7 +544,7 @@ onMounted(() => {
 }
 
 .top-toolbar {
-  margin-bottom: 20px;
+  margin-bottom: 5px;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
