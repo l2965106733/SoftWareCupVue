@@ -126,7 +126,7 @@ const reset = () => {
         </el-form-item>
         <div class="button-group">
           <el-button class="login-button back-btn" type="primary" @click="back">返回</el-button>
-          <el-button class="login-button forgot-btn" type="primary" @click="reset">忘记密码</el-button>
+          <!-- <el-button class="login-button forgot-btn" type="primary" @click="reset">忘记密码</el-button> -->
           <el-button class="login-button login-btn" type="primary" @click="login">登录</el-button>
         </div>
         <!-- 注册链接 -->

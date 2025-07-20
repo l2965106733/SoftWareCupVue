@@ -359,9 +359,9 @@ const addUser = () => {
       <el-button @click="clear" class="clear-btn">
         <i class="fas fa-redo"></i> 重置
       </el-button>
-      <el-button type="primary" @click="addUser" class="add-btn">
+      <!-- <el-button type="primary" @click="addUser" class="add-btn">
         <i class="fas fa-plus"></i> 新增{{ roleLabel }}
-      </el-button>
+      </el-button> -->
       <el-button type="danger" @click="deleteByIds" class="delete-btn">
         <i class="fas fa-trash-alt"></i> 批量删除
       </el-button>
