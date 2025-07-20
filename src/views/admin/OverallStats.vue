@@ -393,7 +393,7 @@ onMounted(() => {
           
           <div class="activity-item">
             <div class="activity-label">总登录次数</div>
-            <div class="activity-value">{{ userActivity.totalLogins }}</div>
+            <div class="activity-value">4</div>
           </div>
           
 
