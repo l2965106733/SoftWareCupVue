@@ -182,17 +182,6 @@ const goToTeacherStats = () => {
                         <i class="fas fa-arrow-right"></i>
                     </div>
                 </div>
-
-                <div class="action-card" @click="goToTeacherStats">
-                    <div class="card-icon">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </div>
-                    <h3 class="card-title">教师统计</h3>
-                    <p class="card-desc">查看教师教学数据分析</p>
-                    <div class="card-arrow">
-                        <i class="fas fa-arrow-right"></i>
-                    </div>
-                </div>
             </div>
         </div>
 
