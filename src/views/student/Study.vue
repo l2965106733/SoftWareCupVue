@@ -101,9 +101,9 @@ const todayStudyTime = ref(0)      // 今日学习时长（分钟）
 
 // 学习统计数据
 const studyStats = ref([
-    { label: '课件总数', value: '0', icon: 'fas fa-folder', color: '#667eea' },
+    { label: '课件总数', value: '1', icon: 'fas fa-folder', color: '#667eea' },
     { label: '已学习', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
-    { label: 'AI提问数', value: '0', icon: 'fas fa-robot', color: '#4facfe' },
+    { label: 'AI提问数', value: '1', icon: 'fas fa-robot', color: '#4facfe' },
     { label: '总学习时长', value: '0分钟', icon: 'fas fa-clock', color: '#26d0ce' },
     { label: '今日学习', value: '0分钟', icon: 'fas fa-calendar-day', color: '#ffd700' }
 ])
@@ -470,9 +470,9 @@ const loadStudyStats = async () => {
     const result = await getStudyStatsApi(studentId)
     if (result.code === 1) {
       const data = result.data
-      studyStats.value[0].value = String(data.totalCourseware || 0)
+      studyStats.value[0].value = String(data.totalCourseware || 1)
       studyStats.value[1].value = String(data.studiedCourseware || 0)
-      studyStats.value[2].value = String(data.aiQuestions || 0)
+      studyStats.value[2].value = String(data.aiQuestions || 1)
       studyStats.value[3].value = `${Math.floor((data.totalStudyTime || 0) / 60)}分钟`
       studyStats.value[4].value = `${Math.floor((data.todayStudyTime || 0) / 60)}分钟`
       // totalCourseware.value = data.totalCourseware || 0
@@ -596,6 +596,17 @@ const getParsedQuestion = (content) => {
     options: options.join('').trim().split(/(?=[A-D]\.)/),
   };
 }
+// watch(
+//   () => q.content,
+//   (newContent) => {
+//     if (q.type === 'choice' && newContent) {
+//       const parsed = getParsedQuestion(newContent);
+//       q.text = parsed.text;
+//       q.options = parsed.options;
+//     }
+//   },
+//   { immediate: true }
+// );
 </script>
 
 <template>

@@ -14,11 +14,11 @@ const clearPlan = () => {
 
 const beforeUpload = (file) => {
   
-  const isLt100M = file.size / 1024 / 1024 < 1000
-  if (!isLt100M) {
-    ElMessage.error('上传文件大小不能超过 100MB')
-    return false
-  }
+  // const isLt100M = file.size / 1024 / 1024 < 1000
+  // if (!isLt100M) {
+  //   ElMessage.error('上传文件大小不能超过 100MB')
+  //   return false
+  // }
 
   return true; // 允许上传
 }

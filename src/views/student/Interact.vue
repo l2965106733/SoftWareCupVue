@@ -491,7 +491,7 @@ const hoverRating = ref(0)
               v-model="newQuestion.type"
               type="text"
               class="student-input"
-              placeholder="请输入问题类型，如：java、vue、database、frontend、other等"
+              placeholder="请输入问题类型(简短名词)，如：java、vue、database、frontend、other等"
               maxlength="50"
             />
           </div>
@@ -692,7 +692,6 @@ const hoverRating = ref(0)
         <div class="dialog-footer">
           <el-button @click="showQuestionDialog = false">关闭</el-button>
           <el-button 
-            v-if="!ratingForm.rating"
             type="primary" 
             @click="submitRating"
           >

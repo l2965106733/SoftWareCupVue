@@ -225,7 +225,8 @@ const refreshData = () => {
                             <i class="fas fa-star"></i>
                         </div>
                         <div class="stat-content">
-                            <h3 class="stat-number">{{ stats.averageScore * 100 }} %</h3>
+                            <!-- <h3 class="stat-number">{{ stats.averageScore * 100 }} %</h3> -->
+                            <h3 class="stat-number">0 %</h3>
                             <p class="stat-label">学生平均得分率</p>
                         </div>
                     </div>

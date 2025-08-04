@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed,watchEffect } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getQuestionApi, saveQuestionApi, publishHomeworkApi, getHomeworkListApi, getStudentSubmissionsApi, gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi } from '@/api/teacher'
 import dayjs from 'dayjs';
@@ -40,7 +40,7 @@ const isSaveButtonDisabled = computed(() => {
 const aiFormData = ref({
   knowledge: '',
   type: '',
-  count: 3,
+  count: 1,
   remark: ''
 })
 
@@ -82,12 +82,19 @@ const handleAIGenerate = async () => {
       questions.value = result.data.map(q => {
         const { id, ...questionWithoutId } = q
 
+        if (q.type === 'choice' && q.content) {
+          const { text, options } = getParsedQuestion(q.content);
+          q.text = text;
+          q.options = options;
+        }
         // 根据题型自动设置分值（与人工出题逻辑一致）
         const defaultScores = {
           choice: 5,
           short: 15,
           code: 25
         }
+
+
         const score = defaultScores[q.type] || 10
 
         return {
@@ -129,7 +136,9 @@ const handleManualAdd = () => {
     answer: '',
     explain: '',
     type: 'choice',
-    score: 5
+    score: 5,
+    text: '',                  // 题干
+    options: ['','','','']             // 选项
     // 临时ID为负数，保存后会获得真实的正数数据库ID
   }
 
@@ -233,6 +242,11 @@ const saveQuestions = async () => {
             const questionIndex = questions.value.findIndex(q => q.id === tempId)
             if (questionIndex !== -1) {
               console.log(`替换题目: 临时ID ${tempId} → 真实ID ${savedQuestion.id}`)
+              if (savedQuestion.type === 'choice' && savedQuestion.content) {
+                const { text, options } = getParsedQuestion(savedQuestion.content);
+                savedQuestion.text = text;
+                savedQuestion.options = options;
+              }
               questions.value[questionIndex] = savedQuestion
             }
           })
@@ -261,7 +275,7 @@ const saveQuestions = async () => {
 
         // 检查每个题目的ID情况
         questions.value.forEach((q, index) => {
-          console.log(`题目${index + 1}: id=${q.id}, 类型=${typeof q.id}, 是否已保存=${q.id > 0}`)
+          console.log(`题目${index + 1}: id=${q.id}, 类型=${q.type}, 是否已保存=${q.id > 0}`)
         })
 
         // 检查发布按钮状态
@@ -306,6 +320,8 @@ const clearQuestionContent = (q) => {
   q.answer = ''
   q.explain = ''
   q.score = 5
+  q.text = '';
+  q.options = ['','','','']
   hasSavedInCurrentSession.value = false
 }
 
@@ -626,6 +642,58 @@ const confirmAndSaveQuestions = async () => {
     // 用户取消
   }
 }
+
+// const getParsedQuestion = (content) => {
+//   const [questionText, ...options] = content.split(/(?=A\.)/); // 从 A. 开始截断
+//   return {
+//     text: questionText.trim(),
+//     options: options.join('').trim().split(/(?=[A-D]\.)/),
+//   };
+// }
+
+const getParsedQuestion = (content) => {
+  const [questionText, ...optionParts] = content.split(/(?=\nA\.)/); // 从 A. 开始切
+  const optionsBlock = optionParts.join('').trim(); // 所有选项合并
+
+  const options = optionsBlock
+    .split(/\n[A-D]\.\s*/) // 按 A. B. C. D. 切开并去除前缀
+    .filter(opt => opt.trim() !== ''); // 去掉空串
+
+  return {
+    text: questionText.trim(),
+    options: options.map(opt => opt.trim())
+  };
+};
+
+const optionsIds = ['A', 'B', 'C', 'D']; // 按需扩展
+
+const getComposedContent = (text, options) => {
+  return text.trim() + '\n' + options
+    .map((opt, idx) => `${optionsIds[idx]}. ${opt.trim()}`)
+    .join('\n');
+};
+
+
+watchEffect(() => {
+  questions.value.forEach((q) => {
+    // 强类型校验：只处理 choice 类型
+    if (q.type === 'choice') {
+      const allFilled = q.text?.trim() && q.options?.length > 0;
+      if (allFilled) {
+        const composed = getComposedContent(q.text, q.options);
+        if (q.content !== composed) {
+        q.content = composed;
+        }
+      }
+    } 
+    else {
+      // q.text = "";
+      // q.options = [];
+    }
+  });
+});
+
+
 </script>
 
 <template>
@@ -635,7 +703,9 @@ const confirmAndSaveQuestions = async () => {
       <el-card shadow="hover" class="temp-el-card">
         <div class="control-header">
           <h3 class="section-title">
-            <el-icon style="margin-right:8px;"><EditPen /></el-icon>
+            <el-icon style="margin-right:8px;">
+              <EditPen />
+            </el-icon>
             题目编辑区
           </h3>
         </div>
@@ -661,15 +731,15 @@ const confirmAndSaveQuestions = async () => {
             <div>
               <el-tag :type="getTypeColor(q.type)" size="small" :style="{ color: getTypeTextColor(q.type) }">{{
                 getTypeName(q.type) }}</el-tag>
-              <el-tag v-if="q.id && q.id > 0" size="small"
-                style="margin-left: 8px; color:white">已保存</el-tag>
+              <el-tag v-if="q.id && q.id > 0" size="small" style="margin-left: 8px; color:white">已保存</el-tag>
               <el-tag v-else type="warning" size="small" style="margin-left: 8px; color:white">未保存</el-tag>
             </div>
           </div>
 
           <el-form label-width="60px">
             <el-form-item label="题型" class="type-label">
-              <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px" @change="(val) => { handleTypeChange(q); onQuestionFieldChange(); }" :disabled="isQuestionSaved(q)">
+              <el-select v-model="q.type" placeholder="请选择题型" style="width: 200px"
+                @change="(val) => { handleTypeChange(q); onQuestionFieldChange(); }" :disabled="isQuestionSaved(q)">
                 <el-option label="选择题" value="choice">
                   <span>选择题</span>
                   <span style="float: right; color: #8492a6; font-size: 13px">5分</span>
@@ -686,11 +756,26 @@ const confirmAndSaveQuestions = async () => {
             </el-form-item>
 
             <el-form-item label="题干" class="content-label">
-              <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+              <div v-if="q.type === 'choice'" style="align-items: center; margin-bottom: 8px; width: 100%;">
+                <el-input v-model="q.text" placeholder="请输入题干" :rows="2" type="textarea"
+                  @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+
+                <div v-for="(opt, idx) in q.options" :key="idx" style="display: flex; align-items: center; margin-top: 8px;">
+                  <span style="margin-right: 5px; width: 20px;">{{optionsIds[idx]}} :</span>
+                  <el-input  v-model="q.options[idx]" :placeholder="`请输入选项 ${optionsIds[idx]} 的内容`" :disabled="isQuestionSaved(q)"/>
+                </div>
+
+              </div>
+
+              <el-input v-else type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8"
+                @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+
+
             </el-form-item>
 
             <el-form-item label="知识点" class="knowledge-label">
-              <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+              <el-input type="textarea" v-model="q.knowledge" placeholder="请输入涉及知识点" :rows="1"
+                @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="答案" class="answer-label">
@@ -699,50 +784,61 @@ const confirmAndSaveQuestions = async () => {
             </el-form-item>
 
             <el-form-item label="解析" class="explain-label">
-              <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2" @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+              <el-input type="textarea" v-model="q.explain" placeholder="请输入解析说明" :rows="2"
+                @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
 
             <el-form-item label="分值" class="score-label">
-              <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px" @change="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
+              <el-input-number v-model="q.score" :min="1" :max="100" placeholder="分值" style="width: 120px"
+                @change="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
             </el-form-item>
           </el-form>
 
           <div class="question-actions right-actions">
             <el-button type="warning" size="small" @click="clearQuestionContent(q)" :disabled="isQuestionSaved(q)">
-              <el-icon><Delete /></el-icon>
+              <el-icon>
+                <Delete />
+              </el-icon>
               清空
             </el-button>
             <el-button type="danger" size="small" @click="removeQuestion(q.id)">
-              <el-icon><Close /></el-icon>
+              <el-icon>
+                <Close />
+              </el-icon>
               删除
             </el-button>
             <el-button
               :type="hasSavedInCurrentSession && questions.filter(q => q.id < 0).length === 0 ? 'info' : 'success'"
-              size="small" @click="confirmAndSaveQuestions" :disabled="isQuestionSaved(q) || isSaveButtonDisabled" :loading="isSaving">
-              <el-icon><Check /></el-icon>
+              size="small" @click="confirmAndSaveQuestions" :disabled="isQuestionSaved(q) || isSaveButtonDisabled"
+              :loading="isSaving">
+              <el-icon>
+                <Check />
+              </el-icon>
               {{
                 isSaving ? '保存中...' :
-                  isQuestionSaved(q) ? '已保存' : '保存题目'}}
+                  isQuestionSaved(q) ? '已保存' : '保存题目' }}
             </el-button>
           </div>
         </div>
 
         <div class="header-actions" style="margin-top: 16px;">
-          
+
         </div>
       </el-card>
     </div>
 
     <!-- 右侧发布与预览 -->
     <div class="side-panel">
-      <el-card shadow="hover" >
+      <el-card shadow="hover">
         <div class="control-header">
           <h3 class="section-title">
-            <el-icon style="margin-right:8px;"><Setting /></el-icon>
+            <el-icon style="margin-right:8px;">
+              <Setting />
+            </el-icon>
             作业设置
           </h3>
         </div>
-        <el-form label-width="80px"  >
+        <el-form label-width="80px">
           <el-form-item label="作业标题" class="title-label">
             <el-input v-model="homeworkTitle" placeholder="请输入作业标题" />
           </el-form-item>
@@ -763,7 +859,8 @@ const confirmAndSaveQuestions = async () => {
               "short").length}} 道简答题</el-tag>
             <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
               "code").length}} 道编程题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px; color:white">当前总分为 {{questions.reduce((sum, q) => sum +
+            <el-tag type="info" size="large" style="margin-right: 6px; color:white">当前总分为 {{questions.reduce((sum, q) =>
+              sum +
               (q.score || 0), 0)}} 分</el-tag>
           </el-form-item>
         </el-form>
@@ -832,8 +929,8 @@ const confirmAndSaveQuestions = async () => {
         <div class="publish-table-wrapper">
           <el-table :data="history" stripe :row-key="row => row.id" class="publish-table" style="width: 100%;">
 
-            <el-table-column prop="title" label="作业名称" align="center" header-align="center"
-              show-overflow-tooltip style="border-radius: 12px;" />
+            <el-table-column prop="title" label="作业名称" align="center" header-align="center" show-overflow-tooltip
+              style="border-radius: 12px;" />
 
             <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
               header-align="center" show-overflow-tooltip />
@@ -853,7 +950,7 @@ const confirmAndSaveQuestions = async () => {
             <el-table-column label="操作" width="100px" align="center" header-align="center">
               <template #default="scope">
                 <div class="center-cell">
-                  <el-button type="danger" size = "small" @click="viewDetail(scope.row)" style=" color: white;">
+                  <el-button type="danger" size="small" @click="viewDetail(scope.row)" style=" color: white;">
                     查看
                   </el-button>
                 </div>
@@ -895,9 +992,9 @@ const confirmAndSaveQuestions = async () => {
           </el-form-item>
 
           <el-form-item label="题目数量">
-            <el-input-number v-model="aiFormData.count" :min="1" :max="10" placeholder="题目数量" style="width: 200px" />
+            <el-input-number v-model="aiFormData.count" :min="1" :max="5" placeholder="题目数量" style="width: 200px" />
             <div class="form-tips" style="color:black">
-              建议：选择题 3-5道，简答题 2-3道，编程题 1-2道
+              建议：选择题 1-3 道，简答题 1-2 道，编程题 1-2 道
             </div>
           </el-form-item>
 
@@ -931,7 +1028,8 @@ const confirmAndSaveQuestions = async () => {
             <el-descriptions-item label="发布时间">{{ formatDate(currentHomework.publishTime) }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="statusMap[currentHomework.status]?.type || 'default'" style="color:white">
-                {{ statusMap[currentHomework.status]?.text || '未知状态' }}
+                <!-- {{ statusMap[currentHomework.status]?.text || '未知状态' }} -->
+                进行中
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="总分">{{homeworkQuestions.reduce((sum, q) => sum + q.score, 0)
@@ -947,7 +1045,7 @@ const confirmAndSaveQuestions = async () => {
                 <h3 style="color: black;">第{{ index + 1 }}题</h3>
                 <div>
                   <el-tag :type="info" style="color:white" size="small">{{ getTypeName(question.type) }}</el-tag>
-                  <el-tag type="info" size="small"  style="margin-left: 8px; color:white">{{ question.score }}分</el-tag>
+                  <el-tag type="info" size="small" style="margin-left: 8px; color:white">{{ question.score }}分</el-tag>
                 </div>
               </div>
               <div class="question-content">
@@ -1039,9 +1137,9 @@ const confirmAndSaveQuestions = async () => {
         <div class="questions-grade">
           <div v-for="(question, index) in currentGradeQuestions" :key="question.id || `grade-${index}`"
             class="grade-question-item">
-            <el-card shadow="hover" style="margin-bottom: 20px" >
+            <el-card shadow="hover" style="margin-bottom: 20px">
               <div class="question-header">
-                <h3 style = "color:black">第{{ index + 1 }}题</h3>
+                <h3 style="color:black">第{{ index + 1 }}题</h3>
                 <div>
                   <el-tag :type="getTypeColor(question.type)" size="small" style="color:white">
                     {{ getTypeName(question.type) }}
@@ -1081,7 +1179,7 @@ const confirmAndSaveQuestions = async () => {
 
         <div class="feedback-section">
           <el-card shadow="hover">
-            <h3 style = "color:black">教师反馈：</h3>
+            <h3 style="color:black">教师反馈：</h3>
             <el-input v-model="gradeFeedback" type="textarea" :rows="4" placeholder="请输入对学生作业的整体评价和建议..."
               style="margin-top: 8px;" :disabled="isGraded" />
           </el-card>
@@ -1135,8 +1233,6 @@ const confirmAndSaveQuestions = async () => {
 
 
 <style scoped>
-
-
 /* 模拟按钮垂直居中 */
 .el-button-local {
   font-size: 13px !important;
@@ -1217,11 +1313,20 @@ const confirmAndSaveQuestions = async () => {
 }
 
 @keyframes page-fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.section-title, .control-header h3, h4 {
+.section-title,
+.control-header h3,
+h4 {
   font-size: clamp(20px, 3vw, 24px);
   font-weight: 600;
   color: #fff;
@@ -1229,29 +1334,39 @@ const confirmAndSaveQuestions = async () => {
   display: flex;
   align-items: center;
   gap: clamp(8px, 2vw, 12px);
-  animation: section-fade-in 0.8s cubic-bezier(.4,0,.2,1);
+  animation: section-fade-in 0.8s cubic-bezier(.4, 0, .2, 1);
 }
 
 @keyframes section-fade-in {
-  0% { opacity: 0; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(0); }
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.el-card, .temp-el-card {
-  background: rgba(255,255,255,0.12) !important;
+.el-card,
+.temp-el-card {
+  background: rgba(255, 255, 255, 0.12) !important;
   border-radius: 20px !important;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.16) !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16) !important;
   border: none !important;
   transition: all 0.3s ease;
   margin-bottom: 32px;
 }
 
 .el-card:hover {
-  background: rgba(255,255,255,0.18) !important;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.18) !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18) !important;
 }
 
-.el-button, .btn, button {
+.el-button,
+.btn,
+button {
   border-radius: 12px !important;
   font-size: 14px !important;
   font-weight: 500;
@@ -1263,21 +1378,25 @@ const confirmAndSaveQuestions = async () => {
 }
 
 .el-button:hover {
-  background: rgba(255,255,255,0.3) !important;
+  background: rgba(255, 255, 255, 0.3) !important;
   transform: translateY(-2px);
 }
 
-.el-input, .el-date-editor, .el-textarea {
-  background: rgba(255,255,255,0.15) !important;
-  border: 1px solid rgba(255,255,255,0.25) !important;
+.el-input,
+.el-date-editor,
+.el-textarea {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
   border-radius: 8px !important;
 }
-.el-input__inner, .el-textarea__inner {
+
+.el-input__inner,
+.el-textarea__inner {
   background: transparent !important;
 }
 
 .el-tag {
-  background: rgba(161,140,209,0.7) !important;
+  background: rgba(161, 140, 209, 0.7) !important;
   border: none !important;
   border-radius: 8px !important;
   font-size: 13px !important;
@@ -1291,6 +1410,7 @@ const confirmAndSaveQuestions = async () => {
   justify-content: flex-end;
   flex-wrap: wrap;
 }
+
 .header-actions .el-button {
   min-width: 110px;
   padding: 10px 20px;
@@ -1298,18 +1418,19 @@ const confirmAndSaveQuestions = async () => {
 }
 
 .question-block {
-  background: rgba(255,255,255,0.18);
+  background: rgba(255, 255, 255, 0.18);
   backdrop-filter: blur(16px);
   border-radius: 16px;
   padding: 24px 24px 16px 24px;
   margin-bottom: 28px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   color: #fff;
   transition: all 0.3s ease;
 }
+
 .question-block:hover {
-  background: rgba(255,255,255,0.18);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.10);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
 }
 
 .question-header {
@@ -1318,6 +1439,7 @@ const confirmAndSaveQuestions = async () => {
   align-items: center;
   margin-bottom: 16px;
 }
+
 .question-header h4 {
   font-size: 16px;
   font-weight: bold;
@@ -1329,7 +1451,7 @@ const confirmAndSaveQuestions = async () => {
   padding: 60px 30px;
   text-align: center;
   font-size: 16px;
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   border: 2px dashed #d9d9d9;
   margin-bottom: 24px;
@@ -1337,7 +1459,7 @@ const confirmAndSaveQuestions = async () => {
 
 .el-table th,
 .el-table td {
-  padding: 12px 16px !important; 
+  padding: 12px 16px !important;
   white-space: nowrap;
 }
 
@@ -1361,7 +1483,7 @@ const confirmAndSaveQuestions = async () => {
 }
 
 .saved-tip {
-  color:rgb(255, 255, 255);
+  color: rgb(255, 255, 255);
   font-size: 14px;
   margin-top: 8px;
   text-align: right;
@@ -1393,12 +1515,16 @@ const confirmAndSaveQuestions = async () => {
   .vertical-layout.practise-layout {
     padding: 12px;
   }
-  .el-card, .temp-el-card {
+
+  .el-card,
+  .temp-el-card {
     padding: 8px;
   }
+
   .side-panel {
     gap: 16px;
   }
+
   .question-block {
     padding: 12px 8px 8px 8px;
     margin-bottom: 16px;
@@ -1408,10 +1534,12 @@ const confirmAndSaveQuestions = async () => {
 .publish-table-wrapper {
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(255,255,255,0.18);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
 }
+
 .publish-table {
-  border-radius: 0; /* 由外层控制圆角 */
+  border-radius: 0;
+  /* 由外层控制圆角 */
 }
 </style>
