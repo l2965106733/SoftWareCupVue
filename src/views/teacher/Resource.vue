@@ -93,7 +93,12 @@ const handlePreview = (file) => {
   ) {
     const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`
     window.open(officeUrl, '_blank')
-  } else {
+  } else if (
+    url.endsWith('.pdf')
+  ) {
+    const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+    window.open(pdfUrl, '_blank')
+  }else {
     window.open(url, '_blank')
   }
 }
@@ -124,8 +129,9 @@ const handleRemove = async (file) => {
 
     try {
       const res = await axios.delete('/api/delete', {
-        params: { url: file.url }
-      })
+        params: { url: file.url },
+        headers: {token: JSON.parse(localStorage.getItem('loginUser'))?.token }
+      })  
       if (res.data.code === 1) {
         fileDeleteSuccess = true
       }

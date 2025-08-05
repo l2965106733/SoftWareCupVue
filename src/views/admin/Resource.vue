@@ -168,16 +168,19 @@ const getTypeColor = (type) => {
   return colors[type] || '#909399'
 }
 
-// 预览文件
 const handlePreview = (resource) => {
   if (!resource.resourceUrl) {
     ElMessage.warning('文件链接不存在')
     return
   }
-  
+
   const url = resource.resourceUrl.toLowerCase()
-  
-  if (
+
+  if (url.endsWith('.pdf')) {
+    // 改为跳转到你自己定义的 pdf-preview.html 页面src\views\public\pdf-preview.html
+    const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(resource.resourceUrl)}&embedded=true`
+    window.open(pdfUrl, '_blank')
+  } else if (
     url.endsWith('.doc') || url.endsWith('.docx') ||
     url.endsWith('.ppt') || url.endsWith('.pptx') ||
     url.endsWith('.xls') || url.endsWith('.xlsx')
@@ -188,6 +191,9 @@ const handlePreview = (resource) => {
     window.open(resource.resourceUrl, '_blank')
   }
 }
+
+
+
 
 // 下载文件
 const handleDownload = (resource) => {
@@ -568,7 +574,7 @@ onMounted(() => {
         
         <el-table-column prop="description" label="描述" min-width="200" show-overflow-tooltip />
         
-        <el-table-column label="操作" width="240" fixed="right">
+        <el-table-column label="操作" width="250" fixed="right">
           <template #default="scope">
             <div class="action-buttons">
               <el-button size="small" type="info" @click="handlePreview(scope.row)">

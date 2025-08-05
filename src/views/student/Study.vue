@@ -318,13 +318,16 @@ const handlePreview = async (courseware) => {
     url.endsWith('.ppt') || url.endsWith('.pptx') ||
     url.endsWith('.xls') || url.endsWith('.xlsx')
   ) {
-    const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(courseware.url)}`
+    const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`
 
     // 监听窗口关闭事件
     const studyWindow = window.open(officeUrl, '_blank')
     monitorStudyWindow(studyWindow, resourceId)
-  } else {
-    const studyWindow = window.open(courseware.url, '_blank')
+  } else if (
+    url.endsWith('.pdf')
+  ) {
+    const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+    const studyWindow = window.open(pdfUrl, '_blank')
     monitorStudyWindow(studyWindow, resourceId)
   }
 }
