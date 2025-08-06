@@ -474,10 +474,10 @@ const loadStudyStats = async () => {
     if (result.code === 1) {
       const data = result.data
       studyStats.value[0].value = String(data.totalCourseware || 1)
-      studyStats.value[1].value = String(data.studiedCourseware || 0)
-      studyStats.value[2].value = String(data.aiQuestions || 1)
-      studyStats.value[3].value = `${Math.floor((data.totalStudyTime || 0) / 60)}分钟`
-      studyStats.value[4].value = `${Math.floor((data.todayStudyTime || 0) / 60)}分钟`
+      studyStats.value[1].value = String(data.completedCourseware || 0)
+      // studyStats.value[2].value = String(data.aiQuestions || 1)
+      studyStats.value[2].value = `${Math.floor((data.totalStudyTime || 0))}秒`
+      studyStats.value[3].value = `${Math.floor((data.todayStudyTime || 0) / 60)}分钟`
       // totalCourseware.value = data.totalCourseware || 0
       // studiedCourseware.value = data.studiedCourseware || 0
       // aiQuestions.value = data.aiQuestions || 0

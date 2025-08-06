@@ -463,14 +463,14 @@ onMounted(() => {
             </div>
             
             <div class="stat-item">
-              <!-- <div class="stat-value">{{ resourceStats.viewCount }}</div> -->
-              <div class="stat-value">1</div>
+              <div class="stat-value">{{ resourceStats.viewCount }}</div>
+              <!-- <div class="stat-value">1</div> -->
               <div class="stat-label">总浏览量</div>
             </div>
             
             <div class="stat-item">
-              <!-- <div class="stat-value">{{ resourceStats.downloadCount }}</div> -->
-              <div class="stat-value">1</div>
+              <div class="stat-value">{{ resourceStats.downloadCount }}</div>
+              <!-- <div class="stat-value">1</div> -->
               <div class="stat-label">总下载量</div>
             </div>
           </div>

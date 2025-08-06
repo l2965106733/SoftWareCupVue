@@ -424,8 +424,8 @@ onMounted(() => {
         
         <el-card shadow="hover" class="stat-card">
           <div class="stat-content">
-            <!-- <div class="stat-value">{{ resourceStats.downloadCount }}</div> -->
-            <div class="stat-value">2</div>
+            <div class="stat-value">{{ resourceStats.downloadCount }}</div>
+            <!-- <div class="stat-value">2</div> -->
             <div class="stat-label">总下载量</div>
           </div>
           <el-icon class="stat-icon"><Download /></el-icon>
@@ -561,8 +561,8 @@ onMounted(() => {
         
         <el-table-column prop="downloadCount" label="下载" width="80" sortable>
           <template #default="scope">
-            <!-- <span class="download-count">{{ scope.row.downloadCount || 0 }}</span> -->
-            <span class="download-count">1</span>
+            <span class="download-count">{{ scope.row.downloadCount || 0 }}</span>
+            <!-- <span class="download-count">1</span> -->
           </template>
         </el-table-column>
         
