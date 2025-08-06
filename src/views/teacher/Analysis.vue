@@ -1181,7 +1181,7 @@ onMounted(() => {
 } */
 .table-pagination {
   margin-top: 20px;
-  margin-left: 150px;
+  margin-left: 180px;
   text-align: right;
   padding: 12px 16px;
   background: rgba(255, 255, 255, 0.12);
