@@ -10,7 +10,7 @@ const studyStats = ref([
     { label: '今日学习时长', value: '0小时', icon: 'fas fa-clock', color: '#667eea' },
     { label: '完成作业数', value: '0个', icon: 'fas fa-check-circle', color: '#f5576c' },
     { label: '参与讨论', value: '0次', icon: 'fas fa-comment-dots', color: '#4facfe' },
-    { label: '学习进度', value: '0%', icon: 'fas fa-chart-line', color: '#26d0ce' }
+    // { label: '学习进度', value: '0%', icon: 'fas fa-chart-line', color: '#26d0ce' }
 ])
 
 // 最近活动数据
@@ -46,6 +46,7 @@ const updateTime = () => {
 // 获取当前登录学生ID
 const getCurrentStudentId = () => {
     const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+    console.log(loginUser?.id)
     return loginUser?.id
 }
 
@@ -78,12 +79,12 @@ const loadStudentHomeData = async () => {
                     icon: 'fas fa-comment-dots', 
                     color: '#4facfe' 
                 },
-                { 
-                    label: '学习进度', 
-                    value: `${stats.studyProgress || 0}%`, 
-                    icon: 'fas fa-chart-line', 
-                    color: '#26d0ce' 
-                }
+                // { 
+                //     label: '学习进度', 
+                //     value: `${stats.studyProgress || 0}%`, 
+                //     icon: 'fas fa-chart-line', 
+                //     color: '#26d0ce' 
+                // }
             ]
         }
         
