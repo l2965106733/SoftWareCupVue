@@ -357,7 +357,7 @@ onMounted(() => {
 
     <div class="vertical-blocks">
       <el-card class="lesson-section" shadow="never">
-        <h3 style = "color #777"><i class="fas fa-book-open"></i> 教学内容结构</h3>
+        <h3><i class="fas fa-book-open"></i> 教学内容结构</h3>
         <div v-if="teachingPlan">
           <div class="vertical-plan-list">
             <div v-for="(item, index) in teachingPlan" :key="index" class="vertical-plan-item">
@@ -383,7 +383,7 @@ onMounted(() => {
         <div v-else>
           <el-empty>
             <template #description>
-              <span style="color: #fff; font-weight: 600;">尚未生成教学节次结构</span>
+              <span style="color:#fff; font-weight:600;">尚未生成教学节次结构</span>
             </template>
           </el-empty>
         </div>
