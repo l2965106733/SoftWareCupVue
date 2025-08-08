@@ -509,7 +509,7 @@ const submitStudentSelection = async () => {
               <span style="width:  85%;">
                 <el-button v-if="scope.row.role == 2" align="center" type="info" size="small"
                   @click="openStudentDialog(scope.row.id)">
-                  新增学生
+                  <i class="fas fa-pen"></i>新增学生
                 </el-button>
               </span>
             </div>
