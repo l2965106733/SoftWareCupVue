@@ -493,7 +493,7 @@ const submitStudentSelection = async () => {
 
 
         <!-- 操作按钮 -->
-        <el-table-column label="操作" align="center" width="180">
+        <el-table-column label="操作" align="center" width="160">
           <template #default="scope">
             <div class="action-buttons">
               <span>
