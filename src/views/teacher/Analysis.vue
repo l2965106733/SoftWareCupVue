@@ -612,9 +612,9 @@ onMounted(() => {
                 </div>
               </template>
             </el-table-column>
-            <el-table-column prop="homeworkCount" label="完成作业" width="110" sortable :cell-class-name="() => 'table-cell'"/>
+            <el-table-column prop="homeworkCount" label="完成作业" width="125" sortable :cell-class-name="() => 'table-cell'"/>
             <el-table-column prop="totalHomework" label="总作业数" width="120" />
-            <el-table-column label="完成率" width="95" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)" :cell-class-name="() => 'table-cell'">
+            <el-table-column label="完成率" width="125" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)" :cell-class-name="() => 'table-cell'">
               <template #default="scope">
                 <div class="completion-cell">
                   <el-progress 
@@ -628,7 +628,7 @@ onMounted(() => {
               </template>
             </el-table-column>
             <!-- <el-table-column prop="lastActive" label="最后活跃" width="140" /> -->
-            <el-table-column prop="questionCount" label="提问数" width="92" sortable>
+            <el-table-column prop="questionCount" label="提问数" width="120" sortable>
               <template #default="scope">
                 <div class="question-count-cell">
                   <el-icon><ChatLineSquare /></el-icon>
