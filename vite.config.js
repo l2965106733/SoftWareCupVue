@@ -16,10 +16,10 @@ export default defineConfig({
     },
   },
   server: {
-    host: '127.0.0.1',        // 监听所有地址，方便外网访问
+    host: '127.0.0.1',  
     port: 5173,
     allowedHosts: [
-      'tas.natapp1.cc',  // 允许 natapp 的域名访问
+      'tas.natapp1.cc', 
     ],
     proxy: {
       '/api': {

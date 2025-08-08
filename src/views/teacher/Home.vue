@@ -247,7 +247,6 @@ const refreshData = () => {
                     <div v-else class="activity-item" v-for="activity in recentActivities" :key="activity.id">
                         <div class="activity-content">
                             <h4 class="activity-title">{{ activity.title }}</h4>
-                            <p class="activity-desc">{{ activity.description }}</p>
                             <span class="activity-time">{{ activity.relativeTime || activity.time }}</span>
                         </div>
                     </div>

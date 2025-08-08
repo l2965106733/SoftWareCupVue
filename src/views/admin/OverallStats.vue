@@ -441,25 +441,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.charts-container {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-.chart-box {
-  width: 100%;
-}
-.chart-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 10px;
-}
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
 .overall-stats-container {
   padding: 24px;
   background: rgba(255, 255, 255, 0.05);
   min-height: 100vh;
+  animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 页面标题 */
@@ -468,6 +457,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .header-actions {
@@ -482,67 +472,43 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 600;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: admin-title-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes section-fade-in {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes card-slide-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+@keyframes stat-fade-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes activities-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes chart-fade-in {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
 }
 
 /* 概览卡片 */
-/* .overview-section {
-  margin-bottom: 24px;
-}
-
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-.overview-card {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.overview-card :deep(.el-card__body) {
-  padding: 20px;
-}
-
-.card-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.card-info {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.card-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.card-change {
-  font-size: 12px;
-}
-
-.card-change.positive {
-  color: #67c23a;
-}
-
-.card-icon {
-  font-size: 40px;
-  color: #409eff;
-  opacity: 0.3;
-} */
 .overview-section {
   margin-bottom: 24px;
+  animation: section-fade-in 0.8s ease-out 0.2s both;
 }
 
 .overview-cards {
@@ -559,6 +525,12 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   transition: transform 0.25s ease;
+  animation: card-slide-up 0.8s ease-out;
+}
+
+@keyframes card-slide-up {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .overview-card:hover {
@@ -612,45 +584,18 @@ onMounted(() => {
   font-size: 36px;
   color: #ffffff80;
   opacity: 0.8;
+  animation: icon-pulse 2s ease-in-out infinite;
 }
 
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
 
 /* 用户活跃度 */
-/* .activity-section {
-  margin-bottom: 24px;
-}
-
-.activity-card {
-  margin-top: 25px;
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.activity-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.activity-item {
-  text-align: center;
-}
-
-.activity-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.activity-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #2c3e50;
-} */
 .activity-section {
   margin-bottom: 24px;
+  animation: section-fade-in 0.8s ease-out 0.4s both;
 }
 
 /* 卡片容器改为玻璃风 */
@@ -663,6 +608,7 @@ onMounted(() => {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
   transition: transform 0.25s ease;
   color: #fff;
+  animation: card-slide-up 0.8s ease-out 0.6s both;
 }
 
 .activity-card:hover {
@@ -680,6 +626,12 @@ onMounted(() => {
 /* 每项居中显示 */
 .activity-item {
   text-align: center;
+  animation: stat-fade-in 0.8s ease-out 0.8s both;
+}
+
+@keyframes stat-fade-in {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* 标签文字改为浅白色 */
@@ -704,16 +656,21 @@ onMounted(() => {
   justify-content: space-between;
 }
 
-
-
-
-
 /* 趋势图样式 */
 .trend-chart-container {
   margin-top: 20px;
   padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);  /* 更柔和透明 */
+  backdrop-filter: blur(14px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  animation: activities-fade-in 0.8s ease-out 1s both;
+}
+
+@keyframes activities-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .chart-title {
@@ -724,24 +681,28 @@ onMounted(() => {
   text-align: center;
 }
 
-.trend-chart-container {
+.charts-container {
   margin-top: 20px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.12);  /* 更柔和透明 */
-  backdrop-filter: blur(14px);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  background: #f8f9fa;
+  border-radius: 8px;
+  animation: chart-fade-in 0.8s ease-out 1.2s both;
 }
 
+@keyframes chart-fade-in {
+  0% { opacity: 0; transform: translateX(-20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+.chart-box {
+  width: 100%;
+}
 
 /* 响应式设计 */
 @media (max-width: 1400px) {
   .overview-cards {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-
 }
 
 @media (max-width: 768px) {
@@ -756,8 +717,6 @@ onMounted(() => {
   .activity-stats {
     grid-template-columns: 1fr;
   }
-  
-
   
   .page-header {
     flex-direction: column;
@@ -781,6 +740,13 @@ onMounted(() => {
   flex: 1;
 }
 
+/* 表格行动画（如果有表格的话） */
+.el-table :deep(.el-table__body tr) {
+  animation: row-fade-in 0.6s ease-out;
+}
 
-
+@keyframes row-fade-in {
+  0% { opacity: 0; transform: translateX(-10px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
 </style>

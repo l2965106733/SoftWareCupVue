@@ -1,0 +1,342 @@
+/* Admin模块统一动效系统 */
+
+/* ===== 页面级动效 ===== */
+.admin-page-fade-in {
+  animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes admin-page-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 区域动效 ===== */
+.admin-section-fade-in {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-section-fade-in-delay-1 {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.admin-section-fade-in-delay-2 {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.admin-section-fade-in-delay-3 {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+}
+
+.admin-section-fade-in-delay-4 {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+@keyframes admin-section-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== 卡片动效 ===== */
+.admin-card-slide-up {
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-card-slide-up-delay-1 {
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.admin-card-slide-up-delay-2 {
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.admin-card-slide-up-delay-3 {
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+}
+
+@keyframes admin-card-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 标题动效 ===== */
+.admin-title-glow {
+  animation: admin-title-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes admin-title-glow {
+  0% {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  100% {
+    text-shadow: 0 2px 8px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* ===== 图标动效 ===== */
+.admin-icon-pulse {
+  animation: admin-icon-pulse 2s ease-in-out infinite;
+}
+
+@keyframes admin-icon-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* ===== 统计数字动效 ===== */
+.admin-stat-fade-in {
+  animation: admin-stat-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-stat-fade-in-delay-1 {
+  animation: admin-stat-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.admin-stat-fade-in-delay-2 {
+  animation: admin-stat-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+@keyframes admin-stat-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===== 活动列表动效 ===== */
+.admin-activities-fade-in {
+  animation: admin-activities-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-activities-fade-in-delay-1 {
+  animation: admin-activities-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.admin-activities-fade-in-delay-2 {
+  animation: admin-activities-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+@keyframes admin-activities-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 图表动效 ===== */
+.admin-chart-fade-in {
+  animation: admin-chart-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-chart-fade-in-delay-1 {
+  animation: admin-chart-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.admin-chart-fade-in-delay-2 {
+  animation: admin-chart-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+@keyframes admin-chart-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== 表格行动效 ===== */
+.admin-row-fade-in {
+  animation: admin-row-fade-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes admin-row-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ===== 欢迎区域动效 ===== */
+.admin-welcome-slide-up {
+  animation: admin-welcome-slide-up 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes admin-welcome-slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== 浮动元素动效 ===== */
+.admin-float {
+  animation: admin-float 6s ease-in-out infinite;
+}
+
+.admin-float-delay-1 {
+  animation-delay: 0s;
+}
+
+.admin-float-delay-2 {
+  animation-delay: 2s;
+}
+
+.admin-float-delay-3 {
+  animation-delay: 4s;
+}
+
+@keyframes admin-float {
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}
+
+/* ===== 交互动效 ===== */
+.admin-interactive {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+}
+
+.admin-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.admin-card-interactive {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-card-interactive:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.admin-button-interactive {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-button-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* ===== 表格动效 ===== */
+.admin-table-row {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-table-row:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* ===== 表单动效 ===== */
+.admin-form-element {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.admin-form-element:focus {
+  transform: scale(1.02);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+/* ===== 加载动效 ===== */
+.admin-loading-pulse {
+  animation: admin-loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes admin-loading-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ===== 响应式动效调整 ===== */
+@media (prefers-reduced-motion: reduce) {
+
+  .admin-page-fade-in,
+  .admin-section-fade-in,
+  .admin-card-slide-up,
+  .admin-title-glow,
+  .admin-icon-pulse,
+  .admin-stat-fade-in,
+  .admin-activities-fade-in,
+  .admin-chart-fade-in,
+  .admin-row-fade-in,
+  .admin-welcome-slide-up,
+  .admin-float {
+    animation: none;
+  }
+
+  .admin-interactive,
+  .admin-card-interactive,
+  .admin-button-interactive,
+  .admin-table-row,
+  .admin-form-element {
+    transition: none;
+  }
+}

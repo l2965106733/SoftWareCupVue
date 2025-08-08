@@ -249,12 +249,7 @@ const goToTeacherStats = () => {
 
 .admin-home {
     min-height: 100%;
-    animation: page-fade-in 0.8s ease-out;
-}
-
-@keyframes page-fade-in {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
+    animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 欢迎区域 */
@@ -266,12 +261,7 @@ const goToTeacherStats = () => {
     padding: clamp(24px, 4vw, 48px);
     margin-bottom: clamp(24px, 4vw, 32px);
     overflow: hidden;
-    animation: welcome-slide-up 1s cubic-bezier(.4,0,.2,1);
-}
-
-@keyframes welcome-slide-up {
-    0% { opacity: 0; transform: translateY(30px); }
-    100% { opacity: 1; transform: translateY(0); }
+    animation: admin-welcome-slide-up 1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .welcome-content {
@@ -288,17 +278,12 @@ const goToTeacherStats = () => {
     align-items: center;
     flex-wrap: wrap;
     gap: clamp(8px, 2vw, 16px);
-    animation: title-glow 3s ease-in-out infinite alternate;
+    animation: admin-title-glow 3s ease-in-out infinite alternate;
 }
 
 .welcome-icon {
     font-size: clamp(28px, 5vw, 40px);
-    animation: icon-pulse 2s ease-in-out infinite;
-}
-
-@keyframes icon-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    animation: admin-icon-pulse 2s ease-in-out infinite;
 }
 
 .welcome-subtitle {
@@ -323,7 +308,7 @@ const goToTeacherStats = () => {
     position: absolute;
     background: rgba(255, 255, 255, 0.1);
     border-radius: 50%;
-    animation: float 6s ease-in-out infinite;
+    animation: admin-float 6s ease-in-out infinite;
 }
 
 .element-1 {
@@ -350,11 +335,6 @@ const goToTeacherStats = () => {
     animation-delay: 4s;
 }
 
-@keyframes float {
-    0%, 100% { transform: translateY(0) rotate(0deg); }
-    50% { transform: translateY(-20px) rotate(180deg); }
-}
-
 /* 通用区域标题 */
 .section-title {
     font-size: clamp(20px, 3vw, 24px);
@@ -364,12 +344,7 @@ const goToTeacherStats = () => {
     display: flex;
     align-items: center;
     gap: clamp(8px, 2vw, 12px);
-    animation: section-fade-in 0.8s ease-out;
-}
-
-@keyframes section-fade-in {
-    0% { opacity: 0; transform: translateX(-20px); }
-    100% { opacity: 1; transform: translateX(0); }
+    animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 快捷操作区域 */
@@ -390,15 +365,10 @@ const goToTeacherStats = () => {
     border-radius: 20px;
     padding: clamp(20px, 4vw, 32px);
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
-    animation: card-slide-up 0.8s ease-out;
-}
-
-@keyframes card-slide-up {
-    0% { opacity: 0; transform: translateY(20px); }
-    100% { opacity: 1; transform: translateY(0); }
+    animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .action-card:hover {

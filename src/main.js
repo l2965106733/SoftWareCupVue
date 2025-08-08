@@ -18,6 +18,7 @@ import {
 } from 'echarts/components'
 import './styles/reset.css'
 import './styles/theme.css'
+import './styles/admin-animations.css'
 
 // 注册必须的组件
 use([

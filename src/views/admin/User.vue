@@ -509,7 +509,7 @@ const submitStudentSelection = async () => {
               <span style="width:  85%;">
                 <el-button v-if="scope.row.role == 2" align="center" type="info" size="small"
                   @click="openStudentDialog(scope.row.id)">
-                  <i class="fas fa-pen"></i>新增学生
+                  <i class="fas fa-pen"></i>关联学生
                 </el-button>
               </span>
             </div>
@@ -609,11 +609,13 @@ const submitStudentSelection = async () => {
 .user-management {
   padding: 24px;
   min-height: 100vh;
+  animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 页面标题 */
 .page-header {
   margin-bottom: 24px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .page-title {
@@ -638,9 +640,42 @@ const submitStudentSelection = async () => {
 }
 
 /* 卡片通用样式 */
-.search-card,
-.action-card,
-/* .table-card, */
+.search-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.action-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.table-card {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+}
+
 .pagination-card {
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(20px);
@@ -650,6 +685,7 @@ const submitStudentSelection = async () => {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform, box-shadow;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
 }
 
 

@@ -643,19 +643,31 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
 .admin-resource-container {
   padding: 24px;
   background: rgba(255, 255, 255, 0.05);
   min-height: 100vh;
+  animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* 头部区域 */
+.header-section {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
+}
+
 .header-section h2 {
   color: white;
   margin: 0 0 20px 0;
   font-size: 28px;
   font-weight: 600;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  animation: admin-title-glow 3s ease-in-out infinite alternate;
 }
 
 .stats-cards {
@@ -663,6 +675,7 @@ onMounted(() => {
   grid-template-columns: repeat(4, 1fr);
   gap: 16px; /* 原本20px */
   margin-bottom: 20px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
 }
 
 .stat-card {
@@ -673,7 +686,8 @@ onMounted(() => {
   padding: 14px 16px;  /* 原本20px */
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); /* 更轻的阴影 */
   color: #fff;
-  transition: transform 0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-card:hover {
@@ -684,6 +698,7 @@ onMounted(() => {
   font-size: 20px; /* 原本28px */
   margin-bottom: 4px;
   color: white;
+  animation: admin-icon-pulse 2s ease-in-out infinite;
 }
 
 .stat-value {
@@ -696,68 +711,7 @@ onMounted(() => {
   opacity: 0.75;
 }
 
-
-
-/* 
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
-.stat-card {
-  border-radius: 12px;
-  overflow: hidden;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.stat-card :deep(.el-card__body) {
-  padding: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 4px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: #666;
-}
-
-.stat-icon {
-  font-size: 40px;
-  color: #409eff;
-  opacity: 0.3;
-} */
-
-
 /* 工具栏 */
-/* .toolbar-card {
-  margin-bottom: 20px;
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-} */
 .toolbar-card {
   margin-bottom: 20px;
   border-radius: 12px;
@@ -766,6 +720,7 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   padding: 12px 16px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
 }
 
 .toolbar {
@@ -803,14 +758,6 @@ onMounted(() => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1) !important;
 }
 
-
-/* .filters {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-} */
-
 .filters {
   display: flex;
   align-items: center;
@@ -846,9 +793,6 @@ onMounted(() => {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-
-
-
 .actions {
   display: flex;
   align-items: center;
@@ -856,52 +800,6 @@ onMounted(() => {
 }
 
 /* 表格样式 */
-/* .table-card {
-  border-radius: 12px;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.resource-name-cell {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.type-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.name-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.download-count {
-  color: #67c23a;
-  font-weight: 600;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-}
-
-.action-buttons .el-button {
-  min-width: 50px;
-  padding: 4px 8px;
-}
-
-/* 分页 */
-/* .pagination-wrapper {
-  margin-top: 20px;
-  text-align: right;
-}  */
-
 .table-card {
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.25);
@@ -909,7 +807,9 @@ onMounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   padding: 12px 16px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
 }
+
 .el-table th,
 .el-table td {
   padding: 12px 16px !important; 
@@ -920,9 +820,6 @@ onMounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 } 
-
-
-
 
 /* 表格内容布局保持不变 */
 .resource-name-cell {
@@ -958,21 +855,6 @@ onMounted(() => {
 }
 
 /* 按钮风格改成玻璃拟态 */
-/* .action-buttons .el-button {
-  min-width: 50px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.action-buttons .el-button:hover {
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-} */
 .action-buttons{
   min-width: 50px;
   padding: 4px 8px;
@@ -996,6 +878,12 @@ onMounted(() => {
 .pagination-wrapper {
   margin-top: 20px;
   text-align: center;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+@keyframes activities-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 .pagination-wrapper .el-pagination {
@@ -1025,13 +913,19 @@ onMounted(() => {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
-
-
-
 /* 响应式设计 */
 @media (max-width: 1400px) {
   .stats-cards {
     grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 动画性能优化 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
