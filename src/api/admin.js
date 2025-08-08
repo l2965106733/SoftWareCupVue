@@ -10,6 +10,9 @@ export const updateUserApi = (user) => request.put("/admin/user",user)
 
 export const addUserApi = (user) => request.post("/admin/user",user)
 
+export const sumbitSelectStudentsApi = (selectedStudentIds,teacherId) => request.put(`/admin/user/submitSelectedStudents/${teacherId}`,selectedStudentIds)
+
+export const getAllStudentsApi = (teacherId) => request.get(`/admin/user/getAllStudents/${teacherId}`);
 // 资源管理相关API
 export const getAllResourcesApi = () => request.get("/admin/resource");
 

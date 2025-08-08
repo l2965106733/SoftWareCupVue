@@ -1,7 +1,7 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
-import { pageQueryApi, deleteByIdApi, getUserInfoApi, updateUserApi, addUserApi } from '@/api/admin';
+import { pageQueryApi, deleteByIdApi, getUserInfoApi, updateUserApi, addUserApi, getAllStudentsApi, sumbitSelectStudentsApi } from '@/api/admin';
 
 const searchUser = ref({ name: '', gender: '', subject: '', role: '' })
 
@@ -69,7 +69,7 @@ const search = async () => {
 
 onMounted(() => {
   search();
-  
+
   // 强制显示表格标题
   setTimeout(() => {
     const headerElements = document.querySelectorAll('.modern-table .el-table__header-wrapper');
@@ -79,7 +79,7 @@ onMounted(() => {
       el.style.opacity = '1';
       el.style.height = 'auto';
     });
-    
+
     const thElements = document.querySelectorAll('.modern-table .el-table__header th');
     thElements.forEach(el => {
       el.style.color = '#ffffff';
@@ -105,6 +105,7 @@ const handleCurrentChange = () => {
 
 const handleSelectionChange = (val) => {
   selectIds.value = val.map(item => item.id);
+  selectedStudentIds.value = val.map(item => item.id);
 }
 
 const deleteById = async (id) => {
@@ -194,31 +195,31 @@ const save = async () => {
   console.log('=== save函数被调用 ===');
   console.log('formUserRef存在:', !!formUserRef.value);
   console.log('当前表单数据:', JSON.stringify(formUser.value, null, 2));
-  
+
   if (saveLoading.value) {
     console.log('⏳ 正在保存中，忽略重复点击');
     return;
   }
-  
-  if (!formUserRef.value) { 
+
+  if (!formUserRef.value) {
     console.log('❌ formUserRef不存在，退出');
     ElMessage.error('表单引用不存在');
-    return; 
+    return;
   }
-  
+
   // 先检查必填字段
   const requiredFields = ['username', 'name', 'gender', 'role', 'identifier'];
   const missingFields = requiredFields.filter(field => !formUser.value[field]);
-  
+
   if (missingFields.length > 0) {
     console.log('❌ 缺少必填字段:', missingFields);
     ElMessage.error(`请填写必填字段: ${missingFields.join(', ')}`);
     return;
   }
-  
-  
+
+
   console.log('✅ 基础验证通过，开始表单验证');
-  
+
   try {
     const isValid = await new Promise((resolve) => {
       formUserRef.value.validate((valid, fields) => {
@@ -229,40 +230,40 @@ const save = async () => {
         resolve(valid);
       });
     });
-    
-         if (isValid) {
-       console.log('✅ 表单验证通过，准备提交');
-       saveLoading.value = true;
-       try {
-         let result;
-         const userData = { ...formUser.value };
-         
-         if (userData.id) {
-           console.log('🔄 执行更新用户');
-           result = await updateUserApi(userData);
-         } else {
-           console.log('➕ 执行新增用户');
-           delete userData.id; // 确保新增时删除id字段
-           result = await addUserApi(userData);
-         }
-         
-         console.log('📝 API返回结果:', result);
-         
-         if (result && result.code) {
-           console.log('✅ 保存成功');
-           ElMessage.success('用户信息保存成功');
-           dialogVisible.value = false;
-           await search();
-         } else {
-           console.log('❌ 保存失败:', result);
-           ElMessage.error(result?.msg || '保存失败，请重试');
-         }
-       } catch (error) {
-         console.error('❌ API调用错误:', error);
-         ElMessage.error(`网络错误: ${error.message || '请检查网络连接'}`);
-       } finally {
-         saveLoading.value = false;
-       }
+
+    if (isValid) {
+      console.log('✅ 表单验证通过，准备提交');
+      saveLoading.value = true;
+      try {
+        let result;
+        const userData = { ...formUser.value };
+
+        if (userData.id) {
+          console.log('🔄 执行更新用户');
+          result = await updateUserApi(userData);
+        } else {
+          console.log('➕ 执行新增用户');
+          delete userData.id; // 确保新增时删除id字段
+          result = await addUserApi(userData);
+        }
+
+        console.log('📝 API返回结果:', result);
+
+        if (result && result.code) {
+          console.log('✅ 保存成功');
+          ElMessage.success('用户信息保存成功');
+          dialogVisible.value = false;
+          await search();
+        } else {
+          console.log('❌ 保存失败:', result);
+          ElMessage.error(result?.msg || '保存失败，请重试');
+        }
+      } catch (error) {
+        console.error('❌ API调用错误:', error);
+        ElMessage.error(`网络错误: ${error.message || '请检查网络连接'}`);
+      } finally {
+        saveLoading.value = false;
+      }
     } else {
       console.log('❌ 表单验证失败');
       ElMessage.error('请检查并完善表单信息');
@@ -288,7 +289,7 @@ const addUser = () => {
   console.log('=== 开始新增用户 ===');
   dialogVisible.value = true;
   dialogTitle.value = '新增用户';
-  
+
   // 重置表单数据
   formUser.value = {
     id: undefined, // 新增时不需要id
@@ -299,9 +300,9 @@ const addUser = () => {
     identifier: '',
     subject: ''
   }
-  
+
   console.log('初始化表单数据:', formUser.value);
-  
+
   // 延迟重置表单验证，确保表单渲染完成
   setTimeout(() => {
     if (formUserRef.value) {
@@ -311,6 +312,58 @@ const addUser = () => {
     }
   }, 100);
 }
+
+const studentDialogVisible = ref(false);
+const allStudents = ref([]);
+const relatedStudents = ref([]);
+const recentTeacherId = ref(null);
+const selectedStudentIds = ref([]);
+const studentTableRef = ref(null);
+
+const openStudentDialog = async (teacherId) => {
+  try {
+    const res = await getAllStudentsApi(teacherId);
+    if (res.code) {
+      studentDialogVisible.value = true;
+      allStudents.value = res.data.all || [];
+      const relatedIds = (res.data.related || []).map(student => student.id);
+      relatedStudents.value = relatedIds;
+      recentTeacherId.value = teacherId;
+      nextTick(() => {
+        setTimeout(() => {
+          allStudents.value.forEach((student) => {
+            if (relatedStudents.value.includes(student.id)) {
+              studentTableRef.value.toggleRowSelection(student, true);
+            }
+          });
+        }, 50);
+      });
+    } else {
+      console.warn('API returned error code');
+    }
+  } catch (err) {
+    console.error(err);
+    ElMessage.error("获取学生数据失败");
+  }
+};
+
+
+
+
+/**
+ * 提交选中学生
+ */
+const submitStudentSelection = async () => {
+  try {
+    const result = await sumbitSelectStudentsApi(selectedStudentIds.value, recentTeacherId.value);
+    ElMessage.success("学生关系已更新");
+    studentDialogVisible.value = false;
+  }
+  catch (err) {
+    console.error(err);
+    ElMessage.error("更新学生关系失败");
+  }
+};
 
 </script>
 
@@ -332,66 +385,62 @@ const addUser = () => {
         <span>筛选条件</span>
       </div>
       <!-- 查询项 + 查询/重置按钮，第一行 -->
-<el-form :inline="true" :model="searchUser" class="search-form">
-  <!-- 查询字段 -->
-  <el-form-item label="角色">
-    <el-select v-model="tempRole" placeholder="请选择查询角色" clearable class="form-select">
-      <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
-    </el-select>
-  </el-form-item>
+      <el-form :inline="true" :model="searchUser" class="search-form">
+        <!-- 查询字段 -->
+        <el-form-item label="角色">
+          <el-select v-model="tempRole" placeholder="请选择查询角色" clearable class="form-select">
+            <el-option v-for="r in roles" :key="r.value" :label="r.name" :value="r.value" />
+          </el-select>
+        </el-form-item>
 
-  <el-form-item label="姓名">
-    <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable class="form-input" />
-  </el-form-item>
+        <el-form-item label="姓名">
+          <el-input v-model="searchUser.name" :placeholder="`请输入${roleLabel}姓名`" clearable class="form-input" />
+        </el-form-item>
 
-  <el-form-item label="性别">
-    <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable class="form-select">
-      <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
-    </el-select>
-  </el-form-item>
+        <el-form-item label="性别">
+          <el-select v-model="searchUser.gender" placeholder="请选择性别" clearable class="form-select">
+            <el-option v-for="g in genders" :key="g.value" :label="g.name" :value="g.value" />
+          </el-select>
+        </el-form-item>
 
-  <!-- 所有按钮：查询、重置、新增、删除，一起放在右侧 -->
-  <div class="action-row">
-    <div class="action-left">
-      <el-button type="primary" @click="search" class="search-btn">
-        <i class="fas fa-search"></i> 查询
-      </el-button>
-      <el-button @click="clear" class="clear-btn">
-        <i class="fas fa-redo"></i> 重置
-      </el-button>
-      <!-- <el-button type="primary" @click="addUser" class="add-btn">
+        <!-- 所有按钮：查询、重置、新增、删除，一起放在右侧 -->
+        <div class="action-row">
+          <div class="action-left">
+            <el-button type="primary" @click="search" class="search-btn">
+              <i class="fas fa-search"></i> 查询
+            </el-button>
+            <el-button @click="clear" class="clear-btn">
+              <i class="fas fa-redo"></i> 重置
+            </el-button>
+            <!-- <el-button type="primary" @click="addUser" class="add-btn">
         <i class="fas fa-plus"></i> 新增{{ roleLabel }}
       </el-button> -->
-      <el-button type="danger" @click="deleteByIds" class="delete-btn">
-        <i class="fas fa-trash-alt"></i> 批量删除
-      </el-button>
-    </div>
-    <div class="record-count">共 {{ total }} 条记录</div>
-  </div>
-</el-form>
+            <el-button type="danger" @click="deleteByIds" class="delete-btn">
+              <i class="fas fa-trash-alt"></i> 批量删除
+            </el-button>
+          </div>
+          <div class="record-count">共 {{ total }} 条记录</div>
+        </div>
+      </el-form>
 
     </div>
 
 
     <!-- 数据表格 -->
     <div class="table-card">
-      <el-table 
-        style="border-radius: 10px; margin-bottom: 10px;"
-        ref="tableRef"
-        :data="user" 
-        :show-header="true" 
-        :header-cell-style="{ textAlign: 'center' }"
-        :cell-style="{ textAlign: 'center' }"
+      <el-table style="border-radius: 10px; margin-bottom: 10px;" ref="tableRef" :data="user" :show-header="true"
+        :header-cell-style="{ textAlign: 'center' }" :cell-style="{ textAlign: 'center' }"
         @selection-change="handleSelectionChange">
         <!-- 多选 -->
-        <el-table-column type="selection" align="center" width="60">
+        <el-table-column type="selection" align="center" width="40">
           <template #header>
             <span style="color: #ffffff; font-weight: 700;">全选</span>
           </template>
         </el-table-column>
 
         <!-- 用户名 -->
-        <el-table-column prop="username" label="用户名" align="center" min-width="120" show-overflow-tooltip style="color:black">
+        <el-table-column prop="username" label="用户名" align="center" min-width="80" show-overflow-tooltip
+          style="color:black">
           <template #default="scope">
             <div>
               <i class="fas fa-user"></i>
@@ -401,7 +450,7 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 姓名 -->
-        <el-table-column prop="name" label="姓名" align="center" min-width="120" show-overflow-tooltip style="color:black">
+        <el-table-column prop="name" label="姓名" align="center" min-width="80" show-overflow-tooltip style="color:black">
           <template #default="scope">
             <div>
               {{ scope.row.name }}
@@ -410,7 +459,7 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 性别 -->
-        <el-table-column label="性别" align="center" width="100">
+        <el-table-column label="性别" align="center" width="70">
           <template #default="scope">
             <el-tag :type="scope.row.gender == '1' ? 'primary' : 'danger'" size="small" class="gender-tag">
               <i :class="scope.row.gender == '1' ? 'fas fa-mars' : 'fas fa-venus'"></i>
@@ -420,19 +469,19 @@ const addUser = () => {
         </el-table-column>
 
         <!-- 角色 -->
-        <el-table-column label="角色" align="center" width="120">
+        <el-table-column label="角色" align="center" width="70">
           <template #default="scope">
-            <el-tag 
-              :type="scope.row.role == 3 ? 'danger' : scope.row.role == 2 ? 'warning' : 'success'" 
-              size="small" class="role-tag">
-              <i :class="scope.row.role == 3 ? 'fas fa-crown' : scope.row.role == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
+            <el-tag :type="scope.row.role == 3 ? 'danger' : scope.row.role == 2 ? 'warning' : 'success'" size="small"
+              class="role-tag">
+              <i
+                :class="scope.row.role == 3 ? 'fas fa-crown' : scope.row.role == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
               {{ scope.row.role == 3 ? '管理员' : scope.row.role == 2 ? '教师' : '学生' }}
             </el-tag>
           </template>
         </el-table-column>
 
         <!-- 用户号 -->
-        <el-table-column prop="identifier" label="用户号" align="center" min-width="140" style="color:black">
+        <el-table-column prop="identifier" label="用户号" align="center" min-width="80" style="color:black">
           <template #default="scope">
             <div>
               <i class="fas fa-id-card"></i>
@@ -441,40 +490,57 @@ const addUser = () => {
           </template>
         </el-table-column>
 
-      
+
 
         <!-- 操作按钮 -->
         <el-table-column label="操作" align="center" width="180">
           <template #default="scope">
             <div class="action-buttons">
-              <el-button type="primary" size="small" @click="edit(scope.row.id)">
-                <i class="fas fa-edit"></i>
-                编辑
-              </el-button>
-              <el-button type="danger" size="small" @click="deleteById(scope.row.id)">
-                <i class="fas fa-trash"></i>
-                删除
-              </el-button>
+              <span>
+                <el-button type="primary" size="small" @click="edit(scope.row.id)">
+                  <i class="fas fa-edit"></i>
+                  编辑
+                </el-button>
+                <el-button type="danger" size="small" @click="deleteById(scope.row.id)">
+                  <i class="fas fa-trash"></i>
+                  删除
+                </el-button>
+              </span>
+              <span style="width:  85%;">
+                <el-button v-if="scope.row.role == 2" align="center" type="info" size="small"
+                  @click="openStudentDialog(scope.row.id)">
+                  新增学生
+                </el-button>
+              </span>
             </div>
           </template>
         </el-table-column>
       </el-table>
 
       <div class="pagination-card">
-        <el-pagination 
-          v-model:current-page="currentPage" 
-          v-model:page-size="pageSize"
-          :page-sizes="[5, 10, 20, 50, 75, 100]" 
-          :background="background" 
-          layout="total, sizes, prev, pager, next, jumper"
-          :total="total" 
-          @size-change="handleSizeChange" 
-          @current-change="handleCurrentChange"
-          class="modern-pagination" />
+        <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize"
+          :page-sizes="[5, 10, 20, 50, 75, 100]" :background="background"
+          layout="total, sizes, prev, pager, next, jumper" :total="total" @size-change="handleSizeChange"
+          @current-change="handleCurrentChange" class="modern-pagination" />
       </div>
     </div>
 
-  
+    <el-dialog title="关联学生" v-model="studentDialogVisible" width="600px">
+
+      <el-table :data="allStudents" style="width: 100%" ref="studentTableRef" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55"></el-table-column>
+        <el-table-column prop="id" label="ID" width="80"></el-table-column>
+        <el-table-column prop="name" label="学生姓名"></el-table-column>
+      </el-table>
+
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="studentDialogVisible = false">取 消</el-button>
+          <el-button type="primary" @click="submitStudentSelection">确 定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
 
     <!-- 编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" class="modern-dialog">
@@ -504,14 +570,14 @@ const addUser = () => {
           </el-select>
         </el-form-item>
 
-                 <el-form-item label="角色" prop="role">
-           <el-select v-model="formUser.role" placeholder="请选择角色" clearable style="width: 100%">
-             <el-option v-for="r in formRoles" :key="r.value" :label="r.name" :value="r.value">
-               <i :class="r.value == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
-               {{ r.name }}
-             </el-option>
-           </el-select>
-         </el-form-item>
+        <el-form-item label="角色" prop="role">
+          <el-select v-model="formUser.role" placeholder="请选择角色" clearable style="width: 100%">
+            <el-option v-for="r in formRoles" :key="r.value" :label="r.name" :value="r.value">
+              <i :class="r.value == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
+              {{ r.name }}
+            </el-option>
+          </el-select>
+        </el-form-item>
 
         <el-form-item label="用户号" prop="identifier">
           <el-input v-model="formUser.identifier" placeholder="请输入用户号" clearable>
@@ -592,8 +658,8 @@ const addUser = () => {
 
 
 /* 覆盖分页按钮背景和边框 */
-.modern-pagination >>> .el-pager li,
-.modern-pagination >>> .el-pagination__sizes {
+.modern-pagination>>>.el-pager li,
+.modern-pagination>>>.el-pagination__sizes {
   background-color: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.3);
@@ -602,14 +668,14 @@ const addUser = () => {
 }
 
 /* 高亮页码 */
-.modern-pagination >>> .el-pager li.is-active {
+.modern-pagination>>>.el-pager li.is-active {
   background-color: #409eff !important;
   color: white !important;
   border: none;
 }
 
 /* hover 效果 */
-.modern-pagination >>> .el-pager li:hover {
+.modern-pagination>>>.el-pager li:hover {
   background-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -630,7 +696,8 @@ const addUser = () => {
 .type-icon {
   font-size: 18px;
   flex-shrink: 0;
-  color: #fff; /* 玻璃背景下字体亮色更清晰 */
+  color: #fff;
+  /* 玻璃背景下字体亮色更清晰 */
 }
 
 .name-text {
@@ -650,7 +717,8 @@ const addUser = () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap; /* 小屏换行用 */
+  flex-wrap: wrap;
+  /* 小屏换行用 */
   margin-top: 16px;
   gap: 12px;
 }
@@ -991,16 +1059,17 @@ const addUser = () => {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
   padding: 12px 16px;
 }
+
 .el-table th,
 .el-table td {
-  padding: 12px 16px !important; 
+  padding: 12px 16px !important;
   white-space: nowrap;
 }
 
 .el-table .cell {
   overflow: hidden;
   text-overflow: ellipsis;
-} 
+}
 
 /* 分页器 */
 .pagination-card {
@@ -1164,7 +1233,7 @@ const addUser = () => {
   .table-card {
     padding: 16px;
   }
-  
+
   .modern-table :deep(.el-table__body td),
   .modern-table :deep(.el-table__header th) {
     padding: 12px 8px;
@@ -1175,37 +1244,37 @@ const addUser = () => {
   .user-management {
     padding: 16px;
   }
-  
+
   .search-form {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .form-input,
   .form-select {
     min-width: auto;
     width: 100%;
   }
-  
+
   .action-card {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
-  
+
   .action-buttons {
     justify-content: center;
   }
-  
+
   .table-card {
     padding: 12px;
     overflow-x: auto;
   }
-  
+
   .modern-table {
     min-width: 700px;
   }
-  
+
   .modern-table :deep(.el-table__body td),
   .modern-table :deep(.el-table__header th) {
     padding: 10px 6px;
