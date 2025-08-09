@@ -506,7 +506,7 @@ const submitStudentSelection = async () => {
                   删除
                 </el-button>
               </span>
-              <span style="width:  85%;">
+              <span style="width:  100%;">
                 <el-button v-if="scope.row.role == 2" align="center" type="info" size="small"
                   @click="openStudentDialog(scope.row.id)">
                   <i class="fas fa-pen"></i>关联学生
