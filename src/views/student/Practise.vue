@@ -517,6 +517,7 @@ const fetchQuestionAnalysis = async (question) => {
               v-if="homework.status === 0" 
               class="student-button"
               @click="startHomework(homework)"
+              :disabled="dayjs().isAfter(dayjs(homework.homework_end_time))"
             >
               <i class="fas fa-edit"></i>
               开始作业
@@ -611,7 +612,7 @@ const fetchQuestionAnalysis = async (question) => {
               </div>
 
               
-              <div v-if="currentHomework.status === 2" class="question-score-display">
+              <!-- <div v-if="currentHomework.status === 2" class="question-score-display">
                 <span class="score-label">得分：</span>
                 <span class="score-value" :class="getScoreClass(question.score, question.totalScore)">
                   {{ question.score || 0 }}/{{ question.totalScore }}
@@ -619,7 +620,7 @@ const fetchQuestionAnalysis = async (question) => {
                 <span v-if="question.totalScore > 0" class="score-rate" :class="getScoreClass(question.score, question.totalScore)">
                   得分率：{{ Math.round(((question.score || 0) / question.totalScore) * 100) }}%
                 </span>
-              </div>
+              </div> -->
             </div>
           </div>
         </div>

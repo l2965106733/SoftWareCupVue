@@ -97,9 +97,7 @@ onMounted(async () => {
     
     // 并行获取所有数据
     await Promise.all([
-        fetchSystemStats(),
-        fetchSystemStatus(),
-        fetchRecentActivities()
+        fetchSystemStats()
     ])
 })
 

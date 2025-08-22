@@ -15,6 +15,7 @@ const formRoles = ref([{ name: '学生', value: 1 }, { name: '教师', value: 2 
 const user = ref([{
   id: '',              // 用户唯一ID
   username: '',          // 用户名
+  className: '',
   password: '',          // 加密后的密码
   name: '',              // 姓名
   gender: '',            // 性别，可为 '男' / '女' / ''
@@ -162,6 +163,7 @@ const formUser = ref({
   gender: '',
   role: '',
   identifier: '',
+  className: '',
   subject: ''
 })
 
@@ -313,7 +315,7 @@ const addUser = () => {
   }, 100);
 }
 
-const studentDialogVisible = ref(false);
+let studentDialogVisible = ref(false);
 const allStudents = ref([]);
 const relatedStudents = ref([]);
 const recentTeacherId = ref(null);
@@ -449,6 +451,15 @@ const submitStudentSelection = async () => {
           </template>
         </el-table-column>
 
+        <el-table-column prop="username" label="班级" align="center" min-width="80" show-overflow-tooltip
+          style="color:black">
+          <template #default="scope">
+            <div>
+              {{ scope.row.className }}
+            </div>
+          </template>
+        </el-table-column>
+
         <!-- 姓名 -->
         <el-table-column prop="name" label="姓名" align="center" min-width="80" show-overflow-tooltip style="color:black">
           <template #default="scope">
@@ -506,12 +517,7 @@ const submitStudentSelection = async () => {
                   删除
                 </el-button>
               </span>
-              <span style="width:  100%;">
-                <el-button v-if="scope.row.role == 2" align="center" type="info" size="small"
-                  @click="openStudentDialog(scope.row.id)">
-                  <i class="fas fa-pen"></i>关联学生
-                </el-button>
-              </span>
+              
             </div>
           </template>
         </el-table-column>
@@ -587,6 +593,20 @@ const submitStudentSelection = async () => {
           </el-input>
         </el-form-item>
 
+        <el-form-item label="用户号" prop="identifier">
+          <el-input v-model="formUser.className" placeholder="请输入用户号" clearable>
+            <template #prefix>
+              <i class="fas fa-id-card"></i>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-button v-if="formUser.role == 2" align="center" type="info" size="small"
+            @click="openStudentDialog(formUser.id)">
+            <i class="fas fa-pen"></i>关联学生
+        </el-button>
+
+
       </el-form>
 
       <template #footer>
@@ -595,7 +615,7 @@ const submitStudentSelection = async () => {
             <i class="fas fa-times"></i>
             取消
           </el-button>
-          <el-button type="primary" @click="save" :loading="saveLoading" class="confirm-btn">
+          <el-button type="primary" @click="save()" :loading="saveLoading" class="confirm-btn">
             <i class="fas fa-check" v-if="!saveLoading"></i>
             {{ saveLoading ? '保存中...' : '确认' }}
           </el-button>

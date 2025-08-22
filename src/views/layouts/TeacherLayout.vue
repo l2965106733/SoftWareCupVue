@@ -11,6 +11,7 @@ onMounted(() => {
     const loginUser = JSON.parse(localStorage.getItem('loginUser'));
     if (loginUser && loginUser.name) {
         loginName.value = loginUser.name;
+        
     }
 });
 
@@ -48,29 +49,7 @@ const logOut = () => {
                         教师教学系统
                     </h1>
                 </div>
-                <div class="header-right">
-                    <div class="user-info">
-                        <span class="welcome-text">欢迎，{{ loginName }}</span>
-                        <div class="user-actions">
-                            <button class="action-btn" @click="reset">
-                                <i class="fas fa-key"></i>
-                                修改密码
-                            </button>
-                            <button class="action-btn logout-btn" @click="logOut">
-                                <i class="fas fa-sign-out-alt"></i>
-                                退出登录
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <div class="main-container">
-            <!-- 现代化侧边栏 -->
-            <aside class="modern-sidebar">
-                <nav class="nav-menu">
-                    <router-link to="/teacher/home" class="nav-item" active-class="active">
+                <router-link to="/teacher/home" class="nav-item" active-class="active">
                         <i class="fas fa-home nav-icon"></i>
                         <span class="nav-text">首页</span>
                     </router-link>
@@ -90,9 +69,25 @@ const logOut = () => {
                         <i class="fas fa-chart-bar nav-icon"></i>
                         <span class="nav-text">数据分析</span>
                     </router-link>
-                </nav>
-            </aside>
+                <div class="header-right">
+                    <div class="user-info">
+                        <span class="welcome-text">欢迎，教师 {{ loginName }}</span>
+                        <div class="user-actions">
+                            <button class="action-btn" @click="reset">
+                                <i class="fas fa-key"></i>
+                                修改密码
+                            </button>
+                            <button class="action-btn logout-btn" @click="logOut">
+                                <i class="fas fa-sign-out-alt"></i>
+                                退出登录
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
+        <div class="main-container">
             <!-- 主内容区域 -->
             <main class="main-content">
                 <div class="content-wrapper">
@@ -156,7 +151,7 @@ const logOut = () => {
 
 .system-title {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 540;
     color: #fff;
     margin: 0;
     display: flex;

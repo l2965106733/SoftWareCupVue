@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed,nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTeachingPlanApi, uploadResourceApi, getResourceListApi, deleteResourceApi, updateResourceApi } from '@/api/teacher'
 import axios from 'axios'
@@ -82,24 +82,59 @@ const getFileType = (fileName) => {
   }
   return typeMap[ext] || 'other'
 }
+
+const showVideoDialog = ref(false)
+const videoUrl = ref('')
+const videoRef = ref(null)
+
+
+const openVideo = (u) => {
+  videoUrl.value = u
+  showVideoDialog.value = true
+  nextTick(() => {
+    const el = videoRef.value
+    if (!el) return
+    el.src = u
+    // 自动播放可能被拦截，不强求
+    el.play().catch(() => {})
+  })
+}
+
+const closeVideo = () => {
+  const el = videoRef.value
+  if (el) {
+    el.pause()
+    el.removeAttribute('src') // 释放资源
+    el.load()
+  }
+}
+
 const handlePreview = (file) => {
   if (!file.url) return ElMessage.warning('文件未就绪')
-  const url = file.url.toLowerCase()
+  const raw = file.url
+  const pathname = (u => { try { return new URL(u).pathname.toLowerCase() } catch { return String(u).split(/[?#]/)[0].toLowerCase() } })(raw)
 
+  // Office
   if (
-    url.endsWith('.doc') || url.endsWith('.docx') ||
-    url.endsWith('.ppt') || url.endsWith('.pptx') ||
-    url.endsWith('.xls') || url.endsWith('.xlsx')
+    pathname.endsWith('.doc') || pathname.endsWith('.docx') ||
+    pathname.endsWith('.ppt') || pathname.endsWith('.pptx') ||
+    pathname.endsWith('.xls') || pathname.endsWith('.xlsx')
   ) {
-    const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(url)}`
+    const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(raw)}`
     window.open(officeUrl, '_blank')
-  } else if (
-    url.endsWith('.pdf')
-  ) {
-    const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
+
+  // PDF
+  } else if (pathname.endsWith('.pdf')) {
+    const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(raw)}&embedded=true`
     window.open(pdfUrl, '_blank')
-  }else {
-    window.open(url, '_blank')
+
+  // 当前页弹窗播放（仅 .mp4 / .mov）
+  } else if (pathname.endsWith('.mp4') || pathname.endsWith('.mov')) {
+    openVideo(raw)
+
+  // 其它直开
+  } else {
+    window.open(raw, '_blank')
   }
 }
 
@@ -347,6 +382,24 @@ onMounted(() => {
 
 
 <template>
+    <el-dialog
+      v-model="showVideoDialog"
+      title="视频预览"
+      width="80%"
+      align-center
+      destroy-on-close
+      @close="closeVideo"
+    >
+      <video
+        ref="videoRef"
+        controls
+        playsinline
+        preload="metadata"
+        style="width:100%;max-height:70vh;background:#000;outline:none"
+        controlslist="nodownload noplaybackrate"
+      ></video>
+    </el-dialog>
+
   <div class="lesson-plan-container vertical-layout">
 
     <div class="top-toolbar">

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, getQuestionApi, getStudyRecordsApi } from '@/api/student'
+import { getCoursewareListApi, getStudyStatsApi, recordStudyBehaviorApi, getQuestionApi, getStudyRecordsApi, getMistakesApi, getAIAdviceApi } from '@/api/student'
 
 // AI对话框相关
 const showAIDialogVisible = ref(false)
@@ -18,6 +18,7 @@ const aiFormData = ref({
   count: 3,
   remark: ''
 })
+
 
 // 显示AI对话框
 const showAIDialog = () => {
@@ -54,10 +55,10 @@ const handleAIGenerate = async () => {
     const result = await getQuestionApi(aiFormData.value)
     if (result.code === 1 && Array.isArray(result.data)) {
       // AI生成的题目给临时ID，并自动设置分值
-      
+
       questions.value = result.data.map(q => ({
-      ...q,
-      id: tempIdCounter.value-- // 每次生成一个唯一负数 ID
+        ...q,
+        id: tempIdCounter.value-- // 每次生成一个唯一负数 ID
       }))
       ElMessage.success(`AI成功生成了${aiFormData.value.count}道题目！`)
     } else {
@@ -101,11 +102,11 @@ const todayStudyTime = ref(0)      // 今日学习时长（分钟）
 
 // 学习统计数据
 const studyStats = ref([
-    { label: '课件总数', value: '0', icon: 'fas fa-folder', color: '#667eea' },
-    { label: '已学习', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
-    // { label: 'AI提问数', value: '0', icon: 'fas fa-robot', color: '#4facfe' },
-    { label: '总学习时长', value: '0分钟', icon: 'fas fa-clock', color: '#26d0ce' },
-    { label: '今日学习', value: '0分钟', icon: 'fas fa-calendar-day', color: '#ffd700' }
+  { label: '课件总数', value: '0', icon: 'fas fa-folder', color: '#667eea' },
+  { label: '已学习', value: '0', icon: 'fas fa-check-circle', color: '#f5576c' },
+  // { label: 'AI提问数', value: '0', icon: 'fas fa-robot', color: '#4facfe' },
+  { label: '总学习时长', value: '0分钟', icon: 'fas fa-clock', color: '#26d0ce' },
+  { label: '今日学习', value: '0分钟', icon: 'fas fa-calendar-day', color: '#ffd700' }
 ])
 
 // 学习统计详情对话框
@@ -117,6 +118,7 @@ const knowledgeStats = ref([])
 
 // 学习时长趋势图数据
 import { getStudyTimeTrendApi } from '@/api/student'
+import { registerAction } from 'echarts'
 const trendOption = ref({})
 const trendChartVisible = ref(false)
 
@@ -323,9 +325,11 @@ const handlePreview = async (courseware) => {
     // 监听窗口关闭事件
     const studyWindow = window.open(officeUrl, '_blank')
     monitorStudyWindow(studyWindow, resourceId)
-  } else if (
-    url.endsWith('.pdf')
-  ) {
+  } else if (url.endsWith('.mp4') || url.endsWith('.mov')) {
+    currentVideoResourceId = resourceId
+    openVideo(url)
+  }
+  else if (url.endsWith('.pdf')) {
     const pdfUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`
     const studyWindow = window.open(pdfUrl, '_blank')
     monitorStudyWindow(studyWindow, resourceId)
@@ -452,7 +456,6 @@ const loadCoursewareList = async () => {
 
         lastStudyTime: item.last_study_time || item.lastStudyTime || '暂无'       // 最后学习时间
       }))
-
       console.log('课件列表加载成功:', coursewareList.value) // 调试日志
     } else {
       console.log('课件列表API响应:', result)
@@ -593,12 +596,14 @@ onBeforeUnmount(() => {
 
 
 const getParsedQuestion = (content) => {
-  const [questionText, ...options] = content.split(/(?=A\.)/); // 从 A. 开始截断
+  // 按选项正则分割，保留题干
+  const [questionText, ...opts] = content.split(/(?=[A-D]\.)/);
+
   return {
-    text: questionText.trim(),
-    options: options.join('').trim().split(/(?=[A-D]\.)/),
+    text: questionText.trim(), // 题干
+    options: opts.map(o => o.trim()).filter(Boolean), // 去掉空项
   };
-}
+};
 // watch(
 //   () => q.content,
 //   (newContent) => {
@@ -610,9 +615,157 @@ const getParsedQuestion = (content) => {
 //   },
 //   { immediate: true }
 // );
+const showVideoDialog = ref(false)
+const videoUrl = ref('')
+const videoRef = ref(null)
+
+let currentVideoResourceId = ref(null)
+
+const openVideo = (u) => {
+  videoUrl.value = u
+  showVideoDialog.value = true
+  nextTick(() => {
+    const el = videoRef.value
+    if (!el) return
+    el.src = u
+    // 自动播放可能被拦截，不强求
+    el.play().catch(() => { })
+  })
+}
+
+
+const closeVideo = () => {
+  const el = videoRef?.value
+  if (el) {
+    try { el.pause() } catch (_) { }
+    el.removeAttribute?.('src')
+    el.load?.()
+  }
+
+  if (!currentVideoResourceId) return
+
+  // 与 monitorStudyWindow 行为一致：仅停计时
+  if (typeof stopStudyTimer === 'function') {
+    stopStudyTimer(currentVideoResourceId)
+  }
+  currentVideoResourceId = null
+  ElMessage.info('学习窗口已关闭，学习时长已记录')
+}
+
+
+const showTrueAnswerFlag = ref({})
+
+const showTrueAnswer = (id) => {
+  showTrueAnswerFlag.value[id] = !showTrueAnswerFlag.value[id]
+}
+
+const getQuestionTypeColor = (type) => {
+  const colors = {
+    choice: 'primary',
+    short: 'success',
+    code: 'warning'
+  }
+  return colors[type] || 'info'
+}
+const getQuestionTypeName = (type) => {
+  const names = {
+    choice: '选择题',
+    short: '简答题',
+    code: '编程题'
+  }
+  return names[type] || '未知'
+}
+
+const showMistakesFlag = ref(false);
+const showMistakes = async () => {
+  showMistakesFlag.value = true;
+  const studentId = getCurrentStudentId()
+  const res = await getMistakesApi(studentId);
+  if (res.code === 1 && Array.isArray(res.data)) {
+    mistakes.value = res.data;
+    console.log('错题本数据:', mistakes.value);
+  } else {
+    ElMessage.error(res.msg || '获取错题本失败');
+  }
+};
+
+const mistakes = ref([]);
+const AiAdvice = ref("建议:加强学习");
+const AiAdviceFlag = ref(true);
+const showAiAdvice = async () => {
+  AiAdviceFlag.value = true;
+  AiAdvice.value = (await getAIAdviceApi()).data;
+};
 </script>
 
 <template>
+  <el-dialog v-model="showVideoDialog" align-center title="视频预览" width="80%" destroy-on-close @close="closeVideo">
+    <video ref="videoRef" controls playsinline preload="metadata"
+      style="width:100%;max-height:70vh;background:#000;outline:none" controlslist="nodownload noplaybackrate"></video>
+  </el-dialog>
+
+  <el-dialog v-model="showMistakesFlag" title="错题本" width="80%" :close-on-click-modal="false">
+    <el-button class="ai-advice-btn" @click="showAiAdvice">
+      <i class="fas fa-eye"></i>
+      AI建议
+    </el-button>
+    <div v-if="AiAdviceFlag" class="ai-advice-box">
+      <span>{{ AiAdvice }}</span>
+    </div>
+
+    <div class="homework-detail">
+      <div class="questions-container">
+        <div v-for="(question, index) in mistakes" :key="question.id" class="question-item">
+          <div class="question-header">
+            <span class="question-number">第{{ index + 1 }}题</span>
+            <el-tag :type="getQuestionTypeColor(question.type)" size="small">
+              {{ getQuestionTypeName(question.type) }}
+            </el-tag>
+            <span class="question-score">{{ question.studentScore }}/{{ question.score }}分</span>
+          </div>
+
+          <div class="question-content">
+            <p>{{ question.content }}</p>
+          </div>
+
+          <div class="answer-section">
+            <div class="text-answer">
+              <div class="question-section question-answer">
+                <strong>个人答案：</strong>
+                <div>{{ question.studentAnswer || '暂无' }}</div>
+              </div>
+            </div>
+
+            <div class="question-score-display">
+
+              <div class="question-section question-answer">
+                <strong>标准答案：</strong>
+                <div>{{ question.standardAnswer || '暂无' }}</div>
+              </div>
+
+              <div class="question-section question-analysis">
+                <strong>解析：</strong>
+                <div>{{ question.explain || '暂无' }}</div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- <template #footer>
+      <div class="dialog-footer">
+        <el-button @click="showMistakesFlag = false">关闭</el-button>
+    
+        <el-button type="success">
+          AI建议
+        </el-button>
+      </div>
+    </template> -->
+  </el-dialog>
+
   <div class="student-container">
     <!-- 页面标题 -->
     <div class="student-section">
@@ -687,11 +840,7 @@ const getParsedQuestion = (content) => {
         课程课件
       </h2>
       <div class="student-grid auto-fit">
-        <div
-          v-for="courseware in coursewareList"
-          :key="courseware.id"
-          class="student-card courseware-card"
-        >
+        <div v-for="courseware in coursewareList" :key="courseware.id" class="student-card courseware-card">
           <div class="courseware-header">
             <div class="file-icon">
               <i v-if="courseware.type === 'pdf'" class="fas fa-file-pdf"></i>
@@ -729,11 +878,35 @@ const getParsedQuestion = (content) => {
       </div>
     </div>
 
+    <!-- 错题本 -->
+    <div class="student-section">
+      <h2 class="student-title medium">
+        <i class="fas fa-robot"></i>
+        错题本
+      </h2>
+      <div class="student-card ai-card">
+        <div class="ai-header">
+          <div class="ai-title">
+            <i class="fas fa-magic"></i>
+            错题集
+          </div>
+          <button class="student-button" @click="showMistakes">
+            <i class="fas fa-plus"></i>
+            查看错题
+          </button>
+        </div>
+        <div class="ai-content">
+          <p class="student-text secondary">查看过往错题，并向AI寻求改进意见</p>
+        </div>
+      </div>
+
+    </div>
+
     <!-- AI题目生成区域 -->
     <div class="student-section">
       <h2 class="student-title medium">
         <i class="fas fa-robot"></i>
-        AI题目生成
+        AI练习
       </h2>
       <div class="student-card ai-card">
         <div class="ai-header">
@@ -754,19 +927,16 @@ const getParsedQuestion = (content) => {
 
 
       <div class="question-display-wrapper">
-        <div
-          class="question-display-card"
-          v-for="(q, index) in questions"
-          :key="q.id"
-        >
+        <div class="question-display-card" v-for="(q, index) in questions" :key="q.id">
           <div class="question-top">
             <h4 class="question-title">题目 {{ index + 1 }}</h4>
-              <el-tag :type="getTypeColor(q.type)" size="small" class="question-tag" style="margin-left: 10px;">
-                {{ getTypeName(q.type) }}
-              </el-tag>
-              <el-button :type="getTypeColor(q.type)" size="small" class="question-tag" style=" margin-left: auto; color: red; font-weight: 400;"  @click="removeQuestion(q.id) ">
-               删除 
-              </el-button>
+            <el-tag :type="getTypeColor(q.type)" size="small" class="question-tag" style="margin-left: 10px;">
+              {{ getTypeName(q.type) }}
+            </el-tag>
+            <el-button :type="getTypeColor(q.type)" size="small" class="question-tag"
+              style=" margin-left: auto; color: red; font-weight: 400;" @click="removeQuestion(q.id)">
+              删除
+            </el-button>
           </div>
 
           <div class="question-inner-content glass-box">
@@ -777,7 +947,7 @@ const getParsedQuestion = (content) => {
                 <li v-for="(opt, idx) in getParsedQuestion(q.content).options" :key="idx">{{ opt }}</li>
               </ul>
             </div>
-            <div class="question-content" v-else >{{ q.content }}</div>
+            <div class="question-content" v-else>{{ q.content }}</div>
 
 
             <div class="question-meta">
@@ -785,12 +955,18 @@ const getParsedQuestion = (content) => {
               <span class="value">{{ q.knowledge }}</span>
             </div>
 
-            <div class="question-answer-block" v-if="q.answer">
+            <div class="question-meta">
+              <el-button type="primary" size="small" @click="showTrueAnswer(q.id)">
+                {{ showTrueAnswerFlag[q.id] ? '隐藏答案' : '显示答案' }}
+              </el-button>
+            </div>
+
+            <div class="question-answer-block" v-show="showTrueAnswerFlag[q.id] && q.answer">
               <span class="label" style="margin-left: 6px;">参考答案：</span>
               <div class="glass-answer">{{ q.answer }}</div>
             </div>
 
-            <div class="question-explain-block glass-box" v-if="q.explain">
+            <div class="question-explain-block glass-box" v-show="showTrueAnswerFlag[q.id] && q.explain">
               <span class="label">解析：</span>
               <div class="explain-text">{{ q.explain }}</div>
             </div>
@@ -840,6 +1016,7 @@ const getParsedQuestion = (content) => {
         <el-form-item label="知识点" prop="knowledge" required>
           <el-input v-model="aiFormData.knowledge" placeholder="请输入知识点，如：Java基础语法" />
         </el-form-item>
+
         <el-form-item label="题目类型" prop="type" required>
           <el-select v-model="aiFormData.type" placeholder="请选择题目类型" style="width: 100%">
             <el-option label="选择题" value="choice" />
@@ -847,9 +1024,11 @@ const getParsedQuestion = (content) => {
             <el-option label="编程题" value="code" />
           </el-select>
         </el-form-item>
+
         <el-form-item label="题目数量" prop="count">
           <el-input-number v-model="aiFormData.count" :min="1" :max="10" />
         </el-form-item>
+
         <el-form-item label="备注" prop="remark">
           <el-input v-model="aiFormData.remark" type="textarea" placeholder="可选：对题目的特殊要求" />
         </el-form-item>
@@ -865,6 +1044,35 @@ const getParsedQuestion = (content) => {
 </template>
 
 <style scoped>
+.ai-advice-btn {
+  margin-bottom: 10px;
+  background: #409eff;      /* 蓝色主调 */
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+.ai-advice-btn:hover {
+  background: #66b1ff;
+}
+
+/* 建议卡片样式 */
+.ai-advice-box {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #e8f4ff;   /* 浅蓝底（和个人答案的浅蓝区区别开） */
+  border-left: 4px solid #409eff;
+  border-radius: 4px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ai-advice-box strong {
+  color: #409eff;   /* 标题蓝色加粗 */
+  margin-right: 6px;
+}
+
 .question-display {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(16px);
@@ -928,7 +1136,7 @@ const getParsedQuestion = (content) => {
 .question-tag {
   font-weight: 100;
   background: rgba(255, 255, 255, 0.25);
-  border: none; 
+  border: none;
   color: white;
   font-size: 15px;
   padding: 2px 10px;
@@ -1056,8 +1264,15 @@ const getParsedQuestion = (content) => {
 }
 
 @keyframes icon-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .stat-content {
@@ -1098,6 +1313,7 @@ const getParsedQuestion = (content) => {
     flex-wrap: wrap;
     gap: 12px;
   }
+
   .stat-row .stat-card {
     min-width: 140px;
     max-width: 100%;
@@ -1265,6 +1481,7 @@ const getParsedQuestion = (content) => {
   background: var(--gradient-secondary);
 }
 
+
 /* 统计详情对话框样式 */
 .stats-detail {
   max-height: 600px;
@@ -1343,36 +1560,169 @@ const getParsedQuestion = (content) => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
+
   .timer-header,
   .ai-header {
     flex-direction: column;
     gap: 12px;
     align-items: stretch;
   }
-  
+
   .timer-actions {
     flex-direction: column;
   }
-  
+
   .courseware-actions {
     flex-direction: column;
   }
-  
+
   .today-stats {
     grid-template-columns: 1fr;
   }
 }
-.student-section > .student-title.medium {
+
+.student-section>.student-title.medium {
   font-size: clamp(18px, 4vw, 24px);
   margin-bottom: 32px !important;
 }
 
-.student-section > .student-title.medium + .student-grid.three-columns {
+.student-section>.student-title.medium+.student-grid.three-columns {
   margin-top: 32px !important;
 }
 
 /* 针对作业模块标题（假设为“作业”或“作业统计”）增加间距 */
-.student-section > .student-title.homework {
+.student-section>.student-title.homework {
   margin-bottom: 24px;
+}
+
+
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  /* 默认背景 */
+}
+
+.question-explain {
+  background-color: #fdf6ec;
+  /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
+}
+
+.question-answer {
+  background-color: #ecf5ff;
+  /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
+}
+
+.question-analysis {
+  background-color: #f0f9eb;
+  /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+
+
+/* 作业详情对话框样式 */
+.homework-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.homework-info-panel {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.homework-info-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.questions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.question-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.question-score {
+  margin-left: auto;
+  color: #666;
+  font-size: 14px;
+}
+
+.question-content {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.submitted-answer {
+  margin-top: 16px;
+  padding: 12px;
+  background: #e8f4fd;
+  border-radius: 6px;
+}
+
+.submitted-answer h5 {
+  margin: 0 0 8px 0;
+  color: #409eff;
+}
+
+.answer-content {
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.question-score-display {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.score-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.score-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 8px;
 }
 </style>

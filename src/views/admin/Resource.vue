@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted,nextTick } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   getAllResourcesApi, 
@@ -168,6 +168,32 @@ const getTypeColor = (type) => {
   return colors[type] || '#909399'
 }
 
+const showVideoDialog = ref(false)
+const videoUrl = ref('')
+const videoRef = ref(null)
+
+const openVideo = (u) => {
+  videoUrl.value = u
+  showVideoDialog.value = true
+  nextTick(() => {
+    const el = videoRef.value
+    if (!el) return
+    el.src = u
+    // 自动播放可能被拦截，不强求
+    el.play().catch(() => {})
+  })
+}
+
+const closeVideo = () => {
+  const el = videoRef.value
+  if (el) {
+    el.pause()
+    el.removeAttribute('src') // 释放资源
+    el.load()
+  }
+}
+
+
 const handlePreview = (resource) => {
   if (!resource.resourceUrl) {
     ElMessage.warning('文件链接不存在')
@@ -187,7 +213,11 @@ const handlePreview = (resource) => {
   ) {
     const officeUrl = `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(resource.resourceUrl)}`
     window.open(officeUrl, '_blank')
-  } else {
+  } else if (url.endsWith('.mp4') || url.endsWith('.mov')) {
+    openVideo(url)
+  }
+
+  else {
     window.open(resource.resourceUrl, '_blank')
   }
 }
@@ -400,6 +430,24 @@ onMounted(() => {
 </script>
 
 <template>
+<el-dialog
+      v-model="showVideoDialog"
+      title="视频预览"
+      width="80%"
+      align-center
+      destroy-on-close
+      @close="closeVideo"
+    >
+      <video
+        ref="videoRef"
+        controls
+        playsinline
+        preload="metadata"
+        style="width:100%;max-height:70vh;background:#000;outline:none"
+        controlslist="nodownload noplaybackrate"
+      ></video>
+    </el-dialog>
+
   <div class="admin-resource-container">
     <!-- 页面标题和统计概览 -->
     <div class="header-section">

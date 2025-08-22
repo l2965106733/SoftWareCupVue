@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
-import { ElMessage } from 'element-plus'
-import { getAiQuestionHistoryApi, getChatApi, recordAiQuestionApi, } from '@/api/student'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { getAiQuestionHistoryApi, getChatApi, recordAiQuestionApi, getChatListApi, getChatDetailByIdApi, getChatNameApi, setChatNameApi, deleteChatApi } from '@/api/student'
 
 
 // AI聊天相关
@@ -185,7 +185,9 @@ const sendMessage = async () => {
           await recordAiQuestionApi({
             studentId: studentId,
             questionContent: userMessage.content,
-            answer: result.data  // 使用纯文本答案测问题分类
+            answer: result.data,  // 使用纯文本答案测问题分类
+            chatId: activeId.value,  // 使用当前聊天ID
+            chatName: renameInput.value || '未命名对话' // 聊天名称
           })
         }
       } catch (error) {
@@ -246,17 +248,141 @@ const loadChatHistory = async () => {
   }
 }
 
+const loadChatList = async () => {
+  try {
+    const loginUser = JSON.parse(localStorage.getItem('loginUser'))
+    const res = await getChatListApi(loginUser.id)
+    chatList.value = res.data
+    if (chatList.value.length > 0) {
+      activeId.value = chatList.value[0].chatId
+      chatId.value = chatList.value[0].chatId; // 初始化聊天ID
+      // renameInput.value = chatList.value[0].chatName;
+    }
+  } catch (error) {
+    console.error('加载聊天列表失败:', error)
+  }
+}
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
   console.log('学生学习模块初始化')
   loadChatHistory() // 加载AI聊天历史
   scrollToBottom()
+  loadChatList() // 加载聊天列表
 })
 
+const chatId = ref(1)          // 临时本地自增（真实项目建议后端生成）
+const chatList = ref([])
+const activeId = ref('')       // 始终用字符串
+
+
+const handleSelect = async (id) => {
+  activeId.value = id
+  try {
+    const res = await getChatDetailByIdApi(id)
+    renameInput.value = (await getChatNameApi(id)).data;
+    if (res.code === 1 && Array.isArray(res.data)) {
+      const history = []
+      // 拆分为两条消息（用户问题 + AI 回复）
+      res.data.forEach(item => {
+        history.push({
+          id: `q_${item.id}`,
+          sender: 'user',
+          type: 'user-question',
+          content: item.questionContent,
+          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        })
+        history.push({
+          id: `a_${item.id}`,
+          sender: 'ai',
+          type: 'ai-reply',
+          content: item.answer,
+          time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        })
+      })
+      // 保留开场白+历史
+      chatHistory.value = [chatHistory.value[0], ...history]
+      await nextTick()
+      scrollToBottom()
+    } else {
+      ElMessage.error('加载聊天记录失败，请稍后再试')
+    }
+  } catch (e) {
+    ElMessage.error('网络异常，请稍后再试')
+  }
+}
+const maxChatId = ref(0)
+
+const createNewChat = () => {
+  maxChatId.value = Math.max(...chatList.value.map(c => Number(c.chatId)), 0);
+
+  const newChat = {
+    chatId: String(++maxChatId.value),
+    chatName: '新聊天' + String(++maxChatId.value)
+  }
+  renameInput.value = newChat.chatName; // 初始化重命名输入框
+  console.log(renameInput.value);
+  chatList.value.unshift(newChat)
+
+  activeId.value = newChat.chatId     // << 已是字符串
+
+  // 可选：这里也可直接清空历史或给欢迎语
+  chatHistory.value = [{
+    id: 'welcome',
+    sender: 'ai',
+    type: 'ai-reply',
+    content: '你好！我是你的AI学习助手，可以帮你解答学习中的各种问题。',
+    time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  }]
+}
+
+const reChatNameFlag = ref(false)
+const tempChatId = ref('')
+const renameInput = ref('')
+
+const handleRename = async (chat) => {
+  reChatNameFlag.value = true;
+  tempChatId.value = chat.chatId;
+  renameInput.value = (await getChatNameApi(chat.chatId)).data;
+}
+
+
+const confirmRename = async () => {
+  await setChatNameApi(tempChatId.value, renameInput.value);
+  reChatNameFlag.value = false;
+  const loginUser = JSON.parse(localStorage.getItem('loginUser'));
+  const res = await getChatListApi(loginUser.id);
+  chatList.value = res.data;
+}
+
+const handleRemove = () => {
+  ElMessageBox.confirm('确定要删除此对话吗？', '提示', {
+    confirmButtonText: '删除',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    // 删除逻辑
+    const res = await deleteChatApi(activeId.value)
+    if (res.code == 1) {
+      ElMessage.success('对话已删除')
+    }
+    // 从列表中移除
+    chatList.value = chatList.value.filter(chat => chat.chatId !== activeId.value)
+  }).catch(() => {
+    ElMessage.info('已取消删除')
+  })
+}
 </script>
 
 <template>
+  <el-dialog v-model="reChatNameFlag" title="重命名对话" width="360px">
+    <el-input v-model="renameInput" placeholder="请输入新的名称" />
+    <template #footer>
+      <el-button @click="reChatNameFlag = false">取消</el-button>
+      <el-button type="primary" @click="confirmRename">确定</el-button>
+    </template>
+  </el-dialog>
+
   <div class="student-container">
     <!-- 页面标题 -->
     <div class="student-section">
@@ -268,8 +394,8 @@ onMounted(() => {
     </div>
 
     <!-- AI聊天区域 -->
-    <div class="student-section">
-      <div class="student-card chat-card">
+    <div class="student-card chat-card">
+      <el-header>
         <div class="chat-header">
           <div class="chat-title">
             <i class="fas fa-comments"></i>
@@ -280,71 +406,90 @@ onMounted(() => {
             {{ aiTyping ? 'AI正在思考...' : 'AI在线' }}
           </div>
         </div>
+      </el-header>
+      <el-container style="height:100vh">
+        <!-- 左侧侧边栏 -->
+        <el-aside width="260px" class="glass-panel glass-aside">
+          <el-menu :default-active="String(activeId)" @select="handleSelect" class="chat-menu">
+            <el-menu-item v-for="chat in chatList" :key="chat.chatId" :index="String(chat.chatId)"
+              class="chat-menu-item" >
+              <span class="chat-name" style="font-size: 15px;">{{ chat.chatName || '未命名对话' }}</span>
+              <div class="chat-actions">
+                <el-button size="small" text type="danger" style="font-size: 13px; color: gray !important;"
+                  @click.stop="handleRemove(chat.chatId)">
+                  删除
+                </el-button>
+                <el-button size="small" text type="primary" style="font-size: 13px; color: gray !important;"
+                  @click.stop="handleRename(chat)">
+                  重命名
+                </el-button>
+              </div>
+            </el-menu-item>
+          </el-menu>
 
-        <div class="chat-container">
-          <div ref="chatMessages" class="chat-messages">
-            <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
-              <!-- 用户消息 -->
-              <div v-if="message.sender === 'user'" class="user-message">
-                <div class="message-content">
-                  {{ message.content }}
-                  <!-- 显示上传的文件信息 -->
-                  <div v-if="message.fileNames && message.fileNames.length > 0" class="message-files">
-                    <div class="files-indicator">
-                      <i class="fas fa-paperclip"></i>
-                      附件 ({{ message.fileNames.length }})
+          <div class="sidebar-footer">
+            <el-button type="primary" class="w-full" @click="createNewChat">新建对话</el-button>
+          </div>
+        </el-aside>
+
+        <!-- 右侧容器 -->
+        <el-container>
+
+          <!-- 主体 -->
+          <el-main style="padding:0;">
+            <div class="chat-card" style="display:flex; flex-direction:column;">
+              <!-- 消息区 -->
+              <div ref="chatMessages" class="chat-messages" style="flex:1; overflow-y:auto; padding:10px;">
+                <div v-for="message in chatHistory" :key="message.id" class="message-item" :class="message.sender">
+                  <!-- 用户消息 -->
+                  <div v-if="message.sender === 'user'" class="user-message">
+                    <div class="message-content">
+                      {{ message.content }}
+                      <!-- 附件 -->
+                      <div v-if="message.fileNames?.length > 0" class="message-files">
+                        <div class="files-indicator">
+                          <i class="fas fa-paperclip"></i> 附件 ({{ message.fileNames.length }})
+                        </div>
+                        <div class="file-names">
+                          <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
+                            {{ fileName }}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div class="file-names">
-                      <span v-for="fileName in message.fileNames" :key="fileName" class="file-name">
-                        {{ fileName }}
-                      </span>
+                    <div class="message-time">{{ message.time }}</div>
+                  </div>
+
+                  <!-- AI消息 -->
+                  <div v-else class="ai-message">
+                    <div class="message-content">{{ message.content }}</div>
+                    <div class="message-time">{{ message.time }}</div>
+                  </div>
+                </div>
+
+                <!-- AI正在输入 -->
+                <div v-if="aiTyping" class="message-item ai typing">
+                  <div class="ai-message">
+                    <div class="typing-indicator">
+                      <span></span><span></span><span></span>
                     </div>
                   </div>
                 </div>
-                <div class="message-time">{{ message.time }}</div>
               </div>
 
-              <!-- AI回复 -->
-              <div v-else class="ai-message">
-                <div class="message-content">{{ message.content }}</div>
-                <div class="message-time">{{ message.time }}</div>
-              </div>
-            </div>
+              <!-- 输入区 -->
+              <div class="chat-input" style="border-top:1px solid #eee;padding:10px;">
+                <div class="input-toolbar" style="margin-bottom:10px;">
+                  <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
+                    :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
+                    class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
+                    <el-button type="info" size="small" text style="color:gray">
+                      <el-icon>
+                        <Paperclip />
+                      </el-icon> 上传文件 (最多5个)
+                    </el-button>
+                  </el-upload>
 
-            <!-- AI正在输入 -->
-            <div v-if="aiTyping" class="message-item ai typing">
-              <div class="ai-message">
-                <div class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- 输入区域 -->
-          <div class="chat-input">
-
-            <div class="input-toolbar">
-              <el-upload v-model:file-list="selectedFiles" action="/api/upload" list-type="text"
-                :headers="uploadHeaders" :on-success="handleUploadSuccess" accept=".pdf,.docx" :limit="5" multiple
-                class="upload-demo" :show-file-list="false" :before-upload="beforeUpload">
-                <el-button type="info" size="small" text style="color:white">
-                  <el-icon>
-                    <Paperclip />
-                  </el-icon>
-                  上传文件 (最多5个)
-                </el-button>
-              </el-upload>
-
-              <div class="file-preview" v-if="selectedFiles.length > 0">
-                <div class="file-list-header">
-                  <span>已选择 {{ selectedFiles.length }} 个文件</span>
-                  <button class="clear-btn" @click="removeFile()">
-                    <i class="fas fa-trash"></i>
-                    清空全部
-                  </button>
                 </div>
                 <div class="file-list">
                   <div class="file-item" v-for="file in selectedFiles" :key="file.uid">
@@ -362,31 +507,146 @@ onMounted(() => {
                     </button>
                   </div>
                 </div>
+
+                <div class="message-input" style="display:flex;gap:10px;">
+                  <textarea v-model="inputMessage" class="message-textarea" placeholder="请输入您的问题..."
+                    @keydown.ctrl.enter="sendMessage" :disabled="sending" rows="3" style="flex:1;"></textarea>
+                  <button class="send-btn" @click="sendMessage"
+                    :disabled="sending || (!inputMessage.trim() && selectedFiles.length === 0)">
+                    <i class="fas fa-paper-plane"></i>
+                    {{ sending ? '发送中...' : '发送' }}
+                  </button>
+                </div>
               </div>
             </div>
+          </el-main>
+        </el-container>
+      </el-container>
 
-            <div class="message-input">
-              <textarea v-model="inputMessage" class="message-textarea" placeholder="请输入您的问题..."
-                @keydown.ctrl.enter="sendMessage" :disabled="sending" rows="3"></textarea>
-              <button class="send-btn" @click="sendMessage"
-                :disabled="sending || (!inputMessage.trim() && selectedFiles.length === 0)">
-                <i class="fas fa-paper-plane"></i>
-                {{ sending ? '发送中...' : '发送' }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>
 
 <style scoped>
+.glass-panel {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 10px 30px rgba(0, 20, 70, .18), inset 0 1px 0 rgba(255, 255, 255, .25);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  border-radius: 16px;
+}
+
+/* 侧栏容器 */
+.glass-aside {
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* 菜单自身透明+滚动 */
+.chat-menu {
+  --el-menu-bg-color: transparent;
+  --el-menu-active-color: #fff;
+  --el-menu-text-color: rgba(255, 255, 255, 0.95);
+  --el-menu-hover-bg-color: rgba(255, 255, 255, 0.12);
+  border-right: none;
+  background: transparent;
+  border-radius: 12px;
+  padding: 4px;
+  /* overflow: auto; max-height: calc(100vh - 140px); */
+}
+
+/* 单条会话 */
+.chat-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px !important;
+  border-radius: 10px;
+  margin: 6px;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.chat-menu-item:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+:deep(.el-menu-item.is-active) {
+  background: linear-gradient(135deg, rgba(255, 255, 255, .28), rgba(255, 255, 255, .16));
+  box-shadow: 0 8px 20px rgba(0, 60, 200, .18);
+}
+
+.chat-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* 按钮做成玻璃态文本按钮 */
+:deep(.el-button.is-text),
+:deep(.el-button.is-link) {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+
+:deep(.el-button.is-text:hover),
+:deep(.el-button.is-link:hover) {
+  background: rgba(255, 255, 255, 0.26);
+  transform: translateY(-1px);
+  transition: all .15s ease;
+}
+
+/* 底部按钮 */
+.sidebar-footer {
+  padding: 8px 8px 0;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.sidebar-footer .el-button {
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4aa3ff, #3b82f6);
+  border: none;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(59, 130, 246, .35);
+}
+
+.sidebar-footer .el-button:hover {
+  filter: brightness(1.08);
+}
+
+/* 滚动条优化 */
+.chat-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-menu::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+}
+
 /* 聊天卡片样式 */
 .chat-card {
   padding: 0;
   overflow: hidden;
-  height: 90vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -396,7 +656,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  background: var(--student-glass);
+  /* background: var(--student-glass); */
   border-bottom: 1px solid var(--student-glass-border);
 }
 

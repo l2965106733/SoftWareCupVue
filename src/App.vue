@@ -33,12 +33,14 @@ const currentSystem = computed(() => {
 <template>
   <div id="app" :class="{ 'no-scroll': disableScroll, [`system-${currentSystem}`]: true }">
     <!-- 全局页眉 - 只在登录相关页面显示 -->
-    <header v-if="showHeader" class="global-header">
+    <!-- <header v-if="showHeader" class="global-header">
       <div class="header-content">
         <div class="header-left">
           <h1 class="system-title">
-            <i class="fas fa-graduation-cap title-icon"></i>
-            欢迎使用教学实训智能体软件
+            <div>
+              <img src="@/assets/publicIcon.png" alt="示例图片" style="width: 80px;" />
+            </div>
+            欢迎使用智学苏云
           </h1>
         </div>
         <div class="header-right">
@@ -48,7 +50,7 @@ const currentSystem = computed(() => {
           </div>
         </div>
       </div>
-    </header>
+    </header> -->
 
     <!-- 主要内容区域 -->
     <main class="main-content" :class="{ 'with-header': showHeader, 'no-scroll': disableScroll }">
@@ -78,17 +80,19 @@ const currentSystem = computed(() => {
 
 /* 学生系统背景 */
 #app.system-student {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
+  background: rgb(93, 93, 209)
 }
 
 /* 教师系统背景 */
 #app.system-teacher {
-  background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a855f7 100%);
+  /* background: linear-gradient(135deg, #8e64cd 0%, #8953e5 50%, #a855f7 100%); */
+  background: rgb(93, 93, 209)
 }
 
 /* 管理员系统背景 */
 #app.system-admin {
-  background: linear-gradient(135deg, #be123c 0%, #e11d48 50%, #f43f5e 100%);
+  /* background: linear-gradient(135deg, #df3e66 0%, #df3e61 50%, #ec7085 100%); */
+  background: rgb(93, 93, 209)
 }
 
 /* 禁用滚动的样式 */
@@ -141,7 +145,7 @@ const currentSystem = computed(() => {
 .system-title {
   font-size: 24px;
   font-weight: 700;
-  color: #fff;
+  /* color: #fff; */
   margin: 0;
   display: flex;
   align-items: center;
@@ -189,7 +193,7 @@ const currentSystem = computed(() => {
 .startup-text {
   font-size: 18px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  /* color: rgba(255, 255, 255, 0.9); */
   display: flex;
   align-items: center;
   animation: startup-pulse 2s ease-in-out infinite;

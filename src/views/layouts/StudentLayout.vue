@@ -5,12 +5,14 @@ import { useRouter } from 'vue-router';
 
 const router = useRouter();
 const loginName = ref('');
+const className = ref('');
 
 onMounted(() => {
     // 从localStorage中获取登录用户信息
     const loginUser = JSON.parse(localStorage.getItem('loginUser'));
     if (loginUser && loginUser.name) {
         loginName.value = loginUser.name;
+        className.value = loginUser.className || '未知班级';
     }
 });
 
@@ -48,28 +50,8 @@ const logOut = () => {
                         学生学习系统
                     </h1>
                 </div>
-                <div class="header-right">
-                    <div class="user-info">
-                        <span class="welcome-text">欢迎，{{ loginName }}</span>
-                        <div class="user-actions">
-                            <button class="action-btn" @click="reset">
-                                <i class="fas fa-key"></i>
-                                修改密码
-                            </button>
-                            <button class="action-btn logout-btn" @click="logOut">
-                                <i class="fas fa-sign-out-alt"></i>
-                                退出登录
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
 
-        <div class="main-container">
-            <!-- 现代化侧边栏 -->
-            <aside class="modern-sidebar">
-                <nav class="nav-menu">
+                
                     <router-link to="/student/home" class="nav-item" active-class="active">
                         <i class="fas fa-home nav-icon"></i>
                         <span class="nav-text">首页</span>
@@ -90,9 +72,26 @@ const logOut = () => {
                         <i class="fas fa-comments nav-icon"></i>
                         <span class="nav-text">互动模块</span>
                     </router-link>
-                </nav>
-            </aside>
 
+                <div class="header-right">
+                    <div class="user-info">
+                        <span class="welcome-text">欢迎，{{ className }} {{ loginName }}</span>
+                        <div class="user-actions">
+                            <button class="action-btn" @click="reset">
+                                <i class="fas fa-key"></i>
+                                修改密码
+                            </button>
+                            <button class="action-btn logout-btn" @click="logOut">
+                                <i class="fas fa-sign-out-alt"></i>
+                                退出登录
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-container"> 
             <!-- 主内容区域 -->
             <main class="main-content">
                 <div class="content-wrapper">
@@ -156,7 +155,7 @@ const logOut = () => {
 
 .system-title {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 540;
     color: #fff;
     margin: 0;
     display: flex;

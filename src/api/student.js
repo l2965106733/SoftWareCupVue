@@ -21,8 +21,22 @@ export const getStudyStatsApi = (studentId, params = {}) => request.get(`/studen
 // 记录学生学习行为（增强版）
 export const recordStudyBehaviorApi = (data) => request.post("/student/study/record", data);
 
+export const createNewChatApi = (data) => request.post("/student/study/createNewChat", data);
+
 // 记录AI提问（增强版）
 export const recordAiQuestionApi = (data) => request.post("/student/study/aiQuestion", data);
+
+export const getChatListApi = (userId) => request.get(`/student/study/getChatList/${userId}`);
+
+export const getChatDetailByIdApi = (id) => request.get(`/student/study/getChatDetailById/${id}`);
+
+export const getChatNameApi = (chatId) => request.get(`/student/study/getChatName/${chatId}`);
+
+export const setChatNameApi = (chatId, name) =>
+  request.post(`/student/study/setChatName/${chatId}`, { name }) // ← JSON body
+
+export const deleteChatApi = (chatId) => request.delete(`/student/study/deleteChat/${chatId}`);
+
 
 // 获取学生学习详细记录
 export const getStudyRecordsApi = (studentId, params = {}) => request.get(`/student/study/records/${studentId}`, { params });
@@ -55,6 +69,10 @@ export const getQuestionDetailApi = (questionId) => request.get(`/student/intera
 export const rateAnswerApi = (data) => request.post("/student/interact/questionRate", data);
 
 export const getQuestionApi = (data) => request.post("/student/study/generateAIQuestion", data);
+
+export const getMistakesApi = (studentId) => request.get(`/student/study/mistakes/${studentId}`);
+
+export const getAIAdviceApi = () => request.post(`/student/study/generateAIAdvice`);
 
 export const getInteractStatsApi = (studentId) => request.get(`/student/interact/stats/${studentId}`);
 

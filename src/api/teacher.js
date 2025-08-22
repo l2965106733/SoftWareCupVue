@@ -20,6 +20,8 @@ export const sendStudentAnswerApi = (data) => request.post("/teacher/interact/st
 
 export const getHomeworkDetailApi = (homeworkId) => request.get(`/teacher/homework/detail/${homeworkId}`);
 
+export const generateQuestionJudgeApi = (data) => request.post(`/teacher/homework/generateQuestionJudge`,data);
+
 export const getHomeworkDetailWithAnswerApi = (homeworkId, studentId) =>
   request.get(`/teacher/homework/detailWithAnswer`, { params: { homeworkId, studentId } });
 

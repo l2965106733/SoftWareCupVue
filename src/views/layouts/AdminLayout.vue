@@ -45,9 +45,25 @@ const logOut = () => {
                 <div class="header-left">
                     <h1 class="system-title">
                         <i class="fas fa-user-shield title-icon"></i>
-                        管理员系统
+                        管理员管理系统
                     </h1>
                 </div>
+                <router-link to="/admin/home" class="nav-item" active-class="active">
+                        <i class="fas fa-home nav-icon"></i>
+                        <span class="nav-text">首页</span>
+                    </router-link>
+                    <router-link to="/admin/user" class="nav-item" active-class="active">
+                        <i class="fas fa-users nav-icon"></i>
+                        <span class="nav-text">用户管理</span>
+                    </router-link>
+                    <router-link to="/admin/resource" class="nav-item" active-class="active">
+                        <i class="fas fa-folder-open nav-icon"></i>
+                        <span class="nav-text">资源管理</span>
+                    </router-link>
+                    <router-link to="/admin/overallstats" class="nav-item" active-class="active">
+                        <i class="fas fa-chart-pie nav-icon"></i>
+                        <span class="nav-text">总体统计</span>
+                    </router-link>
                 <div class="header-right">
                     <div class="user-info">
                         <span class="welcome-text">欢迎，{{ loginName }}</span>
@@ -67,27 +83,6 @@ const logOut = () => {
         </header>
 
         <div class="main-container">
-            <!-- 现代化侧边栏 -->
-            <aside class="modern-sidebar">
-                <nav class="nav-menu">
-                    <router-link to="/admin/home" class="nav-item" active-class="active">
-                        <i class="fas fa-home nav-icon"></i>
-                        <span class="nav-text">首页</span>
-                    </router-link>
-                    <router-link to="/admin/user" class="nav-item" active-class="active">
-                        <i class="fas fa-users nav-icon"></i>
-                        <span class="nav-text">用户管理</span>
-                    </router-link>
-                    <router-link to="/admin/resource" class="nav-item" active-class="active">
-                        <i class="fas fa-folder-open nav-icon"></i>
-                        <span class="nav-text">资源管理</span>
-                    </router-link>
-                    <router-link to="/admin/overallstats" class="nav-item" active-class="active">
-                        <i class="fas fa-chart-pie nav-icon"></i>
-                        <span class="nav-text">总体统计</span>
-                    </router-link>
-                </nav>
-            </aside>
 
             <!-- 主内容区域 -->
             <main class="main-content">
@@ -152,7 +147,7 @@ const logOut = () => {
 
 .system-title {
     font-size: 28px;
-    font-weight: 700;
+    font-weight: 540;
     color: #fff;
     margin: 0;
     display: flex;

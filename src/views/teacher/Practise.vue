@@ -1,12 +1,22 @@
 <script setup>
 import { ref, onMounted, computed,watchEffect } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getQuestionApi, saveQuestionApi, publishHomeworkApi, getHomeworkListApi, getStudentSubmissionsApi, gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi } from '@/api/teacher'
-import dayjs from 'dayjs';
+import { getQuestionApi, saveQuestionApi, publishHomeworkApi, generateQuestionJudgeApi,
+  getHomeworkListApi, getStudentSubmissionsApi, gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi } from '@/api/teacher'
 
 const formatDate = (row, column, cellValue) => {
-  return dayjs(cellValue).format('YYYY-MM-DD HH:mm:ss');
-};
+  if (cellValue == null || cellValue === '') return ''        // 兜底：空就不显示
+  if (typeof cellValue === 'string') {
+    // 支持 "YYYY-MM-DDTHH:mm:ss" / "YYYY-MM-DD HH:mm:ss"
+    if (/^\d{4}-\d{2}-\d{2}T/.test(cellValue)) {
+      return cellValue.replace('T', ' ').slice(0, 19)
+    }
+    if (/^\d{4}-\d{2}-\d{2} /.test(cellValue)) {
+      return cellValue.slice(0, 19)
+    }
+  }
+  return String(cellValue)
+}
 
 const statusMap = {
   0: { text: '未提交', type: 'info' },
@@ -40,7 +50,7 @@ const isSaveButtonDisabled = computed(() => {
 const aiFormData = ref({
   knowledge: '',
   type: '',
-  count: 1,
+  count: 0,
   remark: ''
 })
 
@@ -60,7 +70,7 @@ const handleCloseAIDialog = () => {
   aiFormData.value = {
     knowledge: '',
     type: '',
-    count: 3,
+    count: 0,
     remark: ''
   }
 }
@@ -82,11 +92,11 @@ const handleAIGenerate = async () => {
       questions.value = result.data.map(q => {
         const { id, ...questionWithoutId } = q
 
-        if (q.type === 'choice' && q.content) {
-          const { text, options } = getParsedQuestion(q.content);
-          q.text = text;
-          q.options = options;
-        }
+        // if (q.type === 'choice' && q.content) {
+        //   const { text, options } = getParsedQuestion(q.content);
+        //   q.text = text;
+        //   q.options = options;
+        // }
         // 根据题型自动设置分值（与人工出题逻辑一致）
         const defaultScores = {
           choice: 5,
@@ -137,8 +147,8 @@ const handleManualAdd = () => {
     explain: '',
     type: 'choice',
     score: 5,
-    text: '',                  // 题干
-    options: ['','','','']             // 选项
+    // text: '',                  // 题干
+    // options: ['','','','']             // 选项
     // 临时ID为负数，保存后会获得真实的正数数据库ID
   }
 
@@ -242,11 +252,11 @@ const saveQuestions = async () => {
             const questionIndex = questions.value.findIndex(q => q.id === tempId)
             if (questionIndex !== -1) {
               console.log(`替换题目: 临时ID ${tempId} → 真实ID ${savedQuestion.id}`)
-              if (savedQuestion.type === 'choice' && savedQuestion.content) {
-                const { text, options } = getParsedQuestion(savedQuestion.content);
-                savedQuestion.text = text;
-                savedQuestion.options = options;
-              }
+              // if (savedQuestion.type === 'choice' && savedQuestion.content) {
+              //   const { text, options } = getParsedQuestion(savedQuestion.content);
+              //   savedQuestion.text = text;
+              //   savedQuestion.options = options;
+              // }
               questions.value[questionIndex] = savedQuestion
             }
           })
@@ -320,8 +330,8 @@ const clearQuestionContent = (q) => {
   q.answer = ''
   q.explain = ''
   q.score = 5
-  q.text = '';
-  q.options = ['','','','']
+  // q.text = '';
+  // q.options = ['','','','']
   hasSavedInCurrentSession.value = false
 }
 
@@ -460,6 +470,8 @@ const loadHomeworkHistory = async () => {
       history.value = result.data.map(item => ({
         id: item.id,
         title: item.title,
+        startTime: item.startTime,
+        endTime: item.endTime,
         publishTime: item.createdTime,
         status: item.status,
         timeLeft: formatTimeLeft(item.endTime)
@@ -484,6 +496,7 @@ const studentSubmissions = ref([])
 const viewDetail = async (row) => {
   try {
     currentHomework.value = row
+    console.log('查看作业详情，当前作业:', currentHomework.value)
     detailDialogVisible.value = true
 
     // 调用API获取作业详细信息（只查题目和标准答案）
@@ -651,49 +664,60 @@ const confirmAndSaveQuestions = async () => {
 //   };
 // }
 
-const getParsedQuestion = (content) => {
-  const [questionText, ...optionParts] = content.split(/(?=\nA\.)/); // 从 A. 开始切
-  const optionsBlock = optionParts.join('').trim(); // 所有选项合并
+// const getParsedQuestion = (content) => {
+//   const [questionText, ...optionParts] = content.split(/(?=\nA\.)/); // 从 A. 开始切
+//   const optionsBlock = optionParts.join('').trim(); // 所有选项合并
 
-  const options = optionsBlock
-    .split(/\n[A-D]\.\s*/) // 按 A. B. C. D. 切开并去除前缀
-    .filter(opt => opt.trim() !== ''); // 去掉空串
+//   const options = optionsBlock
+//     .split(/\n[A-D]\.\s*/) // 按 A. B. C. D. 切开并去除前缀
+//     .filter(opt => opt.trim() !== ''); // 去掉空串
 
-  return {
-    text: questionText.trim(),
-    options: options.map(opt => opt.trim())
-  };
-};
+//   return {
+//     text: questionText.trim(),
+//     options: options.map(opt => opt.trim())
+//   };
+// };
 
-const optionsIds = ['A', 'B', 'C', 'D']; // 按需扩展
+// const optionsIds = ['A', 'B', 'C', 'D']; // 按需扩展
 
-const getComposedContent = (text, options) => {
-  return text.trim() + '\n' + options
-    .map((opt, idx) => `${optionsIds[idx]}. ${opt.trim()}`)
-    .join('\n');
-};
-
-
-watchEffect(() => {
-  questions.value.forEach((q) => {
-    // 强类型校验：只处理 choice 类型
-    if (q.type === 'choice') {
-      const allFilled = q.text?.trim() && q.options?.length > 0;
-      if (allFilled) {
-        const composed = getComposedContent(q.text, q.options);
-        if (q.content !== composed) {
-        q.content = composed;
-        }
-      }
-    } 
-    else {
-      // q.text = "";
-      // q.options = [];
-    }
-  });
-});
+// const getComposedContent = (text, options) => {
+//   return text.trim() + '\n' + options
+//     .map((opt, idx) => `${optionsIds[idx]}. ${opt.trim()}`)
+//     .join('\n');
+// };
 
 
+// watchEffect(() => {
+//   questions.value.forEach((q) => {
+//     // 强类型校验：只处理 choice 类型
+//     if (q.type === 'choice') {
+//       const allFilled = q.text?.trim() && q.options?.length > 0;
+//       if (allFilled) {
+//         const composed = getComposedContent(q.text, q.options);
+//         if (q.content !== composed) {
+//         q.content = composed;
+//         }
+//       }
+//     } 
+//     else {
+//       // q.text = "";
+//       // q.options = [];
+//     }
+//   });
+// });
+
+const handleAIGrade = async (question) => {
+  const res = await generateQuestionJudgeApi(question);
+  if (res.code === 1) {
+    gradeScores.value[question.id] = res.data.score ?? '';
+    console.log('AI评分结果:', gradeScores.value[question.id]);
+    gradeFeedback.value = res.data.feedback || '';
+    ElMessage.success('AI已生成参考答案和解析');
+  } else {
+    ElMessage.error(res.msg || 'AI生成失败');
+  }
+  
+}
 </script>
 
 <template>
@@ -756,7 +780,7 @@ watchEffect(() => {
             </el-form-item>
 
             <el-form-item label="题干" class="content-label">
-              <div v-if="q.type === 'choice'" style="align-items: center; margin-bottom: 8px; width: 100%;">
+              <!-- <div v-if="q.type === 'choice'" style="align-items: center; margin-bottom: 8px; width: 100%;">
                 <el-input v-model="q.text" placeholder="请输入题干" :rows="2" type="textarea"
                   @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
 
@@ -765,9 +789,9 @@ watchEffect(() => {
                   <el-input  v-model="q.options[idx]" :placeholder="`请输入选项 ${optionsIds[idx]} 的内容`" :disabled="isQuestionSaved(q)"/>
                 </div>
 
-              </div>
+              </div> -->
 
-              <el-input v-else type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8"
+              <el-input  type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8"
                 @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
 
 
@@ -932,7 +956,7 @@ watchEffect(() => {
             <el-table-column prop="title" label="作业名称" align="center" header-align="center" show-overflow-tooltip
               style="border-radius: 12px;" />
 
-            <el-table-column prop="publishTime" label="发布时间" :formatter="formatDate" width="200px" align="center"
+            <el-table-column prop="publishTime" label="开始时间" :formatter="formatDate" width="200px" align="center"
               header-align="center" show-overflow-tooltip />
 
             <el-table-column prop="endTime" label="截止时间" :formatter="formatDate" width="200px" align="center"
@@ -965,6 +989,7 @@ watchEffect(() => {
 
     <!-- AI生成题目对话框 -->
     <el-dialog v-model="showAIDialogVisible" title="AI 生成题目" width="600px" :before-close="handleCloseAIDialog">
+
       <div class="ai-dialog-content">
         <el-form label-width="80px" :model="aiFormData" ref="aiFormRef">
           <el-form-item label="知识点" prop="knowledge" :rules="[{ required: true, message: '请输入知识点', trigger: 'blur' }]">
@@ -1015,6 +1040,7 @@ watchEffect(() => {
           </el-button>
         </span>
       </template>
+  
     </el-dialog>
 
     <!-- 作业详情对话框 -->
@@ -1025,11 +1051,10 @@ watchEffect(() => {
         <el-tab-pane label="基本信息">
           <el-descriptions :column="2" border>
             <el-descriptions-item label="作业标题">{{ currentHomework.title }}</el-descriptions-item>
-            <el-descriptions-item label="发布时间">{{ formatDate(currentHomework.publishTime) }}</el-descriptions-item>
+            <el-descriptions-item label="发布时间">{{ currentHomework.startTime }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="statusMap[currentHomework.status]?.type || 'default'" style="color:white">
-                <!-- {{ statusMap[currentHomework.status]?.text || '未知状态' }} -->
-                进行中
+             {{currentHomework.timeLeft}}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="总分">{{homeworkQuestions.reduce((sum, q) => sum + q.score, 0)
@@ -1157,15 +1182,19 @@ watchEffect(() => {
 
               <div class="question-section question-answer" style="margin-top: 8px;">
                 <h5>标准答案：</h5>
-                <div style="white-space: pre-wrap;">{{ question.trueAnswer || '暂无' }}</div>
+                <div style="white-space: pre-wrap;">{{ question.standardAnswer || '暂无' }}</div>
               </div>
 
               <div class="question-section question-analysis">
                 <h5>学生答案：</h5>
                 <div class="answer-display">
-                  {{ question.answer || '未作答' }}
+                  {{ question.studentAnswer || '未作答' }}
                 </div>
               </div>
+
+              <el-button @click="handleAIGrade(question)" size="small" type="primary" class="el-button-local">
+                AI试批
+              </el-button>
 
               <div class="score-input-section">
                 <el-form-item :label="`得分（满分${question.questionScore}分）：`">
