@@ -580,10 +580,10 @@ onMounted(() => {
 }
 
 .el-button, .btn, button {
-    background: rgba(255,255,255,0.2) !important;
+    /* background: rgba(255,255,255,0.2) !important;
     border: 1px solid rgba(255,255,255,0.3) !important;
+    color: #fff !important; */
     border-radius: 12px !important;
-    color: #fff !important;
     font-size: 14px !important;
     font-weight: 500;
     padding: 12px 24px !important;

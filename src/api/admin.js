@@ -43,4 +43,11 @@ export const getKnowledgeDistributionApi = (params) => request.get("/admin/knowl
 export const getRecentActivitiesApi = () => request.get("/admin/recentActivities");
 
 
+export const getScoreTrendApi = () => request.get("/admin/getScoreTrend");
+export const getInteractionStatApi = () => request.get("/admin/getInteractionStat");
+export const getAiInteractionStatApi = () => request.get("/admin/getAiInteractionStat");
+
+
+
+
 

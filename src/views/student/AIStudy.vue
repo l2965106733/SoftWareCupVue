@@ -167,12 +167,15 @@ const sendMessage = async () => {
     })
 
     if (result.code === 1 && result.data) {
+      let text = result.data
+        .replace(/\*\*/g, "")   // 去掉 markdown 加粗
+        .replace(/\\n/g, "\n"); // 转换换行符
       // 添加AI回复消息，直接使用返回的纯文本
       const aiMessage = {
         id: Date.now() + 1,
         sender: 'ai',
         type: 'ai-reply',
-        content: result.data,  // 直接使用返回的字符串
+        content: text,  // 直接使用返回的字符串
         time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
       }
       chatHistory.value.push(aiMessage)
@@ -185,7 +188,7 @@ const sendMessage = async () => {
           await recordAiQuestionApi({
             studentId: studentId,
             questionContent: userMessage.content,
-            answer: result.data,  // 使用纯文本答案测问题分类
+            answer: result.data.replace(/\*\*/g, "").replace(/\\n/g, "\n"), // 转换换行符
             chatId: activeId.value,  // 使用当前聊天ID
             chatName: renameInput.value || '未命名对话' // 聊天名称
           })
@@ -296,7 +299,7 @@ const handleSelect = async (id) => {
           id: `a_${item.id}`,
           sender: 'ai',
           type: 'ai-reply',
-          content: item.answer,
+          content: item.answer.replace(/\*\*/g, "").replace(/\\n/g, "\n"),
           time: new Date(item.createdTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         })
       })
@@ -412,7 +415,7 @@ const handleRemove = () => {
         <el-aside width="260px" class="glass-panel glass-aside">
           <el-menu :default-active="String(activeId)" @select="handleSelect" class="chat-menu">
             <el-menu-item v-for="chat in chatList" :key="chat.chatId" :index="String(chat.chatId)"
-              class="chat-menu-item" >
+              class="chat-menu-item">
               <span class="chat-name" style="font-size: 15px;">{{ chat.chatName || '未命名对话' }}</span>
               <div class="chat-actions">
                 <el-button size="small" text type="danger" style="font-size: 13px; color: gray !important;"
@@ -906,6 +909,7 @@ const handleRemove = () => {
   gap: 8px;
   max-height: 200px;
   overflow-y: auto;
+  margin-bottom: 10px;
 }
 
 .file-item {

@@ -53,7 +53,7 @@ const currentSystem = computed(() => {
     </header> -->
 
     <!-- 主要内容区域 -->
-    <main class="main-content" :class="{ 'with-header': showHeader, 'no-scroll': disableScroll }">
+    <main :class="{ 'with-header': showHeader, 'no-scroll': disableScroll }">
       <router-view v-slot="{ Component }">
         <transition name="page-transition" mode="out-in">
           <component :is="Component" />

@@ -688,13 +688,34 @@ const showMistakes = async () => {
     ElMessage.error(res.msg || '获取错题本失败');
   }
 };
+const changeFormat =  (markdown) =>{
+  if (!markdown) return "";
 
+  return markdown
+    // 去掉加粗、斜体、代码块等标记
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/#+\s?(.*)/g, "$1") // 去掉标题符号 #
+
+    // 去掉列表符号（有序/无序）
+    .replace(/^\s*[-+*]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+
+    // 把多个换行替换成一个空格
+    .replace(/\n+/g, " ")
+
+    // 多余空格压缩
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 const mistakes = ref([]);
 const AiAdvice = ref("建议:加强学习");
-const AiAdviceFlag = ref(true);
+const AiAdviceFlag = ref(false);
 const showAiAdvice = async () => {
+  const res = await getAIAdviceApi();
+  AiAdvice.value = changeFormat(res.data);
   AiAdviceFlag.value = true;
-  AiAdvice.value = (await getAIAdviceApi()).data;
 };
 </script>
 

@@ -89,9 +89,8 @@ const handleAIGenerate = async () => {
     const result = await getQuestionApi(aiFormData.value)
     if (result.code === 1 && Array.isArray(result.data)) {
       // AI生成的题目给临时ID，并自动设置分值
-      questions.value = result.data.map(q => {
+      const tempQuestions = result.data.map(q => {
         const { id, ...questionWithoutId } = q
-
         // if (q.type === 'choice' && q.content) {
         //   const { text, options } = getParsedQuestion(q.content);
         //   q.text = text;
@@ -113,6 +112,7 @@ const handleAIGenerate = async () => {
           id: tempIdCounter.value-- // 临时ID，负数
         }
       })
+      questions.value.push(...tempQuestions)
       // 重置保存状态，允许重新保存
       hasSavedInCurrentSession.value = false
       ElMessage.success(`AI成功生成了${aiFormData.value.count}道题目！`)
@@ -126,7 +126,7 @@ const handleAIGenerate = async () => {
     aiFormData.value = {
       knowledge: '',
       type: '',
-      count: 3,
+      count: 1,
       remark: ''
     }
 

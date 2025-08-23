@@ -9,7 +9,7 @@ import {
   getHomeworkStatsApi,
   getAnalysisApi
 } from '@/api/student'
-import Analysis from '../teacher/Analysis.vue'
+import dayjs from 'dayjs'
 
 // 过滤状态
 const filterStatus = ref('all')

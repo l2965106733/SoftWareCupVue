@@ -97,6 +97,27 @@ const loadRatings = async () => {
   }
 }
 
+const changeFormat =  (markdown) =>{
+  if (!markdown) return "";
+
+  return markdown
+    // 去掉加粗、斜体、代码块等标记
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`(.*?)`/g, "$1")
+    .replace(/#+\s?(.*)/g, "$1") // 去掉标题符号 #
+
+    // 去掉列表符号（有序/无序）
+    .replace(/^\s*[-+*]\s+/gm, "")
+    .replace(/^\s*\d+\.\s+/gm, "")
+
+    // 把多个换行替换成一个空格
+    .replace(/\n+/g, " ")
+
+    // 多余空格压缩
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 // AI 生成回答
 const generateAIAnswer = async (q) => {
   loadingMap.value[q.id] = true
@@ -108,7 +129,8 @@ const generateAIAnswer = async (q) => {
     })
     
     if (result.code === 1 && result.data) {
-      q.answer = result.data  // 直接使用返回的字符串
+      
+      q.answer = changeFormat(result.data)  // 直接使用返回的字符串
       ElMessage.success('AI回答生成成功，请检查后发送')
     } else {
       ElMessage.error(result.msg || '生成失败')
@@ -572,11 +594,11 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.question-item:hover {
-  border-color: #409eff;
+/* .question-item:hover { */
+  /* border-color: #409eff;
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
-  background: rgba(255,255,255,0.15);
-}
+  background: rgba(255,255,255,0.15); */
+/* } */
 
 .question-header {
   display: flex;

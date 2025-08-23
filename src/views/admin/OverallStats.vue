@@ -1,77 +1,215 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { 
+import dayjs from 'dayjs'
+import {
   getSystemOverviewApi,
   getUserActivityApi,
   getUserActivityTrendApi,
   getTopKnowledgeScoreApi,
-  getKnowledgeDistributionApi
+  getKnowledgeDistributionApi,
+  getScoreTrendApi,
+  getInteractionStatApi,
+  getAiInteractionStatApi
 } from '@/api/admin'
-import dayjs from 'dayjs'
 
+// ====== ECharts 基础注册（与 <vue-echarts> 配合）======
+import * as echarts from 'echarts/core'
+import { BarChart, LineChart, PieChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent, TitleComponent } from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
+echarts.use([BarChart, LineChart, PieChart, GridComponent, TooltipComponent, LegendComponent, TitleComponent, CanvasRenderer])
 
-const barOption = ref({})
-const pieOption = ref({})
-const pieTitle = ref('知识点掌握分布')
-
-const loadBarChart = async () => {
-  const res = await getTopKnowledgeScoreApi();
-  const rawData = res.data || []
-
-  const data = rawData.filter(item => item.knowledge)
-
-  const colors = ['#5470C6', '#91CC75', '#EE6666']
-
-barOption.value = {
-  tooltip: {
-    trigger: 'axis',
-    axisPointer: { type: 'shadow' },
-    formatter: '{b}: {c}%'
+// 自定义深色主题（可选）
+echarts.registerTheme('dashboardDark', {
+  backgroundColor: 'transparent',
+  textStyle: { color: '#cfd8e3' },
+  legend: { textStyle: { color: '#cfd8e3' } },
+  tooltip: { backgroundColor: 'rgba(17,24,39,.92)', borderColor: '#334155' },
+  grid: { containLabel: true },
+  valueAxis: {
+    splitLine: { lineStyle: { color: 'rgba(148,163,184,.18)' } },
+    axisLine: { lineStyle: { color: '#94a3b8' } },
+    axisLabel: { color: '#cfd8e3' }
   },
-  grid: {
-    left: 10, // 纵坐标
-    top: 10,
-    bottom: 10,
-    right: 10,
-    containLabel: true
-  },
-  xAxis: {
-    type: 'value',
-    max: 100,
-    axisLabel: { formatter: '{value}%' }
-  },
-  yAxis: {
-    type: 'category',
-    data: data.map(item => item.knowledge),
-    inverse: true,
-    axisLabel: {
-      overflow: 'ellipsis', 
-      width: 150  
-    }
-  },
-  series: [{
-    type: 'bar',
-    name: '得分率',
-    data: data.map(item => item.scoreRate), 
-    label: {
-      show: true,
-      position: 'right',
-      formatter: '{c}%'
-    },
-    itemStyle: {
-      color: function (params) {
-        return colors[params.dataIndex % colors.length]
-      }
-    }
-  }]
+  categoryAxis: {
+    axisLine: { lineStyle: { color: '#94a3b8' } },
+    axisLabel: { color: '#cfd8e3' },
+    splitLine: { show: false }
+  }
+})
+
+// =====================================================
+// =============== 顶部标签：一次只显示一张图 ===========
+// =====================================================
+const tabs = [
+  { key: 'score', label: '作业平均成绩走向', icon: 'fas fa-book' },
+  { key: 'qna', label: '学生提问情况', icon: 'fas fa-question-circle' },
+  { key: 'ai', label: 'AI 交互活跃度', icon: 'fas fa-robot' },
+  { key: 'activity', label: '用户活跃度趋势', icon: 'fas fa-users' },
+  { key: 'knowledge', label: '知识点分析', icon: 'fas fa-signal' } // 合并：Top5 + 分布
+]
+const activeTab = ref('score')
+const show = (key) => activeTab.value === key
+const onTabClick = (key) => {
+  activeTab.value = key
+  // 切换后触发重算，避免尺寸问题
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))
 }
-  if (data.length > 0) {
-    loadPieChart(data[0].knowledge)
+
+// =====================================================
+// ================== 状态 & 工具函数 ==================
+// =====================================================
+const loading = ref({ overview: false, activity: false })
+const lastRefreshAt = ref('—')
+
+// KPI（如果页面其它地方要用，可保留）
+const totalUsers = ref(0)
+const activeUsers = ref(0)
+const totalResources = ref(0)
+const storageBytes = ref(0)
+const newUsersToday = ref(0)
+
+const userActivity = ref({
+  todayActive: 0,
+  todayNewUsers: 0,
+  avgSessionTime: 0,
+  totalLogins: 0,
+  uniqueLogins: 0
+})
+
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+const formatUptime = (seconds) => {
+  const s = Number(seconds || 0)
+  const days = Math.floor(s / 86400)
+  const hours = Math.floor((s % 86400) / 3600)
+  return `${days}天 ${hours}小时`
+}
+const activeRateText = computed(() => {
+  const total = Number(totalUsers.value || 0)
+  const active = Number(activeUsers.value || 0)
+  if (total <= 0) return '--'
+  return `${Math.round((active / total) * 100)}%`
+})
+
+// =====================================================
+// ====================== 数据拉取 ======================
+// =====================================================
+const userActivityTrend = ref([]) // 活跃趋势
+const barOption = ref({})         // 知识点 Top5
+const pieOption = ref({})         // 知识点分布
+const pieTitle = ref('知识点掌握分布') // 分布标题
+
+const loadSystemOverview = async () => {
+  loading.value.overview = true
+  try {
+    const res = await getSystemOverviewApi()
+    if (res?.code === 1) {
+      const d = res.data || {}
+      totalUsers.value = d.totalUsers || 0
+      activeUsers.value = d.activeUsers || 0
+      totalResources.value = d.totalResources || 0
+      storageBytes.value = d.totalStorage || 0
+      newUsersToday.value = d.newUsersToday || 0
+    } else {
+      ElMessage.error(res?.msg || '获取系统概览失败')
+    }
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('获取系统概览失败')
+  } finally {
+    loading.value.overview = false
   }
 }
 
+const loadUserActivity = async () => {
+  loading.value.activity = true
+  try {
+    const res = await getUserActivityApi()
+    if (res?.code === 1) {
+      userActivity.value = {
+        todayActive: Number(res.data?.todayActive || 0),
+        todayNewUsers: Number(res.data?.todayNewUsers || 0),
+        avgSessionTime: Number(res.data?.avgSessionTime || 0),
+        totalLogins: Number(res.data?.totalLogins || 0),
+        uniqueLogins: Number(res.data?.uniqueLogins || 0)
+      }
+    } else {
+      ElMessage.error(res?.msg || '获取用户活跃度失败')
+    }
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('获取用户活跃度失败')
+  } finally {
+    loading.value.activity = false
+  }
+}
 
+const loadUserActivityTrend = async () => {
+  try {
+    const res = await getUserActivityTrendApi({
+      startDate: dayjs().subtract(6, 'day').format('YYYY-MM-DD'),
+      endDate: dayjs().format('YYYY-MM-DD'),
+      granularity: 'day'
+    })
+    if (res?.code === 1) {
+      userActivityTrend.value = Array.isArray(res.data) ? res.data : []
+    } else {
+      console.warn('获取用户活跃度趋势失败:', res?.msg)
+      userActivityTrend.value = []
+    }
+  } catch (e) {
+    console.error(e)
+    userActivityTrend.value = []
+  }
+}
+
+// Top 知识点条形图
+const loadBarChart = async () => {
+  const res = await getTopKnowledgeScoreApi()
+  const raw = Array.isArray(res?.data) ? res.data : []
+  const data = raw.filter(i => i?.knowledge)
+  const colors = ['#5470C6', '#91CC75', '#EE6666', '#FAC858', '#73C0DE']
+
+  if (data.length === 0) {
+    barOption.value = {
+      title: { text: '暂无数据', left: 'center', top: 'middle', textStyle: { color: '#8b9fb6' } }
+    }
+    pieTitle.value = '知识点掌握分布'
+    pieOption.value = { series: [] }
+    return
+  }
+
+  barOption.value = {
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: '{b}: {c}%' },
+    grid: { left: 10, top: 10, bottom: 10, right: 10, containLabel: true },
+    xAxis: { type: 'value', max: 100, axisLabel: { formatter: '{value}%' } },
+    yAxis: {
+      type: 'category',
+      data: data.map(i => i.knowledge),
+      inverse: true,
+      axisLabel: { overflow: 'truncate', width: 160 }
+    },
+    series: [{
+      type: 'bar',
+      name: '得分率',
+      data: data.map(i => Number(i.scoreRate) || 0),
+      label: { show: true, position: 'right', formatter: '{c}%' },
+      itemStyle: { color: p => colors[p.dataIndex % colors.length] }
+    }]
+  }
+
+  // 默认选择第一项联动饼图
+  await loadPieChart(data[0].knowledge)
+}
+
+// 分布饼图
 const loadPieChart = async (knowledgeName) => {
   const res = await getKnowledgeDistributionApi({
     knowledgeName: knowledgeName
@@ -102,651 +240,351 @@ const loadPieChart = async (knowledgeName) => {
   }
 }
 
+// 条形图点击联动饼图
 const onBarClick = (params) => {
-  if (params?.name) {
-    loadPieChart(params.name)
-  }
+  if (params?.name) loadPieChart(params.name)
 }
 
+// =====================================================
+// ==================== 图表配置 ========================
+// =====================================================
 
-// 加载状态
-const loading = ref({
-  overview: false,
-  activity: false,
-  usage: false,
-  health: false
-})
+const homeworkScoreOption = ref({})
 
-// 系统概览数据
-const systemOverview = ref({
-  totalUsers: 0,
-  totalStudents: 0,
-  totalTeachers: 0,
-  totalResources: 0,
-  totalStorage: 0,
-  systemUptime: 0,
-  activeUsers: 0,
-  newUsersToday: 0
-})
-
-// 用户活跃度数据
-const userActivity = ref({
-  todayActive: 0,
-  todayNewUsers: 0,
-  avgSessionTime: 0,
-  totalLogins: 0,
-  uniqueLogins: 0
-})
-
-// 用户活跃度趋势数据
-const userActivityTrend = ref([])
-
-// 工具函数
-const formatBytes = (bytes) => {
-  if (!bytes) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-const formatUptime = (seconds) => {
-  const days = Math.floor(seconds / 86400)
-  const hours = Math.floor((seconds % 86400) / 3600)
-  return `${days}天 ${hours}小时`
-}
-
-// 数据加载函数
-const loadSystemOverview = async () => {
-  loading.value.overview = true
+const loadScoreTrend = async () => {
   try {
-    const result = await getSystemOverviewApi()
-    if (result.code === 1) {
-      systemOverview.value = result.data
-      console.log('系统概览数据加载成功:', systemOverview.value)
-    } else {
-      ElMessage.error(result.msg || '获取系统概览失败')
-    }
-  } catch (error) {
-    console.error('获取系统概览失败：', error)
-    ElMessage.error('获取系统概览失败')
-  } finally {
-    loading.value.overview = false
-  }
-}
+    const res = await getScoreTrendApi()
+    if (res?.code === 1) {
+      const data = res.data || []
 
-const loadUserActivity = async () => {
-  loading.value.activity = true
-  try {
-    const result = await getUserActivityApi()
-    if (result.code === 1) {
-      userActivity.value = {
-        todayActive: result.data?.todayActive || 0,
-        todayNewUsers: result.data?.todayNewUsers || 0,
-        avgSessionTime: result.data?.avgSessionTime || 0,
-        totalLogins: result.data?.totalLogins || 0,
-        uniqueLogins: result.data?.uniqueLogins || 0
+      homeworkScoreOption.value = {
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['平均分', '提交率'] },
+        xAxis: { type: 'category', data: data.map(d => d.title || `作业${d.homeworkId}`) },
+        yAxis: [
+          { type: 'value', name: '平均分', min: 0, max: 100 },
+          { type: 'value', name: '提交率', min: 0, max: 100, axisLabel: { formatter: '{value}%' } }
+        ],
+        series: [
+          { name: '平均分', type: 'bar', data: data.map(d => d.avgScore || 0), label: { show: true, position: 'top' }, itemStyle: { color: '#409EFF' } },
+          { name: '提交率', type: 'line', yAxisIndex: 1, smooth: true, data: data.map(d => Math.round((d.submitRate || 0) * 100)), label: { show: true, formatter: '{c}%' }, itemStyle: { color: '#67C23A' } }
+        ]
       }
-      console.log('用户活跃度数据加载成功:', userActivity.value)
-    } else {
-      ElMessage.error(result.msg || '获取用户活跃度失败')
     }
-  } catch (error) {
-    console.error('获取用户活跃度失败：', error)
-    ElMessage.error('获取用户活跃度失败')
-  } finally {
-    loading.value.activity = false
+  } catch (e) {
+    console.error('获取作业成绩趋势失败:', e)
   }
 }
 
-const loadUserActivityTrend = async () => {
+
+const studentQuestionOption = ref({})
+
+const loadInteractionStat = async () => {
   try {
-    const result = await getUserActivityTrendApi({
-      startDate: dayjs().subtract(6, 'day').format('YYYY-MM-DD'),
-      endDate: dayjs().format('YYYY-MM-DD'),
-      granularity: 'day'
-    })
-    if (result.code === 1) {
-      userActivityTrend.value = result.data || []
-      console.log('用户活跃度趋势数据加载成功:', userActivityTrend.value)
-    } else {
-      console.warn('获取用户活跃度趋势失败:', result.msg)
-      userActivityTrend.value = []
+    const res = await getInteractionStatApi()
+    if (res?.code === 1) {
+      const data = res.data || []
+
+      studentQuestionOption.value = {
+        tooltip: { trigger: 'axis' },
+        legend: { data: ['已答', '未答'], bottom: 0 },
+        xAxis: { type: 'category', data: data.map(d => dayjs(d.d).format('MM-DD')) },
+        yAxis: { type: 'value', name: '提问数' },
+        series: [
+          { name: '已答', type: 'bar', stack: 'total', data: data.map(d => d.answered || 0), itemStyle: { color: '#409EFF' } },
+          { name: '未答', type: 'bar', stack: 'total', data: data.map(d => d.unanswered || 0), itemStyle: { color: '#F56C6C' } }
+        ]
+      }
     }
-  } catch (error) {
-    console.error('获取用户活跃度趋势失败：', error)
-    userActivityTrend.value = []
+  } catch (e) {
+    console.error('获取学生提问统计失败:', e)
   }
 }
 
-// 加载所有数据
+
+
+const aiTrendOption = ref({})
+
+const loadAiTrend = async () => {
+  try {
+    const res = await getAiInteractionStatApi()
+    if (res?.code === 1) {
+      const data = res.data || []
+
+      aiTrendOption.value = {
+        tooltip: { trigger: 'axis' },
+        xAxis: { type: 'category', data: data.map(d => dayjs(d.d).format('MM-DD')), boundaryGap: false },
+        yAxis: { type: 'value', name: '提问次数' },
+        series: [{
+          name: 'AI提问次数',
+          type: 'line',
+          data: data.map(d => d.cnt || 0),
+          smooth: true,
+          areaStyle: { opacity: 0.25 },
+          itemStyle: { color: '#a78bfa' }
+        }]
+      }
+    }
+  } catch (e) {
+    console.error('获取AI交互趋势失败:', e)
+  }
+}
+
+
+
+// ④ 用户活跃趋势（近7天折线）
+const userActivityTrendOption = computed(() => {
+  const trend = userActivityTrend.value || []
+  const dates = trend.map(it => it?.date ? dayjs(it.date).format('MM-DD') : '').filter(Boolean)
+  const counts = trend.map(it => Number(it?.activeUserCount || 0))
+
+  const mk = (ds, cs) => ({
+    tooltip: { trigger: 'axis' },
+    xAxis: { type: 'category', data: ds, boundaryGap: false },
+    yAxis: { type: 'value', name: '活跃用户数' },
+    series: [{ name: '活跃用户数', type: 'line', data: cs, smooth: true, areaStyle: { opacity: 0.25 }, itemStyle: { color: '#409eff' } }]
+  })
+
+  if (dates.length === 0) {
+    const ds = [], cs = []
+    for (let i = 6; i >= 0; i--) { ds.push(dayjs().subtract(i, 'day').format('MM-DD')); cs.push(0) }
+    return mk(ds, cs)
+  }
+  return mk(dates, counts)
+})
+
+// =====================================================
+// ================= 刷新/初始化入口 ====================
+// =====================================================
 const loadAllData = async () => {
-  console.log('🚀 开始加载系统总体统计数据...')
-  
-  // 并行加载所有数据
   await Promise.all([
     loadSystemOverview(),
     loadUserActivity(),
-    loadUserActivityTrend()
+    loadUserActivityTrend(),
+    loadBarChart(),
+    loadScoreTrend(),        // 作业成绩
+    loadInteractionStat(),   // 学生提问
+    loadAiTrend()            // AI交互
   ])
+  lastRefreshAt.value = dayjs().format('HH:mm:ss')
 }
-
-// 刷新数据
 const refreshData = () => {
   loadAllData()
   ElMessage.success('数据已刷新')
 }
 
-// ECharts 配置
-const userActivityTrendOption = computed(() => {
-  // 确保数据存在且格式正确
-  const trendData = userActivityTrend.value || []
-  const dates = trendData.map(item => item?.date || '').filter(Boolean)
-  const counts = trendData.map(item => item?.activeUserCount || 0)
-  
-  // 如果没有数据，提供默认数据
-  if (dates.length === 0) {
-    const defaultDates = []
-    const defaultCounts = []
-    for (let i = 6; i >= 0; i--) {
-      defaultDates.push(dayjs().subtract(i, 'day').format('MM-DD'))
-      defaultCounts.push(0)
-    }
-    return {
-      tooltip: { trigger: 'axis' },
-      xAxis: {
-        type: 'category',
-        data: defaultDates,
-        boundaryGap: false
-      },
-      yAxis: { type: 'value', name: '活跃用户数' },
-      series: [{
-        name: '活跃用户数',
-        type: 'line',
-        data: defaultCounts,
-        smooth: true,
-        areaStyle: { opacity: 0.3 },
-        itemStyle: { color: '#409eff' }
-      }]
-    }
-  }
-  
-  return {
-    tooltip: { trigger: 'axis' },
-    xAxis: {
-      type: 'category',
-      data: dates,
-      boundaryGap: false
-    },
-    yAxis: { type: 'value', name: '活跃用户数' },
-    series: [{
-      name: '活跃用户数',
-      type: 'line',
-      data: counts,
-      smooth: true,
-      areaStyle: { opacity: 0.3 },
-      itemStyle: { color: '#409eff' }
-    }]
-  }
-})
-
-// 初始化
 onMounted(() => {
   loadAllData()
-  setTimeout(() => {
-    loadBarChart()
-  }, 100)
 })
+
+
 </script>
 
+
 <template>
-  <div class="overall-stats-container">
-    <!-- 页面标题和刷新按钮 -->
+  <div class="page-wrap">
+    <!-- 头部：标题 + 刷新 -->
     <div class="page-header">
-      <h2> <i class="fas fa-chart-pie nav-icon"></i> 系统总体统计</h2>
-      <!-- <div class="header-actions">
-        <el-button type="primary" @click="refreshData" :loading="loading.overview">
-          <el-icon><Refresh /></el-icon>
-          刷新数据
-        </el-button> -->
-      <!-- </div> -->
-    </div>
-
-    <!-- 系统概览卡片 -->
-    <div class="overview-section">
-      <div class="overview-cards" v-loading="loading.overview">
-        <el-card shadow="hover" class="overview-card">
-          <div class="card-content">
-            <div class="card-info">
-              <div class="card-title">总用户数</div>
-              <div class="card-value">{{ systemOverview.totalUsers }}</div>
-              <div class="card-change positive">+{{ systemOverview.newUsersToday }} 今日新增</div>
-            </div>
-            <div class="card-icon">
-              <el-icon><User /></el-icon>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card shadow="hover" class="overview-card">
-          <div class="card-content">
-            <div class="card-info">
-              <div class="card-title">活跃用户</div>
-              <div class="card-value">{{ systemOverview.activeUsers }}</div>
-              <div class="card-change positive">{{ Math.round((systemOverview.activeUsers / systemOverview.totalUsers) * 100) }}% 活跃率</div>
-            </div>
-            <div class="card-icon">
-              <el-icon><ChatLineRound /></el-icon>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card shadow="hover" class="overview-card">
-          <div class="card-content">
-            <div class="card-info">
-              <div class="card-title">总存储量</div>
-              <div class="card-value">{{ formatBytes(systemOverview.totalStorage || 0) }}</div>
-              <div class="card-change positive">{{ systemOverview.totalResources }} 个资源</div>
-            </div>
-            <div class="card-icon">
-              <el-icon><Folder /></el-icon>
-            </div>
-          </div>
-        </el-card>
-
-        <el-card shadow="hover" class="overview-card">
-          <div class="card-content">
-            <div class="card-info">
-              <div class="card-title">系统运行</div>
-              <div class="card-value" style="font-size: 22px;">{{ formatUptime(systemOverview.systemUptime || 0) }}</div>
-              <div class="card-change positive">稳定运行中</div>
-            </div>
-            <div class="card-icon">
-              <el-icon><Monitor /></el-icon>
-            </div>
-          </div>
-        </el-card>
+      <h2 class="title">
+        <i class="fas fa-chart-line"></i> 教学实训 · 可视化
+      </h2>
+      <div class="actions">
+        <span class="muted">上次刷新：{{ lastRefreshAt }}</span>
+        <el-button text type="success" :loading="loading?.overview" @click="refreshData">
+          <i class="fas fa-rotate"></i>&nbsp;刷新
+        </el-button>
       </div>
     </div>
 
-    <!-- 用户活跃度统计 -->
-    <div class="activity-section">
-      <el-card shadow="never" class="activity-card" v-loading="loading.activity">
-        <div class="card-header">
-          <h4>
-            <el-icon><DataAnalysis /></el-icon>
-            用户活跃度分析
-          </h4>
-        </div>
-        
-        <div class="activity-stats">
-          <div class="activity-item">
-            <div class="activity-label">今日活跃用户</div>
-            <div class="activity-value">{{ userActivity.uniqueLogins }}</div>
-          </div>
-          
-          <div class="activity-item">
-            <div class="activity-label">今日新增用户</div>
-            <div class="activity-value">{{ userActivity.todayNewUsers }}</div>
-          </div>
-          
-          
-          <div class="activity-item">
-            <div class="activity-label">总登录次数</div>
-            <div class="activity-value">4</div>
-          </div>
-          
-
-        </div>
-        
-        <!-- 用户活跃度趋势图 -->
-        <div class="trend-chart-container">
-          <div class="chart-title">用户活跃度趋势（近7天）</div>
-          <vue-echarts :option="userActivityTrendOption" style="height: 300px;" />
-        </div>
-        
-
-
-      </el-card>
-
-
-      <el-card shadow="never" class="activity-card" v-loading="loading.activity">
-        <div class="card-header">
-          <h4>
-            <el-icon><DataAnalysis /></el-icon>
-            知识点掌握分析
-          </h4>
-        </div>
-        <div class="charts-container">
-          <!-- 条形图区域 -->
-          <div class="chart-box">
-            <div class="chart-title">知识点得分率 Top5</div>
-            <vue-echarts :option="barOption" style="height: 300px;" @click="onBarClick"/>
-          </div>
-
-        </div>
-        
-        <div class="charts-container">
-          <!-- 饼图区域 -->
-          <div class="chart-box">
-            <div class="chart-title">{{ pieTitle }}</div>
-            <vue-echarts :option="pieOption" style="height: 300px"/>
-          </div>
-        </div>
-      </el-card>
-
-
+    <!-- 顶部切换按钮（按你的顺序） -->
+    <div class="view-tabs">
+      <button v-for="t in tabs" :key="t.key" class="view-tab" :class="{ active: activeTab === t.key }"
+        @click="onTabClick(t.key)">
+        <i :class="t.icon"></i>
+        <span>{{ t.label }}</span>
+      </button>
     </div>
+
+    <!-- 内容面板：一次只显示一个图 -->
+    <section class="view-panel glass">
+      <!-- 1 作业平均成绩走向 -->
+      <div v-if="show('score')" class="panel-body">
+        <div class="chart-title"><i class="fas fa-book"></i> 作业平均成绩走向</div>
+        <vue-echarts :option="homeworkScoreOption" theme="dashboardDark" :autoresize="true"
+          style="width:100%; height:calc(100% - 36px);" />
+      </div>
+
+      <!-- 2 学生提问情况 -->
+      <div v-else-if="show('qna')" class="panel-body">
+        <div class="chart-title"><i class="fas fa-question-circle"></i> 学生提问情况</div>
+        <vue-echarts :option="studentQuestionOption" theme="dashboardDark" :autoresize="true"
+          style="width:100%; height:calc(100% - 36px);" />
+      </div>
+
+      <!-- 3 AI 交互活跃度 -->
+      <div v-else-if="show('ai')" class="panel-body">
+        <div class="chart-title"><i class="fas fa-robot"></i> AI 交互活跃度（近7天）</div>
+        <vue-echarts :option="aiTrendOption" theme="dashboardDark" :autoresize="true"
+          style="width:100%; height:calc(100% - 36px);" />
+      </div>
+
+      <!-- 4 用户活跃度趋势 -->
+      <div v-else-if="show('activity')" class="panel-body">
+        <div class="chart-title"><i class="fas fa-users"></i> 用户活跃度趋势（近7天）</div>
+        <vue-echarts :option="userActivityTrendOption" theme="dashboardDark" :autoresize="true"
+          style="width:100%; height:calc(100% - 36px);" />
+      </div>
+
+      <!-- 5 知识点分析（合并：Top5 + 分布） -->
+      <div v-else-if="show('knowledge')" class="panel-body">
+        <div class="chart-title"><i class="fas fa-signal"></i> 知识点分析（Top5 + 分布）</div>
+        <div class="knowledge-two">
+          <!-- 左：Top5 -->
+          <vue-echarts :option="barOption" theme="dashboardDark" :autoresize="true" @click="onBarClick" />
+          <!-- 右：分布 -->
+          <vue-echarts :option="pieOption" theme="dashboardDark" :autoresize="true" />
+        </div>
+        <div class="sub-title">{{ pieTitle }}</div>
+      </div>
+    </section>
   </div>
 </template>
 
+
 <style scoped>
-/* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
-.overall-stats-container {
-  padding: 24px;
-  background: rgba(255, 255, 255, 0.05);
+/* 页面整体 */
+.page-wrap {
+  padding: 20px;
   min-height: 100vh;
-  animation: admin-page-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  /* background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); */
+  color: #e2e8f0;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-/* 页面标题 */
+/* 头部区域 */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
-  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: 12px;
 }
 
-.header-actions {
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.actions {
   display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.page-header h2 {
-  color: white;
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  animation: admin-title-glow 3s ease-in-out infinite alternate;
-}
-
-@keyframes section-fade-in {
-  0% { opacity: 0; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-
-@keyframes card-slide-up {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes icon-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-@keyframes stat-fade-in {
-  0% { opacity: 0; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-@keyframes activities-fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes chart-fade-in {
-  0% { opacity: 0; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-
-/* 概览卡片 */
-.overview-section {
-  margin-bottom: 24px;
-  animation: section-fade-in 0.8s ease-out 0.2s both;
-}
-
-.overview-cards {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-}
-
-/* 玻璃卡片核心 */
-.overview-card {
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
-  transition: transform 0.25s ease;
-  animation: card-slide-up 0.8s ease-out;
-}
-
-@keyframes card-slide-up {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
-
-.overview-card:hover {
-  transform: translateY(-4px);
-}
-
-.overview-card :deep(.el-card__body) {
-  padding: 20px;
-}
-
-/* 布局 */
-.card-content {
-  display: flex;
-  justify-content: space-between;
+  gap: 10px;
   align-items: center;
 }
 
-/* 信息文本区域 */
-.card-info {
-  flex: 1;
-}
-
-.card-title {
-  font-size: 13px;
-  color: #ffffffcc; /* 半透明白 */
-  margin-bottom: 6px;
-}
-
-.card-value {
-  font-size: 26px;
-  font-weight: 600;
-  color: #ffffff;
-  margin-bottom: 4px;
-}
-
-.card-change {
-  font-size: 12px;
-  color: #ffffffb0;
-}
-
-.card-change.positive {
-  color: #67c23a;
-  font-size: 18px;
-}
-.card-change.negative {
-  color: #f56c6c;
-}
-
-/* 图标美化 */
-.card-icon {
-  font-size: 36px;
-  color: #ffffff80;
-  opacity: 0.8;
-  animation: icon-pulse 2s ease-in-out infinite;
-}
-
-@keyframes icon-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-}
-
-/* 用户活跃度 */
-.activity-section {
-  margin-bottom: 24px;
-  animation: section-fade-in 0.8s ease-out 0.4s both;
-}
-
-/* 卡片容器改为玻璃风 */
-.activity-card {
-  margin-top: 25px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-  transition: transform 0.25s ease;
-  color: #fff;
-  animation: card-slide-up 0.8s ease-out 0.6s both;
-}
-
-.activity-card:hover {
-  transform: translateY(-4px);
-}
-
-/* 统计项网格布局保持 */
-.activity-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-/* 每项居中显示 */
-.activity-item {
-  text-align: center;
-  animation: stat-fade-in 0.8s ease-out 0.8s both;
-}
-
-@keyframes stat-fade-in {
-  0% { opacity: 0; transform: scale(0.9); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-/* 标签文字改为浅白色 */
-.activity-label {
+.muted {
+  color: #94a3b8;
   font-size: 14px;
-  color: #ffffffcc;
-  margin-bottom: 8px;
 }
 
-/* 数值更亮白字 */
-.activity-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: #ffffff;
-}
-.card-header {
-  font-size: 20px;
-  padding: 10px 15px;         /* 原可能是 12px */
-  min-height: 60px;           /* 强制拉高容器高度 */
+/* 标签按钮条 */
+.view-tabs {
   display: flex;
-  align-items: left;
-  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
 }
 
-/* 趋势图样式 */
-.trend-chart-container {
-  margin-top: 20px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.12);  /* 更柔和透明 */
-  backdrop-filter: blur(14px);
+.view-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cfe3ff;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.view-tab:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.view-tab.active {
+  color: #fff;
+  background: rgba(64, 158, 255, 0.25);
+  border-color: #409eff;
+}
+
+/* 内容区整体卡片 */
+.view-panel {
+  height: 70vh;
+  /* 页面中占6成高，可根据需要调整 */
+  padding: 14px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  animation: activities-fade-in 0.8s ease-out 1s both;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
-@keyframes activities-fade-in {
-  0% { opacity: 0; transform: translateY(20px); }
-  100% { opacity: 1; transform: translateY(0); }
+/* 单个图容器 */
+.panel-body {
+  background-color: rgba(255, 255, 255, 0.15);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 5px;
 }
 
 .chart-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
-  margin-bottom: 16px;
-  text-align: center;
+  margin-bottom: 10px;
+  display: flex;
+  margin-top: 5px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  color: black;
 }
 
-.charts-container {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  animation: chart-fade-in 0.8s ease-out 1.2s both;
+.sub-title {
+  margin-top: 6px;
+  color: black;
+  font-size: 15px;
+  margin-left: 800px;
 }
 
-@keyframes chart-fade-in {
-  0% { opacity: 0; transform: translateX(-20px); }
-  100% { opacity: 1; transform: translateX(0); }
-}
-
-.chart-box {
+/* 知识点分析合并布局 */
+.knowledge-two {
+  display: grid;
+  grid-template-columns: 7fr 5fr;
+  /* 左右比例可调整 */
+  gap: 14px;
   width: 100%;
+  height: calc(100% - 36px);
+  /* 扣掉标题高度 */
 }
 
-/* 响应式设计 */
-@media (max-width: 1400px) {
-  .overview-cards {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.knowledge-two>* {
+  width: 100%;
+  height: 100%;
 }
 
-@media (max-width: 768px) {
-  .overall-stats-container {
-    padding: 16px;
+/* 响应式适配 */
+@media (max-width: 1024px) {
+  .view-panel {
+    height: 58vh;
   }
-  
-  .overview-cards {
+
+  .knowledge-two {
     grid-template-columns: 1fr;
+    /* 小屏上下排列 */
   }
-  
-  .activity-stats {
-    grid-template-columns: 1fr;
-  }
-  
-  .page-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-}
-
-/* 通用样式 */
-.el-card {
-  border-radius: 12px !important;
-  border: none !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
-}
-
-.el-card :deep(.el-card__body) {
-  padding: 24px;
-}
-
-.el-progress {
-  flex: 1;
-}
-
-/* 表格行动画（如果有表格的话） */
-.el-table :deep(.el-table__body tr) {
-  animation: row-fade-in 0.6s ease-out;
-}
-
-@keyframes row-fade-in {
-  0% { opacity: 0; transform: translateX(-10px); }
-  100% { opacity: 1; transform: translateX(0); }
 }
 </style>
