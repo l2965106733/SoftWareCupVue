@@ -1,8 +1,10 @@
 <script setup>
-import { ref, onMounted, computed,watchEffect } from 'vue'
+import { ref, onMounted, computed, watchEffect } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getQuestionApi, saveQuestionApi, publishHomeworkApi, generateQuestionJudgeApi,
-  getHomeworkListApi, getStudentSubmissionsApi, gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi } from '@/api/teacher'
+import {
+  getQuestionApi, saveQuestionApi, publishHomeworkApi, generateQuestionJudgeApi,
+  getHomeworkListApi, getStudentSubmissionsApi, gradeHomeworkApi, getHomeworkDetailWithAnswerApi, getHomeworkDetailApi
+} from '@/api/teacher'
 
 const formatDate = (row, column, cellValue) => {
   if (cellValue == null || cellValue === '') return ''        // 兜底：空就不显示
@@ -553,6 +555,7 @@ const gradeDialogVisible = ref(false)
 const currentSubmission = ref({})
 const currentGradeQuestions = ref([])
 const gradeScores = ref({})
+const gradeAiFeedback = ref({})
 const gradeFeedback = ref('')
 const isGraded = ref(false) // 新增：是否已批改
 
@@ -706,17 +709,28 @@ const confirmAndSaveQuestions = async () => {
 //   });
 // });
 
+const cleanFeedbackText = (raw) => {
+  if (!raw) return '';
+  let s = String(raw).replace(/\r\n/g, '\n'); // 统一换行
+  // 直接把“等待批改的问题：”到末尾全部删除（兼容 : 和 ：）
+  s = s.replace(/等待批改的问题\s*[:：][\s\S]*$/, '').trim();
+  // 可选：清掉结尾可能残留的代码块围栏
+  s = s.replace(/```[\s\S]*$/g, '').trim();
+  // 可选：合并多余空行
+  s = s.replace(/\n{3,}/g, '\n\n');
+  return s;
+}
 const handleAIGrade = async (question) => {
   const res = await generateQuestionJudgeApi(question);
   if (res.code === 1) {
-    gradeScores.value[question.id] = res.data.score ?? '';
+    gradeScores.value[question.id] = res.data.score;
     console.log('AI评分结果:', gradeScores.value[question.id]);
-    gradeFeedback.value = res.data.feedback || '';
+    gradeAiFeedback.value[question.id] = cleanFeedbackText(res.data.feedback);
     ElMessage.success('AI已生成参考答案和解析');
   } else {
     ElMessage.error(res.msg || 'AI生成失败');
   }
-  
+
 }
 </script>
 
@@ -791,7 +805,7 @@ const handleAIGrade = async (question) => {
 
               </div> -->
 
-              <el-input  type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8"
+              <el-input type="textarea" v-model="q.content" placeholder="请输入题目内容" :rows="8"
                 @input="onQuestionFieldChange" :disabled="isQuestionSaved(q)" />
 
 
@@ -1040,7 +1054,7 @@ const handleAIGrade = async (question) => {
           </el-button>
         </span>
       </template>
-  
+
     </el-dialog>
 
     <!-- 作业详情对话框 -->
@@ -1054,7 +1068,7 @@ const handleAIGrade = async (question) => {
             <el-descriptions-item label="发布时间">{{ currentHomework.startTime }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="statusMap[currentHomework.status]?.type || 'default'" style="color:white">
-             {{currentHomework.timeLeft}}
+                {{ currentHomework.timeLeft }}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="总分">{{homeworkQuestions.reduce((sum, q) => sum + q.score, 0)
@@ -1192,6 +1206,12 @@ const handleAIGrade = async (question) => {
                 </div>
               </div>
 
+              <div class="question-section question-analysis" v-if="gradeAiFeedback[question.id]">
+                <h5>AI反馈</h5>
+                <div class="answer-display">
+                  {{ gradeAiFeedback[question.id] }}
+                </div>
+              </div>
               <el-button @click="handleAIGrade(question)" size="small" type="primary" class="el-button-local">
                 AI试批
               </el-button>

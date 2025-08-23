@@ -1,11 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { 
-  getHomeworkListApi, 
-  getHomeworkDetailApi, 
-  saveHomeworkDraftApi, 
-  submitHomeworkApi, 
+import {
+  getHomeworkListApi,
+  getHomeworkDetailApi,
+  saveHomeworkDraftApi,
+  submitHomeworkApi,
   getHomeworkStatsApi,
   getAnalysisApi
 } from '@/api/student'
@@ -54,9 +54,9 @@ const getCurrentStudentId = () => {
 }
 
 // 计算属性
-const completionRate = computed(() => 
-  homeworkStats.value.totalHomework > 0 
-    ? Math.round((homeworkStats.value.completedHomework / homeworkStats.value.totalHomework) * 100) 
+const completionRate = computed(() =>
+  homeworkStats.value.totalHomework > 0
+    ? Math.round((homeworkStats.value.completedHomework / homeworkStats.value.totalHomework) * 100)
     : 0
 )
 
@@ -108,7 +108,7 @@ const getTimeLeftClass = (deadline) => {
   const now = new Date()
   const deadlineDate = new Date(deadline)
   const timeDiff = deadlineDate - now
-  
+
   if (timeDiff < 0) return 'overdue'
   if (timeDiff < 24 * 60 * 60 * 1000) return 'urgent' // 24小时内
   return 'normal'
@@ -116,33 +116,33 @@ const getTimeLeftClass = (deadline) => {
 
 const formatTimeLeft = (deadline) => {
   if (!deadline) return '未设置'
-  
+
   const now = new Date()
   const deadlineDate = new Date(deadline)
-  
+
   // 检查日期是否有效
   if (isNaN(deadlineDate.getTime())) return '无效日期'
-  
+
   const timeDiff = deadlineDate - now
-  
+
   if (timeDiff < 0) return '已逾期'
-  
+
   const days = Math.floor(timeDiff / (24 * 60 * 60 * 1000))
   const hours = Math.floor((timeDiff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000))
-  
+
   if (days > 0) return `${days}天${hours}小时`
   if (hours > 0) return `${hours}小时`
-  
+
   const minutes = Math.floor((timeDiff % (60 * 60 * 1000)) / (60 * 1000))
   return `${minutes}分钟`
 }
 
 const formatDeadline = (deadline) => {
   if (!deadline) return '未设置'
-  
+
   const date = new Date(deadline)
   if (isNaN(date.getTime())) return '无效日期'
-  
+
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -164,7 +164,7 @@ const getScoreClass = (score, totalScore) => {
 const getQuestionTypeColor = (type) => {
   const colors = {
     choice: 'primary',
-    short: 'success', 
+    short: 'success',
     code: 'warning'
   }
   return colors[type] || 'info'
@@ -193,7 +193,7 @@ const loadHomeworkList = async () => {
   try {
     const studentId = getCurrentStudentId()
     if (!studentId) return
-    
+
     const result = await getHomeworkListApi(studentId)
     if (result.code === 1 && result.data && Array.isArray(result.data)) {
       homeworkList.value = result.data.map(item => ({
@@ -225,16 +225,16 @@ const loadHomeworkStats = async () => {
   try {
     const studentId = getCurrentStudentId()
     if (!studentId) return
-    
+
     const result = await getHomeworkStatsApi(studentId)
     if (result.code === 1) {
       const data = result.data || {}
-      
+
       // 从学生角度：已完成 = 已提交，待完成 = 未提交
       const totalHomework = data.totalHomework || 0
       const submittedHomework = data.submittedHomework || 0
       const gradedHomework = data.gradedHomework || 0
-      
+
       homeworkStats.value = {
         totalHomework: totalHomework,
         completedHomework: submittedHomework,                 // 已完成 = 已提交作业数
@@ -242,15 +242,15 @@ const loadHomeworkStats = async () => {
         averageScore: data.avgScore || 0,                     // 平均分
         overallProgress: totalHomework > 0 ? Math.round((submittedHomework / totalHomework) * 100) : 0 // 整体进度基于提交率
       }
-      
+
       // 更新作业统计数据
       homeworkStatsData.value = [
         { label: '总作业数', value: homeworkStats.value.totalHomework.toString(), icon: 'fas fa-file-alt', color: '#667eea' },
         { label: '已完成', value: homeworkStats.value.completedHomework.toString(), icon: 'fas fa-check-circle', color: '#f5576c' },
         { label: '待完成', value: homeworkStats.value.pendingHomework.toString(), icon: 'fas fa-clock', color: '#4facfe' },
-        { label: '平均得分率', value: (homeworkStats.value.averageScore.toFixed(2)*100).toString() + "%", icon: 'fas fa-chart-line', color: '#26d0ce' }
+        { label: '平均得分率', value: (homeworkStats.value.averageScore.toFixed(2) * 100).toString() + "%", icon: 'fas fa-chart-line', color: '#26d0ce' }
       ]
-      
+
       console.log('作业统计数据:', homeworkStats.value) // 调试日志
     }
   } catch (error) {
@@ -269,13 +269,13 @@ const startHomework = async (homework) => {
       }
 
 
-      
+
       // 初始化答案对象
       currentAnswers.value = {}
       currentHomework.value.questions.forEach(question => {
         currentAnswers.value[question.id] = question.studentAnswer || ''
       })
-      
+
       showHomeworkDialog.value = true
     }
   } catch (error) {
@@ -299,7 +299,7 @@ const saveDraft = async () => {
       status: 0,                                       // 0:未提交(草稿状态)
       answers: currentAnswers.value                    // 学生答案
     }
-    
+
     const result = await saveHomeworkDraftApi(draftData)
     if (result.code === 1) {
       ElMessage.success('草稿保存成功')
@@ -316,10 +316,10 @@ const saveDraft = async () => {
 // 提交作业
 const submitHomework = () => {
   // 检查是否所有题目都已作答
-  const unanswered = currentHomework.value.questions.filter(q => 
+  const unanswered = currentHomework.value.questions.filter(q =>
     !currentAnswers.value[q.id]?.trim()
   )
-  
+
   if (unanswered.length > 0) {
     ElMessageBox.confirm(`还有${unanswered.length}道题未作答，确定要提交吗？`, '确认提交', {
       confirmButtonText: '确定提交',
@@ -345,7 +345,7 @@ const doSubmit = async () => {
       status: 1,                                       // 1:已提交
       answers: currentAnswers.value                    // 学生答案
     }
-    
+
     const result = await submitHomeworkApi(submitData)
     if (result.code === 1) {
       ElMessage.success('作业提交成功，等待教师批改')
@@ -424,13 +424,8 @@ const fetchQuestionAnalysis = async (question) => {
             作业筛选
           </h3>
           <div class="filter-controls">
-            <button 
-              v-for="filter in filterOptions" 
-              :key="filter.value"
-              class="filter-btn"
-              :class="{ active: filterStatus === filter.value }"
-              @click="filterStatus = filter.value"
-            >
+            <button v-for="filter in filterOptions" :key="filter.value" class="filter-btn"
+              :class="{ active: filterStatus === filter.value }" @click="filterStatus = filter.value">
               <i :class="filter.icon"></i>
               {{ filter.label }}
             </button>
@@ -445,20 +440,16 @@ const fetchQuestionAnalysis = async (question) => {
         <i class="fas fa-list"></i>
         作业列表
       </h2>
-      
+
       <div v-if="filteredHomework.length === 0" class="student-card empty-card">
         <div class="empty-content">
           <i class="fas fa-inbox"></i>
           <p class="student-text secondary">暂无作业数据</p>
         </div>
       </div>
-      
+
       <div v-else class="student-grid auto-fit">
-        <div 
-          v-for="homework in filteredHomework" 
-          :key="homework.id" 
-          class="student-card homework-card"
-        >
+        <div v-for="homework in filteredHomework" :key="homework.id" class="student-card homework-card">
           <div class="homework-header">
             <div class="homework-title">{{ homework.title }}</div>
             <div class="homework-status">
@@ -467,7 +458,7 @@ const fetchQuestionAnalysis = async (question) => {
               </span>
             </div>
           </div>
-          
+
           <div class="homework-content">
             <p class="homework-desc">{{ homework.description }}</p>
             <div class="homework-meta">
@@ -486,14 +477,15 @@ const fetchQuestionAnalysis = async (question) => {
                 </span>
               </div>
             </div>
-            
+
             <div v-if="homework.status === 2" class="score-section">
               <div class="score-display">
                 <span class="score-label">得分:</span>
                 <span class="score-value" :class="getScoreClass(homework.score, homework.totalScore)">
                   {{ homework.score }}/{{ homework.totalScore }}
                 </span>
-                <span v-if="homework.totalScore > 0" class="score-rate" :class="getScoreClass(homework.score, homework.totalScore)">
+                <span v-if="homework.totalScore > 0" class="score-rate"
+                  :class="getScoreClass(homework.score, homework.totalScore)">
                   得分率：{{ Math.round((homework.score / homework.totalScore) * 100) }}%
                 </span>
               </div>
@@ -511,23 +503,16 @@ const fetchQuestionAnalysis = async (question) => {
               </div>
             </div>
           </div>
-          
+
           <div class="homework-actions">
-            <button 
-              v-if="homework.status === 0" 
-              class="student-button"
-              @click="startHomework(homework)"
-              :disabled="dayjs().isAfter(dayjs(homework.homework_end_time))"
-            >
+            <button v-if="homework.status === 0" class="student-button" @click="startHomework(homework)"
+              :disabled="dayjs().isAfter(dayjs(homework.homework_end_time))">
               <i class="fas fa-edit"></i>
               开始作业
             </button>
-            
-            <button 
-              v-if="homework.status === 1 || homework.status === 2" 
-              class="student-button secondary"
-              @click="viewHomework(homework)"
-            >
+
+            <button v-if="homework.status === 1 || homework.status === 2" class="student-button secondary"
+              @click="viewHomework(homework)">
               <i class="fas fa-eye"></i>
               查看详情
             </button>
@@ -537,12 +522,7 @@ const fetchQuestionAnalysis = async (question) => {
     </div>
 
     <!-- 作业详情对话框 -->
-    <el-dialog 
-      v-model="showHomeworkDialog" 
-      :title="currentHomework?.title" 
-      width="80%"
-      :close-on-click-modal="false"
-    >
+    <el-dialog v-model="showHomeworkDialog" :title="currentHomework?.title" width="80%" :close-on-click-modal="false">
       <div v-if="currentHomework" class="homework-detail">
         <div class="homework-info-panel">
           <p><strong>作业描述：</strong>{{ currentHomework.description }}</p>
@@ -550,68 +530,58 @@ const fetchQuestionAnalysis = async (question) => {
           <p><strong>总分：</strong>{{ currentHomework.totalScore }}分</p>
           <p v-if="currentHomework.feedback"><strong>教师反馈：</strong>{{ currentHomework.feedback }}</p>
         </div>
-        
+
         <div class="questions-container">
-          <div 
-            v-for="(question, index) in currentHomework.questions" 
-            :key="question.id" 
-            class="question-item"
-          >
+          <div v-for="(question, index) in currentHomework.questions" :key="question.id" class="question-item">
             <div class="question-header">
               <span class="question-number">第{{ index + 1 }}题</span>
-              <el-tag 
-                :type="getQuestionTypeColor(question.type)" 
-                size="small"
-              >
+              <el-tag :type="getQuestionTypeColor(question.type)" size="small">
                 {{ getQuestionTypeName(question.type) }}
               </el-tag>
               <span class="question-score">{{ question.score || question.totalScore }}分</span>
             </div>
-            
-            <div class="question-content">
-              <p>{{ question.content }}</p>
+
+            <div class="question-content" style="white-space: pre-line;">
+              {{ question.content }}
             </div>
-            
+
             <div class="answer-section">
               <div class="text-answer">
-                <el-input
-                  v-model="currentAnswers[question.id]"
-                  type="textarea"
+                <el-input v-model="currentAnswers[question.id]" type="textarea"
                   :rows="question.type === 'code' ? 8 : (question.type === 'choice' ? 2 : 4)"
                   :placeholder="getAnswerPlaceholder(question.type)"
-                  :disabled="currentHomework.status === 1 || currentHomework.status === 2"
-                />
+                  :disabled="currentHomework.status === 1 || currentHomework.status === 2" />
               </div>
-              
-    
+
+
 
               <div v-if="currentHomework.status === 2 && question.score !== undefined" class="question-score-display">
-                
+
                 <!-- <div v-if="!analysisMap[question.id]">
                   <span :data-id="question.id" v-once>
                     {{ fetchQuestionAnalysis(question) }}
                   </span>
                 </div>   需要吗？？-->
-                
+
                 <!-- <div class="question-section question-explain">
                   <strong>错误诊断：</strong>
                   <div>{{ analysisMap[question.id] || '诊断中...' }}</div>
                 </div> -->
-                
+
                 <div class="question-section question-answer">
-                <strong>标准答案：</strong>
-                <div style="color: #409eff;">{{ question.answer || '暂无' }}</div>
-              </div>
+                  <strong>标准答案：</strong>
+                  <div style="color: #409eff;">{{ question.answer || '暂无' }}</div>
+                </div>
 
                 <div class="question-section question-analysis">
                   <strong>解析：</strong>
                   <div>{{ question.explain || '暂无' }}</div>
                 </div>
-              
-              
+
+
               </div>
 
-              
+
               <!-- <div v-if="currentHomework.status === 2" class="question-score-display">
                 <span class="score-label">得分：</span>
                 <span class="score-value" :class="getScoreClass(question.score, question.totalScore)">
@@ -625,22 +595,14 @@ const fetchQuestionAnalysis = async (question) => {
           </div>
         </div>
       </div>
-      
+
       <template #footer>
         <div class="dialog-footer">
           <el-button @click="showHomeworkDialog = false">关闭</el-button>
-          <el-button 
-            v-if="currentHomework?.status === 0"
-            type="primary" 
-            @click="saveDraft"
-          >
+          <el-button v-if="currentHomework?.status === 0" type="primary" @click="saveDraft">
             保存草稿
           </el-button>
-          <el-button 
-            v-if="currentHomework?.status === 0"
-            type="success" 
-            @click="submitHomework"
-          >
+          <el-button v-if="currentHomework?.status === 0" type="success" @click="submitHomework">
             提交作业
           </el-button>
         </div>
@@ -650,26 +612,29 @@ const fetchQuestionAnalysis = async (question) => {
 </template>
 
 <style scoped>
-
 .question-section {
   margin-top: 8px;
   padding: 12px;
   border-radius: 6px;
-  background-color: #f9f9f9; /* 默认背景 */
+  background-color: #f9f9f9;
+  /* 默认背景 */
 }
 
 .question-explain {
-  background-color: #fdf6ec; /* 淡橘黄 - 用于“错误诊断” */
+  background-color: #fdf6ec;
+  /* 淡橘黄 - 用于“错误诊断” */
   border-left: 4px solid #f4a261;
 }
 
 .question-answer {
-  background-color: #ecf5ff; /* 淡蓝色 - 用于“标准答案” */
+  background-color: #ecf5ff;
+  /* 淡蓝色 - 用于“标准答案” */
   border-left: 4px solid #409eff;
 }
 
 .question-analysis {
-  background-color: #f0f9eb; /* 淡绿色 - 用于“解析” */
+  background-color: #f0f9eb;
+  /* 淡绿色 - 用于“解析” */
   border-left: 4px solid #67c23a;
 }
 
@@ -704,8 +669,15 @@ const fetchQuestionAnalysis = async (question) => {
 }
 
 @keyframes icon-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.1); }
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
 }
 
 .stat-content {
@@ -808,15 +780,15 @@ const fetchQuestionAnalysis = async (question) => {
 }
 
 .status-warning {
-  background:rgb(229, 202, 27);
+  background: rgb(229, 202, 27);
 }
 
 .status-primary {
-  background:rgb(238, 134, 64);
+  background: rgb(238, 134, 64);
 }
 
 .status-success {
-  background:rgb(45, 218, 91);
+  background: rgb(45, 218, 91);
 }
 
 .status-info {
@@ -1017,20 +989,20 @@ const fetchQuestionAnalysis = async (question) => {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .filter-controls {
     justify-content: center;
   }
-  
+
   .homework-header {
     flex-direction: column;
     gap: 12px;
   }
-  
+
   .homework-actions {
     flex-direction: column;
   }
-  
+
   .homework-meta {
     flex-direction: column;
   }

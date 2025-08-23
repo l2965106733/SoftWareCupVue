@@ -200,7 +200,7 @@ const loadBarChart = async () => {
       type: 'bar',
       name: '得分率',
       data: data.map(i => Number(i.scoreRate) || 0),
-      label: { show: true, position: 'right', formatter: '{c}%' },
+      // label: { show: true, position: 'right', formatter: '{c}%' },
       itemStyle: { color: p => colors[p.dataIndex % colors.length] }
     }]
   }
@@ -229,12 +229,19 @@ const loadPieChart = async (knowledgeName) => {
     series: [{
       type: 'pie',
       radius: '60%',
-      data: dist.map(item => ({
-        name: item.label,
-        value: item.count
-      })),
+      data: dist.map(item => {
+        let color = '#ccc'
+        if (item.label === '优秀') color = '#91cc75'
+        else if (item.label === '良好') color = '#fac858'
+        else if (item.label === '一般') color = '#ee6666'
+        return {
+          name: item.label,
+          value: item.count,
+          itemStyle: { color }
+        }
+      }),
       label: {
-        formatter: '{b}: {c}人 ({d}%)'
+        formatter: '{b}:{c}题({d}%)'
       }
     }]
   }
@@ -314,7 +321,7 @@ const loadAiTrend = async () => {
       aiTrendOption.value = {
         tooltip: { trigger: 'axis' },
         xAxis: { type: 'category', data: data.map(d => dayjs(d.d).format('MM-DD')), boundaryGap: false },
-        yAxis: { type: 'value', name: '提问次数' },
+        yAxis: { type: 'value', name: '提问次数',minInterval: 1 },
         series: [{
           name: 'AI提问次数',
           type: 'line',
