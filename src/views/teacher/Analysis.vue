@@ -587,8 +587,8 @@ onMounted(() => {
           
           <el-table   style="border-radius: 10px; margin-bottom: 10px;"
           :data="filteredStudentData" stripe border default-sort="{prop: 'avgScore', order: 'descending'}" @sort-change="handleSortChange">
-            <el-table-column prop="name" label="姓名" width="125" sortable/>
-            <el-table-column prop="studentId" label="学号" width="125" />
+            <el-table-column prop="name" label="姓名" width="130" sortable/>
+            <el-table-column prop="studentId" label="学号" width="145" />
 
             <!-- <el-table-column label="学习进度" width="150" sortable prop="progress">
               <template #default="scope">
@@ -604,7 +604,7 @@ onMounted(() => {
               </template>
             </el-table-column> -->
 
-            <el-table-column prop="viewCount" label="资源查看数" width="119" sortable :cell-class-name="() => 'table-cell'">
+            <el-table-column prop="viewCount" label="资源查看数" width="130" sortable :cell-class-name="() => 'table-cell'">
               <template #default="scope">
                 <div class="view-count-cell">
                   <el-icon><View /></el-icon>
@@ -613,8 +613,8 @@ onMounted(() => {
               </template>
             </el-table-column>
             <el-table-column prop="homeworkCount" label="完成作业" width="125" sortable :cell-class-name="() => 'table-cell'"/>
-            <el-table-column prop="totalHomework" label="总作业数" width="120" />
-            <el-table-column label="完成率" width="125" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)" :cell-class-name="() => 'table-cell'">
+            <el-table-column prop="totalHomework" label="总作业数" width="140" />
+            <el-table-column label="完成率" width="145" sortable :sort-by="(row) => (row.homeworkCount / row.totalHomework)" :cell-class-name="() => 'table-cell'">
               <template #default="scope">
                 <div class="completion-cell">
                   <el-progress 
@@ -628,7 +628,7 @@ onMounted(() => {
               </template>
             </el-table-column>
             <!-- <el-table-column prop="lastActive" label="最后活跃" width="140" /> -->
-            <el-table-column prop="questionCount" label="提问数" width="120" sortable>
+            <el-table-column prop="questionCount" label="提问数" width="140" sortable>
               <template #default="scope">
                 <div class="question-count-cell">
                   <el-icon><ChatLineSquare /></el-icon>

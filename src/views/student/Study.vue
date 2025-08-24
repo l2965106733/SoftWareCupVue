@@ -962,13 +962,13 @@ const showAiAdvice = async () => {
 
           <div class="question-inner-content glass-box">
 
-            <div class="question-display" v-if="q.type === 'choice'">
+            <div class="question-display" v-if="q.type === 'choice'" style="margin-bottom: 15px;">
               <div class="question-text">{{ getParsedQuestion(q.content).text }}</div>
               <ul class="option-list">
                 <li v-for="(opt, idx) in getParsedQuestion(q.content).options" :key="idx">{{ opt }}</li>
               </ul>
             </div>
-            <div class="question-content" v-else>{{ q.content }}</div>
+            <div class="question-text" v-else style="margin-bottom: 15px;">{{ q.content }}</div>
 
 
             <div class="question-meta">
