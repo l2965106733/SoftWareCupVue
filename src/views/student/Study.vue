@@ -15,7 +15,7 @@ const tempIdCounter = ref(-1)
 const aiFormData = ref({
   knowledge: '',
   type: '',
-  count: 3,
+  count: 1,
   remark: ''
 })
 
@@ -36,7 +36,7 @@ const handleCloseAIDialog = () => {
   aiFormData.value = {
     knowledge: '',
     type: '',
-    count: 3,
+    count: 1,
     remark: ''
   }
 }
@@ -70,7 +70,7 @@ const handleAIGenerate = async () => {
     aiFormData.value = {
       knowledge: '',
       type: '',
-      count: 3,
+      count: 1,
       remark: ''
     }
 
@@ -710,12 +710,14 @@ const changeFormat =  (markdown) =>{
     .trim();
 }
 const mistakes = ref([]);
-const AiAdvice = ref("建议:加强学习");
+const AiAdvice = ref("请稍候，AI建议会展示在此区域");
 const AiAdviceFlag = ref(false);
 const showAiAdvice = async () => {
+  if (AiAdviceFlag.value) return;
+  AiAdviceFlag.value = true; // 防止重复点击
   const res = await getAIAdviceApi();
   AiAdvice.value = changeFormat(res.data);
-  AiAdviceFlag.value = true;
+  
 };
 </script>
 
@@ -726,7 +728,7 @@ const showAiAdvice = async () => {
   </el-dialog>
 
   <el-dialog v-model="showMistakesFlag" title="错题本" width="80%" :close-on-click-modal="false">
-    <el-button class="ai-advice-btn" @click="showAiAdvice">
+    <el-button class="ai-advice-btn" @click="showAiAdvice" :disabled="AiAdviceFlag">
       <i class="fas fa-eye"></i>
       AI建议
     </el-button>
@@ -790,22 +792,23 @@ const showAiAdvice = async () => {
   <div class="student-container">
     <!-- 页面标题 -->
     <div class="student-section">
-      <h1 class="student-title large">
+      <h1 class="student-title large" style="color: #000;">
         <i class="fas fa-book"></i>
         学习模块
       </h1>
-      <p class="student-text secondary">探索丰富的学习资源</p>
+      <p class="student-text secondary" style="color: #000;"> 探索丰富的学习资源</p>
     </div>
 
     <!-- 学习统计区域 -->
     <div class="student-section">
-      <h2 class="student-title medium">
+      <h2 class="student-title medium" style="color: #000;">
         <i class="fas fa-chart-bar"></i>
         学习统计
       </h2>
       <div class="student-grid three-columns stat-row">
         <div class="student-card stat-card" v-for="(stat, index) in studyStats" :key="index">
-          <div class="stat-icon" :style="{ color: stat.color }">
+          <!-- <div class="stat-icon" :style="{ color: stat.color }"> -->
+          <div class="stat-icon">
             <i :class="stat.icon"></i>
           </div>
           <div class="stat-content">
@@ -856,7 +859,7 @@ const showAiAdvice = async () => {
 
     <!-- 课件学习区域 -->
     <div class="student-section">
-      <h2 class="student-title medium">
+      <h2 class="student-title medium" style="color: #000;">
         <i class="fas fa-folder-open"></i>
         课程课件
       </h2>
@@ -886,7 +889,7 @@ const showAiAdvice = async () => {
             </div>
           </div>
           <div class="courseware-actions">
-            <button class="student-button" @click.stop="handlePreview(courseware)">
+            <button class="student-button color" @click.stop="handlePreview(courseware)">
               <i class="fas fa-eye"></i>
               预览
             </button>
@@ -901,8 +904,8 @@ const showAiAdvice = async () => {
 
     <!-- 错题本 -->
     <div class="student-section">
-      <h2 class="student-title medium">
-        <i class="fas fa-robot"></i>
+      <h2 class="student-title medium" style="color: #000;">
+        <i class="fas fa-book"></i>
         错题本
       </h2>
       <div class="student-card ai-card">
@@ -911,13 +914,13 @@ const showAiAdvice = async () => {
             <i class="fas fa-magic"></i>
             错题集
           </div>
-          <button class="student-button" @click="showMistakes">
+          <button class="student-button color" @click="showMistakes">
             <i class="fas fa-plus"></i>
             查看错题
           </button>
         </div>
         <div class="ai-content">
-          <p class="student-text secondary">查看过往错题，并向AI寻求改进意见</p>
+          <p class="student-text secondary"  style="color: #000;">查看过往错题，并向AI寻求改进意见</p>
         </div>
       </div>
 
@@ -925,7 +928,7 @@ const showAiAdvice = async () => {
 
     <!-- AI题目生成区域 -->
     <div class="student-section">
-      <h2 class="student-title medium">
+      <h2 class="student-title medium"  style="color: #000;">
         <i class="fas fa-robot"></i>
         AI练习
       </h2>
@@ -935,13 +938,13 @@ const showAiAdvice = async () => {
             <i class="fas fa-magic"></i>
             智能题目生成
           </div>
-          <button class="student-button" @click="showAIDialog">
+          <button class="student-button color" @click="showAIDialog">
             <i class="fas fa-plus"></i>
             生成题目
           </button>
         </div>
         <div class="ai-content">
-          <p class="student-text secondary">基于学习内容，AI可以为您生成个性化的练习题</p>
+          <p class="student-text secondary" style="color: #000;">基于学习内容，AI可以为您生成个性化的练习题</p>
         </div>
       </div>
 
@@ -1064,7 +1067,7 @@ const showAiAdvice = async () => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 .ai-advice-btn {
   margin-bottom: 10px;
   background: #409eff;      /* 蓝色主调 */
@@ -1655,6 +1658,670 @@ const showAiAdvice = async () => {
   color: #666;
 }
 
+
+/* 作业详情对话框样式 */
+.homework-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.homework-info-panel {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.homework-info-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.questions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.question-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.question-score {
+  margin-left: auto;
+  color: #666;
+  font-size: 14px;
+}
+
+.question-content {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.submitted-answer {
+  margin-top: 16px;
+  padding: 12px;
+  background: #e8f4fd;
+  border-radius: 6px;
+}
+
+.submitted-answer h5 {
+  margin: 0 0 8px 0;
+  color: #409eff;
+}
+
+.answer-content {
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.question-score-display {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.score-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.score-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+</style> -->
+
+<style scoped>
+.ai-advice-btn {
+  margin-bottom: 10px;
+  background: #409eff;      /* 蓝色主调 */
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  border-radius: 6px;
+  padding: 6px 14px;
+}
+.ai-advice-btn:hover {
+  background: #66b1ff;
+}
+
+/* 建议卡片样式 */
+.ai-advice-box {
+  margin-top: 8px;
+  padding: 12px;
+  background-color: #e8f4ff;   /* 浅蓝底（和个人答案的浅蓝区区别开） */
+  border-left: 4px solid #409eff;
+  border-radius: 4px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.ai-advice-box strong {
+  color: #409eff;   /* 标题蓝色加粗 */
+  margin-right: 6px;
+}
+
+.question-display {
+  background: #fff;  /* 修改为白色背景 */
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  color: #222;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.question-text {
+  font-weight: 600;
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.option-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.option-list li {
+  padding: 6px 0;
+  font-size: 15px;
+  color: #333;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.08);
+}
+
+.question-display-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.question-display-card {
+  background: linear-gradient(135deg, rgba(128, 183, 255, 0.4), rgba(102, 161, 255, 0.5));
+  backdrop-filter: blur(24px);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  color: #222;
+  transition: all 0.3s ease;
+}
+
+.question-top {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.question-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b1ea0;
+  margin: 0;
+}
+
+.question-tag {
+  font-weight: 100;
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: white;
+  font-size: 15px;
+  padding: 2px 10px;
+  border-radius: 6px;
+}
+
+/* 内部内容整体样式 */
+.question-inner-content.glass-box {
+  padding: 20px;
+  border-radius: 14px;
+  background: #fff; /* 修改为白色背景 */
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.05);
+}
+
+/* 单项内容 */
+.question-content {
+  margin-bottom: 12px;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.question-meta {
+  background: #fff;  /* 修改为白色背景 */
+  border-left: 4px solid #409eff;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.05);
+  color: #2c3e50;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-meta .label {
+  font-weight: 600;
+  color: #333;
+}
+
+.question-meta .value {
+  font-weight: 500;
+  color: #222;
+}
+
+.question-answer-block {
+  margin-bottom: 16px;
+}
+
+/* 参考答案样式 */
+.glass-answer {
+  background: #fff; /* 修改为白色背景 */
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-family: 'Courier New', monospace;
+  font-size: 15px;
+  color: #2c3e50;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* 解析区域样式 */
+.question-explain-block {
+  background: #fff;  /* 修改为白色背景 */
+  border-left: 4px solid #e67e22;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.1);
+}
+
+.question-explain-block .label {
+  display: block;
+  font-weight: bold;
+  font-size: 15px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.explain-text {
+  font-size: 15px;
+  color: #444;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.explain-text {
+  white-space: pre-wrap;
+  padding-top: 4px;
+}
+
+.label {
+  font-weight: bold;
+  color: #333;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+/* 统计卡片样式 */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+  
+}
+
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: clamp(11px, 2vw, 14px);
+  color: #666;
+  line-height: 1.3;
+}
+
+/* 统计卡片横排布局 */
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+}
+
+.stat-row .stat-card {
+  flex: 1 1 0;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .stat-row {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .stat-row .stat-card {
+    min-width: 140px;
+    max-width: 100%;
+  }
+}
+
+/* 计时器卡片样式 */
+.timer-card {
+  padding: 24px;
+}
+
+.timer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.timer-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.timer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #fff;  /* 修改为白色背景 */
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+.timer-item:hover {
+  background: #f5f5f5;
+}
+
+.timer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.resource-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.timer-display {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 课件卡片样式 */
+.courseware-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.courseware-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.file-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.courseware-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+}
+
+.courseware-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.courseware-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* AI卡片样式 */
+.ai-card {
+  padding: 24px;
+}
+
+.ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ai-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-content {
+  color: #666;
+}
+
+
+/* 按钮样式扩展 */
+.student-button {
+  background: #f4f4f4;
+  color: black;
+  border: 1px solid #ccc;
+}
+/* .student-button.warning {
+  background: #f56c6c;
+}
+.student-button.color {
+  background: black;
+}
+
+
+.student-button.danger {
+  background: #f44336;
+}
+
+.student-button.secondary {
+  background: #607d8b;
+} */
+
+/* 统计详情对话框样式 */
+.stats-detail {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.stats-section {
+  margin-bottom: 30px;
+}
+
+.stats-section h4 {
+  margin-bottom: 15px;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #fff;  /* 修改为白色背景 */
+  border: 1px solid #e0e0e0;
+}
+
+.question-explain {
+  background-color: #fdf6ec;  /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
+}
+
+.question-answer {
+  background-color: #ecf5ff;  /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
+}
+
+.question-analysis {
+  background-color: #f0f9eb;  /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+/* .stat-card {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+} */
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.stat-desc {
+  font-size: 14px;
+  opacity: 0.9;
+  color: white;
+}
+
+.chart-container {
+  height: 200px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed #e0e0e0;
+}
+
+.chart-placeholder {
+  text-align: center;
+  color: #999;
+}
+
+.chart-placeholder .el-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  color: #ddd;
+}
+
+.chart-placeholder p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+
+  .timer-header,
+  .ai-header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .timer-actions {
+    flex-direction: column;
+  }
+
+  .courseware-actions {
+    flex-direction: column;
+  }
+
+  .today-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.student-section>.student-title.medium {
+  font-size: clamp(18px, 4vw, 24px);
+  margin-bottom: 32px !important;
+}
+
+.student-section>.student-title.medium+.student-grid.three-columns {
+  margin-top: 32px !important;
+}
+
+.student-section>.student-title.homework {
+  margin-bottom: 24px;
+}
 
 /* 作业详情对话框样式 */
 .homework-detail {

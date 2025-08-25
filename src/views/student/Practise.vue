@@ -393,7 +393,7 @@ const fetchQuestionAnalysis = async (question) => {
         <i class="fas fa-tasks"></i>
         作业模块
       </h1>
-      <p class="student-text secondary">完成课程作业，提升学习效果</p>
+      <p class="student-text">完成课程作业，提升学习效果</p>
     </div>
 
     <!-- 作业统计区域 -->
@@ -404,7 +404,8 @@ const fetchQuestionAnalysis = async (question) => {
       </h2>
       <div class="student-grid three-columns">
         <div class="student-card stat-card" v-for="(stat, index) in homeworkStatsData" :key="index">
-          <div class="stat-icon" :style="{ color: stat.color }">
+          <!-- <div class="stat-icon" :style="{ color: stat.color }"> -->
+          <div class="stat-icon">
             <i :class="stat.icon"></i>
           </div>
           <div class="stat-content">
@@ -419,7 +420,7 @@ const fetchQuestionAnalysis = async (question) => {
     <div class="student-section">
       <div class="student-card filter-card">
         <div class="filter-header">
-          <h3 class="student-title small">
+          <h3 class="student-title medium">
             <i class="fas fa-filter"></i>
             作业筛选
           </h3>
@@ -611,7 +612,7 @@ const fetchQuestionAnalysis = async (question) => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 .question-section {
   margin-top: 8px;
   padding: 12px;
@@ -1010,5 +1011,416 @@ const fetchQuestionAnalysis = async (question) => {
 
 .student-title.medium {
   margin-bottom: 20px;
+}
+</style> -->
+
+<style scoped>
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #fff;  /* 修改为白色背景 */
+  border: 1px solid #e0e0e0;
+}
+
+.question-explain {
+  background-color: #fdf6ec;  /* 淡橘黄 - 用于“错误诊断” */
+  border-left: 4px solid #f4a261;
+}
+
+.question-answer {
+  background-color: #ecf5ff;  /* 淡蓝色 - 用于“标准答案” */
+  border-left: 4px solid #409eff;
+}
+
+.question-analysis {
+  background-color: #f0f9eb;  /* 淡绿色 - 用于“解析” */
+  border-left: 4px solid #67c23a;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+
+
+/* 统计卡片样式 */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: #222;
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: clamp(11px, 2vw, 14px);
+  color: #666;
+  line-height: 1.3;
+}
+
+/* 筛选卡片样式 */
+.filter-card {
+  padding: 24px;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: #f4f8fc;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn:hover {
+  background: #e0e0e0;
+  color: #000;
+}
+
+.filter-btn.active {
+  background: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+/* 作业卡片样式 */
+.homework-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.homework-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.homework-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.4;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.homework-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.status-warning {
+  background: rgb(229, 202, 27);
+}
+
+.status-primary {
+  background: rgb(238, 134, 64);
+}
+
+.status-success {
+  background: rgb(45, 218, 91);
+}
+
+.status-info {
+  background: #444;
+}
+
+.homework-content {
+  margin-bottom: 16px;
+}
+
+.homework-desc {
+  color: #666;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.homework-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.meta-item i {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.time-left.urgent {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.time-left.overdue {
+  color: #ff6b6b;
+  font-weight: 600;
+}
+
+.time-left.normal {
+  color: #666;
+}
+
+.score-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.score-display {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* 统一得分相关字体样式 */
+.score-label,
+.score-value,
+.score-rate {
+  font-size: 15px !important;
+  font-weight: bold !important;
+  color: #333 !important;
+  font-family: 'Microsoft YaHei', 'Arial', 'PingFang SC', 'Hiragino Sans GB', 'Heiti SC', 'sans-serif' !important;
+  margin: 0 !important;
+  letter-spacing: 0.5px;
+}
+
+.score-value,
+.score-rate {
+  margin-left: 8px !important;
+}
+
+.homework-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 空状态卡片 */
+.empty-card {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-content i {
+  font-size: 48px;
+  color: #888;
+}
+
+/* 作业详情对话框样式 */
+.homework-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.homework-info-panel {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.homework-info-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.questions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.question-item {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+  background: #fafafa;
+}
+
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.question-number {
+  font-weight: 600;
+  color: #333;
+}
+
+.question-score {
+  margin-left: auto;
+  color: #666;
+  font-size: 14px;
+}
+
+.question-content {
+  margin-bottom: 16px;
+  padding: 12px;
+  background: white;
+  border-radius: 6px;
+  border-left: 4px solid #409eff;
+}
+
+.submitted-answer {
+  margin-top: 16px;
+  padding: 12px;
+  background: #e8f4fd;
+  border-radius: 6px;
+}
+
+.submitted-answer h5 {
+  margin: 0 0 8px 0;
+  color: #409eff;
+}
+
+.answer-content {
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.question-score-display {
+  margin-top: 12px;
+  text-align: left;
+}
+
+.score-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.score-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-controls {
+    justify-content: center;
+  }
+
+  .homework-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .homework-actions {
+    flex-direction: column;
+  }
+
+  .homework-meta {
+    flex-direction: column;
+  }
+}
+
+.student-title.medium {
+  margin-bottom: 20px;
+  color: #000;
+}
+.student-title.large {
+  margin-bottom: 20px;
+  color: #000;
+}
+.student-text{
+  color: black;
+}
+.student-button  {
+  background: #f4f4f4;
+  color: black;
+  border: 1px solid #ccc;
 }
 </style>

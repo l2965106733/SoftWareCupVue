@@ -374,7 +374,7 @@ const submitStudentSelection = async () => {
     <!-- 页面标题 -->
     <div class="page-header">
       <h1 class="page-title">
-        <i class="fas fa-users" style="color: white;"></i>
+        <i class="fas fa-users"></i>
         {{ roleLabel }}管理
       </h1>
       <p class="page-subtitle">管理系统中的所有用户信息</p>
@@ -482,7 +482,7 @@ const submitStudentSelection = async () => {
         <!-- 角色 -->
         <el-table-column label="角色" align="center" width="70">
           <template #default="scope">
-            <el-tag :type="scope.row.role == 3 ? 'danger' : scope.row.role == 2 ? 'warning' : 'success'" size="small"
+            <el-tag :type="scope.row.role == 3 ? 'danger' : scope.row.role == 2 ? 'warning' : 'success'" size="small" style="color: black;"
               class="role-tag">
               <i
                 :class="scope.row.role == 3 ? 'fas fa-crown' : scope.row.role == 2 ? 'fas fa-chalkboard-teacher' : 'fas fa-graduation-cap'"></i>
@@ -593,11 +593,9 @@ const submitStudentSelection = async () => {
           </el-input>
         </el-form-item>
 
-        <el-form-item label="用户号" prop="identifier">
+        <el-form-item label="班级" prop="identifier">
           <el-input v-model="formUser.className" placeholder="请输入用户号" clearable>
-            <template #prefix>
-              <i class="fas fa-id-card"></i>
-            </template>
+            
           </el-input>
         </el-form-item>
 
@@ -625,7 +623,7 @@ const submitStudentSelection = async () => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 .user-management {
   padding: 24px;
   min-height: 100vh;
@@ -1323,4 +1321,381 @@ const submitStudentSelection = async () => {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
+</style> -->
+
+<style scoped>
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  /* 小屏换行用 */
+  margin-top: 16px;
+  gap: 12px;
+}
+
+.action-left {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.record-count {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.user-management {
+  padding: 24px;
+  min-height: 100vh;
+  background: #f9f9f9;
+  color: #333;
+  animation: admin-page-fade-in 0.8s ease-out;
+}
+
+@keyframes admin-page-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 页面标题 */
+.page-header {
+  margin-bottom: 24px;
+  animation: admin-section-fade-in 0.8s ease-out;
+}
+
+.page-title {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  color: #333;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-title i {
+  color: #333;
+  font-size: 0.9em;
+}
+
+.page-subtitle {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 16px;
+  margin: 0;
+}
+
+/* 卡片通用样式 */
+.search-card,
+.action-card,
+.table-card,
+.pagination-card {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, box-shadow;
+  animation: admin-section-fade-in 0.8s ease-out;
+}
+
+.search-card:hover,
+.action-card:hover,
+.table-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.18);
+}
+
+/* 分页按钮样式 */
+.modern-pagination>>>.el-pager li,
+.modern-pagination>>>.el-pagination__sizes {
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  color: #333;
+}
+
+.modern-pagination>>>.el-pager li.is-active {
+  background-color: #333;
+  color: white;
+  border: none;
+}
+
+.modern-pagination>>>.el-pager li:hover {
+  background-color: #e0e0e0;
+}
+
+/* 搜索卡片 */
+.search-card {
+  padding: 24px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.search-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+}
+
+.search-form .el-form-item {
+  margin-bottom: 0;
+}
+
+.form-input,
+.form-select {
+  min-width: 200px;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.el-button  {
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.search-btn,
+.clear-btn {
+  /* padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); */
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.search-btn {
+  /* background: #333;
+  color: white;
+  border: none; */
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.search-btn:hover {
+  background: #555;
+  transform: translateY(-1px);
+}
+
+
+.clear-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+/* 操作按钮区域 */
+.action-card {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.add-btn,
+.delete-btn {
+  /* padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); */
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.add-btn {
+  background: #333;
+  color: white;
+  border: none;
+}
+
+.add-btn:hover {
+  background: #555;
+  transform: translateY(-1px);
+}
+
+.delete-btn {
+  /* background: #dc2626;
+  color: white;
+  border: none; */
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.delete-btn:hover {
+  /* background: #b91c1c;
+  transform: translateY(-1px); */
+  background: #e0e0e0 !important;
+  transform: translateY(-2px);
+}
+
+.table-info {
+  color: rgba(0, 0, 0, 0.7);
+  font-size: 14px;
+}
+
+/* 表格卡片 */
+.table-card {
+  padding: 24px;
+  overflow-x: auto;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important;
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 分页器 */
+.pagination-card {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.modern-pagination :deep(.el-pagination) {
+  color: rgba(0, 0, 0, 0.9);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li) {
+  background: #f0f0f0;
+  color: #333;
+  border-radius: 6px;
+  margin: 0 2px;
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li:hover) {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.modern-pagination :deep(.el-pagination .el-pager li.is-active) {
+  background: #333;
+  color: white;
+}
+
+/* 对话框样式 */
+.modern-dialog :deep(.el-dialog) {
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e0e0e0;
+}
+
+.modern-dialog :deep(.el-dialog__header) {
+  background: #333;
+  color: white;
+}
+
+.dialog-form {
+  padding: 24px;
+}
+
+.dialog-form :deep(.el-form-item__label) {
+  color: #333;
+}
+
+.dialog-form :deep(.el-input__wrapper) {
+  border-radius: 8px;
+  background: #fff !important;
+}
+
+.dialog-form :deep(.el-input__inner) {
+  color: #333 !important;
+  background: #fff !important;
+}
+
+.dialog-footer {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn,
+.confirm-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancel-btn {
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  color: #333;
+}
+
+.confirm-btn {
+  background: #333;
+  color: white;
+  border: none;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .table-card {
+    padding: 16px;
+  }
+  .el-table th,
+  .el-table td {
+    padding: 10px 6px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-management {
+    padding: 16px;
+  }
+  .search-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .form-input,
+  .form-select {
+    min-width: auto;
+    width: 100%;
+  }
+  .action-card {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .action-buttons {
+    justify-content: center;
+  }
+  .table-card {
+    padding: 12px;
+  }
+}
 </style>
+

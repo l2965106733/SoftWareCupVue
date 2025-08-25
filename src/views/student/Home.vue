@@ -165,7 +165,9 @@ const quickActions = ref([
                     <div class="welcome-text">
                         <h1 class="welcome-title">
                             <i class="fas fa-sun welcome-icon"></i>
-                            欢迎回来，{{ loginUser.name || '同学' }}！
+                            
+                            <span style="margin-left: 10px;">欢迎回来，{{ loginUser.name || '同学' }}！</span>
+
                         </h1>
                         <p class="welcome-subtitle">开始今天的学习之旅吧</p>
                         <div class="current-time">
@@ -221,7 +223,7 @@ const quickActions = ref([
                     class="stat-card"
                     :style="{ '--delay': index * 0.1 + 's' }"
                 >
-                    <div class="stat-icon" :style="{ color: stat.color }">
+                    <div class="stat-icon">
                         <i :class="stat.icon"></i>
                     </div>
                     <div class="stat-content">
@@ -263,7 +265,7 @@ const quickActions = ref([
     </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 .student-home {
     max-width: 1200px;
     margin: 0 auto;
@@ -678,4 +680,356 @@ const quickActions = ref([
         text-align: center;
     }
 }
+</style> -->
+
+<style scoped>
+.student-home {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+    background: #f9f9f9;
+    color: #333;
+}
+
+/* 欢迎区域 */
+.welcome-section {
+    margin-bottom: 32px;
+}
+
+.welcome-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px;
+    border: 1px solid #e0e0e0;
+}
+
+.welcome-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.welcome-text {
+    flex: 1;
+    min-width: 300px;
+}
+
+.welcome-title {
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.welcome-subtitle {
+    font-size: clamp(14px, 2.5vw, 18px);
+    color: #666;
+    margin: 0 0 16px 0;
+    line-height: 1.4;
+}
+
+.current-time {
+    font-size: clamp(12px, 2vw, 16px);
+    color: #777;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.welcome-illustration {
+    font-size: clamp(60px, 8vw, 120px);
+    color: #ccc;
+    animation: float 6s ease-in-out infinite;
+    flex-shrink: 0;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+/* 区域标题 */
+.section-title {
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 24px 0;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    line-height: 1.3;
+}
+
+.section-title i {
+    margin-right: 12px;
+    color: #777;
+    flex-shrink: 0;
+}
+
+/* 快捷操作区域 */
+.quick-actions-section {
+    margin-bottom: 32px;
+}
+
+.actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.action-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px;
+    text-decoration: none;
+    color: #333;
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+
+.action-card:hover {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.action-icon {
+    font-size: clamp(24px, 4vw, 32px);
+    margin-right: 16px;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.action-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.action-title {
+    font-size: clamp(16px, 2.5vw, 20px);
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+}
+
+.action-subtitle {
+    font-size: clamp(12px, 2vw, 14px);
+    opacity: 0.8;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.action-arrow {
+    font-size: clamp(14px, 2.5vw, 18px);
+    opacity: 0.7;
+    transition: transform 0.3s ease;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.action-card:hover .action-arrow {
+    transform: translateX(8px);
+}
+
+/* 学习统计区域 */
+.stats-section {
+    margin-bottom: 32px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.stat-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease;
+    min-height: 80px;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+}
+
+.stat-icon {
+    font-size: clamp(20px, 3vw, 28px);
+    margin-right: 12px;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.stat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.stat-value {
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.stat-label {
+    font-size: clamp(11px, 2vw, 14px);
+    color: #777;
+    line-height: 1.3;
+}
+
+/* 最近活动区域 */
+.recent-section {
+    margin-bottom: 32px;
+}
+
+.activity-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+}
+
+.activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #fafafa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    gap: 12px;
+}
+
+.activity-item:hover {
+    background: #f5f5f5;
+    transform: translateX(8px);
+}
+
+.activity-item .activity-icon {
+    font-size: clamp(16px, 2.5vw, 20px);
+    color: #333;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-size: clamp(14px, 2.5vw, 16px);
+    color: #333;
+    margin-bottom: 4px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.activity-time {
+    font-size: clamp(11px, 2vw, 14px);
+    color: #777;
+    line-height: 1.3;
+}
+
+.no-activity {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+    font-size: clamp(14px, 2.5vw, 18px);
+    padding: 20px;
+    border-radius: 12px;
+    background: #fafafa;
+    border: 1px dashed #e0e0e0;
+}
+
+.no-activity i {
+    margin-right: 10px;
+    font-size: clamp(18px, 3vw, 24px);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .student-home {
+        padding: 0 12px;
+    }
+    
+    .welcome-card {
+        padding: 24px 20px;
+    }
+    
+    .welcome-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .welcome-text {
+        min-width: auto;
+    }
+    
+    .welcome-title {
+        justify-content: center;
+    }
+    
+    .actions-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .action-card, .stat-card {
+        padding: 16px;
+    }
+    
+    .activity-card {
+        padding: 16px;
+    }
+    
+    .activity-item {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-card {
+        padding: 20px 16px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .current-time {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .section-title {
+        justify-content: center;
+        text-align: center;
+    }
+}
 </style>
+

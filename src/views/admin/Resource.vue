@@ -595,7 +595,7 @@ onMounted(() => {
         
         <el-table-column prop="resourceType" label="类型" width="80">
           <template #default="scope">
-            <el-tag>
+            <el-tag style="color: #000;">
               {{ scope.row.resourceType }}
             </el-tag>
           </template>
@@ -690,7 +690,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
@@ -1038,5 +1038,311 @@ onMounted(() => {
 .el-tag {
   border-radius: 4px;
   font-weight: 500;
+}
+</style> -->
+
+<style scoped>
+.el-button {
+    color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+.el-button:hover {
+    background: #d0d0d0;
+    transform: translateY(-2px);
+}
+
+.admin-resource-container {
+  padding: 24px;
+  background: #f9f9f9;
+  min-height: 100vh;
+  color: #333;
+  animation: admin-page-fade-in 0.8s ease-out;
+}
+
+@keyframes admin-page-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 头部区域 */
+.header-section {
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
+}
+
+.header-section h2 {
+  color: #333;
+  margin: 0 0 20px 0;
+  font-size: 28px;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  color: #333;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: admin-card-slide-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.stat-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+  color: #333;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.stat-label {
+  font-size: 20px;
+  opacity: 0.75;
+}
+
+/* 工具栏 */
+.toolbar-card {
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s both;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* 针对 Element Plus 按钮和输入框的简洁样式 */
+.toolbar .el-button,
+.toolbar .el-input__inner,
+.toolbar button,
+.toolbar select,
+.toolbar input {
+  background: #f5f5f5 !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+  font-size: 14px !important;
+  color: #333 !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.toolbar .el-button:hover,
+.toolbar .el-input__inner:hover,
+.toolbar button:hover,
+.toolbar select:hover,
+.toolbar input:hover {
+  background: #eaeaea !important;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* 筛选按钮或下拉组件样式 */
+.filters button,
+.filters select,
+.filters input {
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.filters button:hover,
+.filters select:hover,
+.filters input:hover {
+  background: #eaeaea;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 表格样式 */
+.table-card {
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #ddd;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+}
+
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important;
+  white-space: nowrap;
+}
+
+.el-table .cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resource-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.type-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  color: #333;
+}
+
+.name-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: black;
+}
+
+.download-count {
+  color: #67c23a;
+  font-weight: 600;
+}
+
+/* 操作按钮容器 */
+.action-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* 按钮风格改成简洁风 */
+.action-buttons {
+  min-width: 50px;
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border: 1px solid #ccc;
+  color: #333;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.el-button {
+  min-width: 50px;
+  padding: 4px 8px;
+}
+
+.action-buttons {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-wrapper {
+  margin-top: 20px;
+  text-align: center;
+  animation: admin-section-fade-in 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.8s both;
+}
+
+@keyframes activities-fade-in {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.pagination-wrapper .el-pagination {
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 16px;
+  display: inline-flex;
+  gap: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-wrapper .el-pager li,
+.pagination-wrapper .el-pagination__sizes,
+.pagination-wrapper .el-pagination__jump {
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  color: #333;
+  margin: 0 2px;
+  transition: all 0.2s ease;
+}
+
+.pagination-wrapper .el-pager li:hover,
+.pagination-wrapper .el-pagination__sizes:hover {
+  background-color: #eaeaea;
+}
+
+/* 响应式设计 */
+@media (max-width: 1400px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-resource-container {
+    padding: 16px;
+  }
+  
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filters, .actions {
+    justify-content: space-between;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 360px) {
+  .action-card, .stat-card, .activities-list {
+    padding: 16px;
+  }
 }
 </style>

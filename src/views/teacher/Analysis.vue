@@ -656,7 +656,7 @@ onMounted(() => {
     
   </div>
 </template>
-
+<!-- 
 <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 .analysis-layout {
@@ -1243,4 +1243,484 @@ h4 {
     border-radius: 12px;
   }
 }
-</style> 
+</style>  -->
+
+<style scoped>
+.analysis-layout {
+    min-height: 100%;
+    background: #f9f9f9;
+    color: #333;
+    padding: 24px;
+    border-radius: 24px;
+}
+
+.section-title, h4 {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card, .el-card, .overview-cards > div, .stats-grid > div, .resource-item, .question-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 24px;
+    color: #333;
+}
+
+.card:hover, .el-card:hover, .overview-cards > div:hover, .stats-grid > div:hover, .resource-item:hover, .question-item:hover {
+    background: #f5f5f5;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+}
+
+.table-cell {
+    color: #333;
+    font-weight: 500;
+}
+
+.el-button, .btn, button {
+    background: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 12px;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px 24px;
+    transition: all 0.3s ease;
+}
+
+.el-button:hover, .btn:hover, button:hover {
+    background: #d0d0d0;
+    transform: translateY(-2px);
+}
+
+.icon, .fa, .fas, .far, .fal, .fab {
+    color: #333;
+    font-size: 20px;
+}
+
+.stats-grid, .overview-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.resource-list, .question-list {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    color: #333;
+}
+
+.table-section {
+    background: #fff;
+    border-radius: 20px;
+    padding: 24px;
+    color: #333;
+}
+
+.main-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+/* 卡片样式 */
+.el-card {
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border: none;
+    background: #f5f5f5;
+}
+
+.el-card :deep(.el-card__body) {
+    padding: 24px;
+}
+
+/* 概览卡片 */
+.overview-section {
+    flex-shrink: 0;
+}
+
+.overview-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.overview-card {
+    background: #f5f5f5;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    color: #333;
+}
+
+.card-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-info {
+    flex: 1;
+}
+
+.card-title {
+    font-size: 17px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+.card-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.card-change {
+    font-size: 16px;
+}
+
+.card-change.positive {
+    color: #67c23a;
+}
+
+.card-change.negative {
+    color: #f56c6c;
+}
+
+.card-icon {
+    font-size: 40px;
+    color: #333;
+    opacity: 0.3;
+}
+
+/* 分析区块 */
+.charts-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #ccc;
+}
+
+.chart-header h4 {
+    margin: 0;
+    color: #333;
+}
+
+/* 成绩分布条 */
+.score-distribution {
+    margin-top: 20px;
+    margin-bottom: 24px;
+}
+
+.score-distribution h5 {
+    margin-bottom: 16px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.distribution-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.distribution-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.range-label {
+    width: 100px;
+    font-size: 14px;
+    color: #666;
+    text-align: right;
+}
+
+.range-count {
+    width: 50px;
+    font-size: 14px;
+    color: #666;
+    text-align: center;
+}
+
+.recent-homework h5 {
+    margin-bottom: 16px;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.homework-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.homework-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.homework-item:hover {
+    background: #e0e0e0;
+}
+
+.homework-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.homework-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 13px;
+    color: #666;
+}
+
+.empty-placeholder {
+    text-align: center;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border: 1px dashed #ccc;
+    color: #333;
+}
+
+.el-table th,
+.el-table td {
+    padding: 12px 16px !important; 
+    white-space: nowrap;
+}
+
+.el-table .cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+} 
+
+.resource-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.type-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    color: #333;
+}
+
+.name-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #333;
+}
+
+.download-count {
+    color: #67c23a;
+    font-weight: 600;
+}
+
+/* 学生详细数据表格样式 */
+.progress-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.progress-text {
+    font-size: 12px;
+    color: #666;
+    font-weight: 500;
+    min-width: 40px;
+}
+
+.view-count-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: gray;
+}
+
+.question-count-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: gray;
+}
+
+.completion-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: black;
+}
+
+.completion-text {
+    font-size: 12px;
+    color: gray;
+    font-weight: 500;
+    min-width: 40px;
+}
+
+/* 成绩分布自定义进度条样式 */
+.range-bar {
+    flex: 1;
+    height: 16px;
+    background: #e6f9ed; 
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 0 8px;
+    position: relative;
+}
+.range-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #5ad8a6 0%, #36cfc9 100%);
+    border-radius: 8px 0 0 8px;
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+}
+
+/* 资源统计专区 */
+.resource-stats-section {
+    margin-top: 20px;
+}
+
+.popular-resources,
+.recent-questions {
+    margin-top: 20px;
+}
+
+.popular-resources h5,
+.recent-questions h5 {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.resource-list,
+.question-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.resource-item,
+.question-item {
+    padding: 12px;
+    background: #f5f5f5;
+    border-radius: 6px;
+    border-left: 3px solid #000;
+    color: #333;
+}
+
+.resource-name,
+.question-title {
+    font-size: 14px;
+    color: #333;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.resource-stats,
+.question-info {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 互动统计专区 */
+.interact-stats-section {
+    margin-top: 20px;
+}
+
+/* 表格区域 */
+.table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+.table-header h4 {
+    margin: 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.table-pagination {
+    margin-top: 20px;
+    text-align: right;
+    padding: 12px 16px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    display: inline-block;
+}
+
+/* 分页按钮 */
+.table-pagination :deep(.el-pager li),
+.table-pagination :deep(.el-pagination__sizes),
+.table-pagination :deep(.el-pagination__jump),
+.table-pagination :deep(button) {
+    background: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    color: #333;
+    margin: 2px;
+    transition: all 0.2s ease;
+}
+
+/* hover 效果 */
+.table-pagination :deep(.el-pager li:hover),
+.table-pagination :deep(.el-pagination__sizes:hover),
+.table-pagination :deep(.el-pagination__jump:hover),
+.table-pagination :deep(button:hover) {
+    background: #d0d0d0;
+}
+</style>

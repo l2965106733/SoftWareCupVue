@@ -98,7 +98,7 @@ const logOut = () => {
     </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
@@ -343,5 +343,190 @@ const logOut = () => {
 .content-wrapper {
     padding: 32px;
     min-height: 100%;
+}
+</style> -->
+
+<style scoped>
+/* FontAwesome（保留） */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
+/* 布局容器：白底 + 轻阴影 + 去玻璃效果 */
+.teacher-layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  max-width: 75vw;
+  margin: 0 auto;
+  border-radius: 0 0 16px 16px;
+  overflow: hidden;
+  background: #f9f9f9;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  color: #333;
+}
+
+/* 页眉：实体白底 + 灰色边框 */
+.modern-header {
+  height: 72px;
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  flex-shrink: 0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 24px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.system-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #222;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.title-icon {
+  margin-right: 10px;
+  font-size: 22px;
+  /* color: #007bff;  */
+}
+
+/* 右侧用户区 */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.welcome-text {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.user-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* 按钮：白底边框，悬浮轻阴影 */
+.action-btn {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  padding: 8px 14px;
+  border-radius: 18px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+.action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+  border-color: #d5d5d5;
+}
+
+/* 退出：红色轻点缀 */
+.logout-btn:hover {
+  color: #c0392b;
+  border-color: #f0c9c5;
+  background: #fff5f4;
+}
+
+/* 主容器 */
+.main-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 侧边栏：白底 + 右边框 + 内滚动（隐藏滚动条外观） */
+.modern-sidebar {
+  width: 260px;
+  background: #fff;
+  border-right: 1px solid #e5e5e5;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+.modern-sidebar::-webkit-scrollbar { width: 0; height: 0; }
+.modern-sidebar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.nav-menu { padding: 16px 0; }
+
+/* 菜单项：灰文字，hover 灰底，active 左边蓝条 */
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #444;
+  text-decoration: none;
+  transition: all .2s ease;
+  border-left: 3px solid transparent;
+  margin: 2px 0;
+  border-radius: 6px;
+}
+.nav-item:hover {
+  background: #f7f7f7;
+  color: #222;
+}
+.nav-item.active {
+  background: #f2f7ff;
+  color: #1f2d3d;
+  border-left-color: black;
+}
+
+.nav-icon {
+  font-size: 16px;
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  /* color: #007bff; */
+}
+.nav-text {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* 主内容：白底卡片感 + 轻阴影 */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  background: #f4f6f8;
+}
+.main-content::-webkit-scrollbar { width: 0; height: 0; }
+.main-content { -ms-overflow-style: none; scrollbar-width: none; }
+
+.content-wrapper {
+  padding: 24px;
+  min-height: 100%;
+}
+
+/* 适配小屏 */
+@media (max-width: 1024px) {
+  .teacher-layout { max-width: 100vw; border-radius: 0; }
+  .modern-sidebar { width: 240px; }
+  .header-content { padding: 0 16px; }
+}
+@media (max-width: 768px) {
+  .modern-header { height: 64px; }
+  .system-title { font-size: 18px; }
+  .title-icon { font-size: 18px; margin-right: 8px; }
+  .modern-sidebar { width: 220px; }
+  .content-wrapper { padding: 16px; }
 }
 </style>

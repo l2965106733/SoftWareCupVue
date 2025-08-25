@@ -94,7 +94,7 @@ const logOut = () => {
     </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
@@ -334,6 +334,186 @@ const logOut = () => {
         opacity: 1; 
         transform: translateY(0);
     }
+}
+
+.content-wrapper {
+    padding: 32px;
+    min-height: 100%;
+}
+</style> -->
+
+<style scoped>
+.admin-layout {
+    height: 100vh;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    max-width: 75vw;
+    margin: 0 auto;
+    border-radius: 0 0 24px 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* 页眉 */
+.modern-header {
+    height: 80px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+    flex-shrink: 0;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 32px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.system-title {
+    font-size: 28px;
+    font-weight: 540;
+    color: #333;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.title-icon {
+    margin-right: 12px;
+    font-size: 32px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.welcome-text {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.user-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.action-btn {
+    background: #f0f0f0;
+    border: 1px solid #ddd;
+    color: #333;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: #ddd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.logout-btn:hover {
+    background: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* 主容器 */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 侧边栏 */
+.modern-sidebar {
+    width: 260px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+.modern-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.modern-sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.nav-menu {
+    padding: 24px 0;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    color: #666;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border-left: 3px solid transparent;
+    margin: 4px 0;
+}
+
+.nav-item:hover {
+    background: #f0f0f0;
+    color: #333;
+    border-left-color: #333;
+    transform: translateX(8px);
+}
+
+.nav-item.active {
+    background: #e0e0e0;
+    color: #333;
+    border-left-color: #333;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.nav-icon {
+    font-size: 18px;
+    margin-right: 12px;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 主内容区域 */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px;
+}
+
+.main-content::-webkit-scrollbar {
+    display: none;
+}
+
+.main-content {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .content-wrapper {

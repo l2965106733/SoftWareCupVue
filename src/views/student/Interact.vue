@@ -455,7 +455,8 @@ const hoverRating = ref(0)
       </h2>
       <div class="student-grid three-columns">
         <div class="student-card stat-card" v-for="(stat, index) in interactStatsData" :key="index">
-          <div class="stat-icon" :style="{ color: stat.color }">
+          <!-- <div class="stat-icon" :style="{ color: stat.color }"> -->
+          <div class="stat-icon">
             <i :class="stat.icon"></i>
           </div>
           <div class="stat-content">
@@ -703,7 +704,7 @@ const hoverRating = ref(0)
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 统计卡片样式 */
 .stat-card {
   display: flex;
@@ -1172,6 +1173,521 @@ const hoverRating = ref(0)
 
 .student-title.medium {
   margin-bottom: 20px;
+}
+
+.student-grid.three-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.student-grid.three-columns .stat-card {
+  flex: 1 1 0;
+  min-width: 160px;
+  max-width: 220px;
+}
+
+@media (max-width: 900px) {
+  .student-grid.three-columns {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .student-grid.three-columns .stat-card {
+    min-width: 140px;
+    max-width: 100%;
+  }
+}
+
+</style> -->
+
+<style scoped>
+/* 统计卡片样式 */
+.stat-card {
+  display: flex;
+  align-items: center;
+  padding: 20px;
+  animation: student-scale-in 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+  background: #fff; /* 背景为白色 */
+  border: 1px solid #e0e0e0; /* 边框颜色 */
+}
+
+.stat-icon {
+  font-size: clamp(20px, 3vw, 28px);
+  margin-right: 12px;
+  animation: icon-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.stat-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.stat-value {
+  font-size: clamp(18px, 3vw, 24px);
+  font-weight: 700;
+  color: #222; /* 修改为深灰色 */
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+.stat-label {
+  font-size: clamp(11px, 2vw, 14px);
+  color: #666; /* 修改为浅灰色 */
+  line-height: 1.3;
+}
+
+/* 提问表单卡片样式 */
+.question-form-card {
+  padding: 24px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.form-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #222; /* 修改为深灰色 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-tips {
+  font-size: 14px;
+  color: #666; /* 修改为浅灰色 */
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.question-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222; /* 修改为深灰色 */
+}
+
+.student-input {
+  background: #f0f0f0; /* 修改为浅灰背景 */
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  color: #222; /* 修改为深灰色 */
+  padding: 12px 16px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  resize: vertical;
+}
+
+.student-input:focus {
+  outline: none;
+  border-color: #409eff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.student-input::placeholder {
+  color: #aaa; /* 修改为灰色 */
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.student-button  {
+  color: black;
+  background: white;
+  border: 1px solid #ccc;
+}
+
+/* 筛选卡片样式 */
+.filter-card {
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #222; /* 修改为深灰色 */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: #f0f0f0; /* 修改为浅灰背景 */
+  border: 1px solid #e0e0e0;
+  color: #666; /* 修改为浅灰色 */
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-btn:hover {
+  background: #e0e0e0;
+  color: #222; /* 修改为深灰色 */
+}
+
+.filter-btn.active {
+  background: #409eff;
+  color: #fff;
+  border-color: #409eff;
+}
+
+/* 问题卡片样式 */
+.question-card {
+  padding: 20px;
+  animation: student-slide-up 0.8s cubic-bezier(.4, 0, .2, 1);
+  animation-delay: calc(var(--index, 0) * 0.1s);
+  animation-fill-mode: both;
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.question-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #222; /* 修改为深灰色 */
+  line-height: 1.4;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.question-status {
+  flex-shrink: 0;
+}
+
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.status-warning {
+  background: rgb(222, 105, 42);
+}
+
+.status-success {
+  background: rgb(33, 220, 89);
+}
+
+.question-content {
+  margin-bottom: 16px;
+}
+
+.question-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #666; /* 修改为浅灰色 */
+}
+
+.meta-item i {
+  width: 12px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.response-time {
+  color: #222; /* 修改为深灰色 */
+  font-weight: 500;
+}
+
+.question-desc {
+  color: #666; /* 修改为浅灰色 */
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.answer-preview {
+  padding: 12px;
+  background: #f0f0f0; /* 修改为浅灰背景 */
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.teacher-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #222; /* 修改为深灰色 */
+  font-weight: 600;
+}
+
+.answer-snippet {
+  color: #666; /* 修改为浅灰色 */
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.question-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 空状态卡片 */
+.empty-card {
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.empty-content i {
+  font-size: 48px;
+  color: #888; /* 修改为淡灰色 */
+}
+
+/* 问题详情对话框样式 */
+.question-detail {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.question-info-panel {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.question-info-panel p {
+  margin: 8px 0;
+  line-height: 1.6;
+}
+
+.question-content-section {
+  margin-bottom: 20px;
+}
+
+.question-content-section h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.content-display {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #409eff;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.answer-section {
+  margin-bottom: 20px;
+}
+
+.answer-section h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 16px;
+}
+
+.answer-section .teacher-info {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.answer-time {
+  color: #999;
+  font-size: 12px;
+  font-weight: normal;
+  margin-left: auto;
+}
+
+.answer-content {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+
+.rating-section h5 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+}
+
+.rating-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rating-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.rating-btn {
+  background: #f0f0f0; /* 修改为浅灰背景 */
+  border: 1px solid #e0e0e0;
+  color: #666; /* 修改为浅灰色 */
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rating-btn:hover {
+  background: #e0e0e0;
+  color: #222; /* 修改为深灰色 */
+}
+
+.rated-text {
+  color: #67c23a;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.waiting-section {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.waiting-section i {
+  font-size: 48px;
+  color: #888; /* 修改为淡灰色 */
+  margin-bottom: 16px;
+}
+
+.waiting-section p {
+  color: #666; /* 修改为浅灰色 */
+  font-size: 16px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .form-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .filter-controls {
+    justify-content: center;
+  }
+  
+  .question-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .question-actions {
+    flex-direction: column;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .rating-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.student-title.medium {
+  margin-bottom: 20px;
+  color: #000;
+}
+.student-title.large {
+  margin-bottom: 20px;
+  color: #000;
+}
+.student-text.secondary {
+  color: #555; 
 }
 
 .student-grid.three-columns {

@@ -748,14 +748,14 @@ const handleAIGrade = async (question) => {
           </h3>
         </div>
         <div class="empty-hint">
-          <el-button type="primary" @click="showAIDialog" size="large" style="color: white">
+          <el-button type="primary" @click="showAIDialog" size="large">
             <el-icon>
               <MagicStick />
             </el-icon>
             AI 生成题目
           </el-button>
 
-          <el-button type="danger" @click="handleManualAdd" size="large" style="color: white">
+          <el-button type="danger" @click="handleManualAdd" size="large">
             <el-icon>
               <EditPen />
             </el-icon>
@@ -891,13 +891,13 @@ const handleAIGrade = async (question) => {
           </el-form-item>
 
           <el-form-item label="题目总数" class="count-label">
-            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
               "choice").length}} 道选择题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
               "short").length}} 道简答题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px; color:white">{{questions.filter(q => q.type ===
+            <el-tag type="info" size="large" style="margin-right: 6px;">{{questions.filter(q => q.type ===
               "code").length}} 道编程题</el-tag>
-            <el-tag type="info" size="large" style="margin-right: 6px; color:white">当前总分为 {{questions.reduce((sum, q) =>
+            <el-tag type="info" size="large" style="margin-right: 6px;">当前总分为 {{questions.reduce((sum, q) =>
               sum +
               (q.score || 0), 0)}} 分</el-tag>
           </el-form-item>
@@ -961,7 +961,7 @@ const handleAIGrade = async (question) => {
 
       <!-- 发布记录区块 -->
       <el-card shadow="never">
-        <h3 class="section-title" style="color:white; margin-bottom: 25px;"><el-icon>
+        <h3 class="section-title" style="margin-bottom: 25px;"><el-icon>
             <List />
           </el-icon> 发布记录</h3>
         <div class="publish-table-wrapper">
@@ -988,7 +988,7 @@ const handleAIGrade = async (question) => {
             <el-table-column label="操作" width="100px" align="center" header-align="center">
               <template #default="scope">
                 <div class="center-cell">
-                  <el-button type="danger" size="small" @click="viewDetail(scope.row)" style=" color: white;">
+                  <el-button type="danger" size="small" @click="viewDetail(scope.row)" >
                     查看
                   </el-button>
                 </div>
@@ -1281,7 +1281,7 @@ const handleAIGrade = async (question) => {
 </template>
 
 
-<style scoped>
+<!-- <style scoped>
 /* 模拟按钮垂直居中 */
 .el-button-local {
   font-size: 13px !important;
@@ -1590,5 +1590,312 @@ button {
 .publish-table {
   border-radius: 0;
   /* 由外层控制圆角 */
+}
+</style> -->
+
+<style scoped>
+.el-button {
+  background: #f4f4f4;
+  color: black;
+  border: 1px solid #ccc;
+}
+/* 模拟按钮垂直居中 */
+.el-button-local {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 30px !important;
+  height: 30px !important;
+  padding: 0 12px !important;
+}
+
+.question-content {
+  margin-bottom: 8px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 6px;
+  border-left: 4px solid #333;
+}
+
+.question-section {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 6px;
+  background-color: #f9f9f9;
+  margin-bottom: 8px;
+}
+
+.question-explain {
+  background-color: #f5f5f5;
+  border-left: 4px solid #999;
+}
+
+.question-answer {
+  background-color: #f0f0f0;
+  border-left: 4px solid #666;
+}
+
+.question-analysis {
+  background-color: #e0e0e0;
+  border-left: 4px solid #444;
+}
+
+.question-section strong {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #333;
+}
+
+.question-section div {
+  white-space: pre-wrap;
+  color: #666;
+}
+
+.center-button-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+.action-btn {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: normal !important;
+  padding: 4px 10px !important;
+}
+
+.el-table__row {
+  height: 58px;
+}
+
+@keyframes page-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-title,
+.control-header h3,
+h4 {
+  font-size: clamp(20px, 3vw, 24px);
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 clamp(16px, 3vw, 24px) 0;
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 2vw, 12px);
+  animation: section-fade-in 0.8s cubic-bezier(.4, 0, .2, 1);
+}
+
+@keyframes section-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.el-card,
+.temp-el-card {
+  background: #fff !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16) !important;
+  border: none !important;
+  transition: all 0.3s ease;
+  margin-bottom: 32px;
+}
+
+.el-card:hover {
+  background: #f0f0f0 !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18) !important;
+}
+
+.el-button,
+.btn,
+button {
+  border-radius: 12px !important;
+  font-size: 14px !important;
+  font-weight: 500;
+  padding: 12px 24px !important;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.el-button:hover {
+  background: #e0e0e0 !important;
+  transform: translateY(-2px);
+}
+
+.el-input,
+.el-date-editor,
+.el-textarea {
+  background: #fff !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+}
+
+.el-input__inner,
+.el-textarea__inner {
+  background: transparent !important;
+}
+
+.el-tag {
+  /* background: rgba(161, 140, 209, 0.7) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  padding: 2px 10px !important; */
+  background: #f4f4f4;
+  color: black;
+  border: 1px solid #ccc;
+}
+
+.header-actions {
+  margin-top: 24px;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.header-actions .el-button {
+  min-width: 110px;
+  padding: 10px 20px;
+  font-size: 15px;
+}
+
+.question-block {
+  background: #f9f9f9;
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.question-block:hover {
+  background: #f0f0f0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+}
+
+.question-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.question-header h4 {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 0;
+}
+
+.empty-hint {
+  color: #e0e0e0;
+  padding: 60px 30px;
+  text-align: center;
+  font-size: 16px;
+  background: #f0f0f0;
+  border-radius: 12px;
+  border: 2px dashed #ccc;
+  margin-bottom: 24px;
+}
+
+.el-table th,
+.el-table td {
+  padding: 12px 16px !important;
+  white-space: nowrap;
+}
+
+.form-tips {
+  font-size: 13px;
+  color: #e0e0e0;
+  margin-top: 8px;
+}
+
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.right-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.saved-tip {
+  color: #333;
+  font-size: 14px;
+  margin-top: 8px;
+  text-align: right;
+}
+
+/* 只影响作业标题label为白色 */
+:deep(.side-panel .title-label .el-form-item__label) {
+  color: #333 !important;
+}
+
+/* 只影响作业备注、起止时间、题目总数label为白色 */
+:deep(.side-panel .remark-label .el-form-item__label),
+:deep(.side-panel .time-label .el-form-item__label),
+:deep(.side-panel .count-label .el-form-item__label) {
+  color: #333 !important;
+}
+
+/* 只影响题型、题干、知识点、答案、解析、分值label为白色 */
+:deep(.type-label .el-form-item__label),
+:deep(.content-label .el-form-item__label),
+:deep(.knowledge-label .el-form-item__label),
+:deep(.answer-label .el-form-item__label),
+:deep(.explain-label .el-form-item__label),
+:deep(.score-label .el-form-item__label) {
+  color: #333 !important;
+}
+
+@media (max-width: 900px) {
+  .vertical-layout.practise-layout {
+    padding: 12px;
+  }
+
+  .el-card,
+  .temp-el-card {
+    padding: 8px;
+  }
+
+  .side-panel {
+    gap: 16px;
+  }
+
+  .question-block {
+    padding: 12px 8px 8px 8px;
+    margin-bottom: 16px;
+  }
+}
+
+.publish-table-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f9f9f9;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
+}
+
+.publish-table {
+  border-radius: 0;
 }
 </style>

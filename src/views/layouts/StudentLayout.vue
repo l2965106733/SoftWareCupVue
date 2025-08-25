@@ -102,7 +102,7 @@ const logOut = () => {
     </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
@@ -302,6 +302,254 @@ const logOut = () => {
     color: #fff;
     border-left-color: #fff;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.nav-icon {
+    font-size: 18px;
+    margin-right: 12px;
+    width: 20px;
+    text-align: center;
+}
+
+.nav-text {
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 主内容区域 */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    animation: content-fade-in 1s cubic-bezier(.4,0,.2,1);
+}
+
+/* 隐藏主内容区域滚动条 */
+.main-content::-webkit-scrollbar {
+    display: none;
+}
+
+.main-content {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@keyframes content-fade-in {
+    0% { 
+        opacity: 0; 
+        transform: translateY(20px);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);
+    }
+}
+
+.content-wrapper {
+    padding: 32px;
+    min-height: 100%;
+}
+</style> -->
+
+
+<style scoped>
+/* 引入FontAwesome */
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
+.student-layout {
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    max-width: 75vw;
+    margin: 0 auto;
+    border-radius: 0 0 24px 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    color: #000;  /* 默认字体颜色改为黑色 */
+}
+
+/* 现代化页眉 */
+.modern-header {
+    height: 80px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    animation: header-slide-down 0.8s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+    color: #000;  /* 字体颜色改为黑色 */
+}
+
+@keyframes header-slide-down {
+    0% { 
+        opacity: 0; 
+        transform: translateY(-20px);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateY(0);
+    }
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    padding: 0 32px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.system-title {
+    font-size: 28px;
+    font-weight: 540;
+    color: #000;  /* 字体颜色改为黑色 */
+    margin: 0;
+    display: flex;
+    align-items: center;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    animation: title-glow 3s ease-in-out infinite alternate;
+}
+
+.title-icon {
+    margin-right: 12px;
+    font-size: 32px;
+    animation: icon-rotate 4s ease-in-out infinite;
+}
+
+@keyframes title-glow {
+    0% { 
+        text-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 20px rgba(255,255,255,0.3);
+    }
+    100% { 
+        text-shadow: 0 2px 8px rgba(0,0,0,0.1), 0 0 30px rgba(255,255,255,0.5);
+    }
+}
+
+@keyframes icon-rotate {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.welcome-text {
+    font-size: 16px;
+    color: #000;  /* 字体颜色改为黑色 */
+    margin-bottom: 8px;
+    animation: text-fade-in 1s ease-out;
+}
+
+@keyframes text-fade-in {
+    0% { opacity: 0; transform: translateX(20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+.user-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.action-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #000;  /* 字体颜色改为黑色 */
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.action-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.logout-btn:hover {
+    background: rgba(255, 108, 108, 0.8);
+    border-color: rgba(255, 108, 108, 0.9);
+}
+
+/* 主容器 */
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* 现代化侧边栏 */
+.modern-sidebar {
+    width: 260px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    border-right: 1px solid rgba(255, 255, 255, 0.2);
+    animation: sidebar-slide-in 0.8s cubic-bezier(.4,0,.2,1);
+    flex-shrink: 0;
+    overflow-y: auto;
+}
+
+/* 隐藏侧边栏滚动条 */
+.modern-sidebar::-webkit-scrollbar {
+    display: none;
+}
+
+.modern-sidebar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@keyframes sidebar-slide-in {
+    0% { 
+        opacity: 0; 
+        transform: translateX(-20px);
+    }
+    100% { 
+        opacity: 1; 
+        transform: translateX(0);
+    }
+}
+
+.nav-menu {
+    padding: 24px 0;
+}
+
+.nav-item {
+    display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  color: #444;
+  text-decoration: none;
+  transition: all .2s ease;
+  border-left: 3px solid transparent;
+  margin: 2px 0;
+  border-radius: 6px;
+}
+
+.nav-item:hover {
+    background: #f7f7f7;
+  color: #222;
+}
+.nav-item.active {
+    background: #f2f7ff;
+  color: #1f2d3d;
+  border-left-color: black;
 }
 
 .nav-icon {

@@ -404,8 +404,10 @@ onMounted(() => {
 
     <div class="top-toolbar">
 
-      <el-button type="success" size="large" @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button>
-      <el-button type="danger" size="large" @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button>
+      <!-- <el-button type="success" size="large" @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button> -->
+      <!-- <el-button type="danger" size="large" @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button> -->
+      <el-button  @click="aiDialogVisible = true"><i class="fas fa-magic"></i> AI生成教学内容</el-button>
+      <el-button  @click="clearPlan"><i class="fas fa-broom"></i> 清空</el-button>
     </div>
 
     <div class="vertical-blocks">
@@ -449,7 +451,8 @@ onMounted(() => {
             <el-upload v-model:file-list="teachingFileList" action="/api/upload" :before-upload="beforeUpload"
               :on-success="handleSuccess" :on-preview="handlePreview" :on-remove="handleRemove" :headers="uploadHeaders"
               :show-file-list="false">
-              <el-button type="primary">
+              <!-- <el-button type="primary"> -->
+              <el-button>
                 <el-icon>
                   <Upload />
                 </el-icon>
@@ -459,7 +462,7 @@ onMounted(() => {
             <span class="upload-tip">支持上传课程资料，多文件，最大100MB</span>
           </div>
         </div>
-        <div v-if="teachingFileList.length > 0" class="resource-list">
+        <div v-if="teachingFileList.length > 0" class="resource-list"  style="margin-top: 10px;">
           <h4><i class="fas fa-list"></i> 资源列表</h4>
           <div v-for="file in teachingFileList" :key="file.uid" class="resource-item">
             <div class="resource-name">
@@ -524,7 +527,7 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 .lesson-plan-container {
     min-height: 100%;
@@ -962,5 +965,201 @@ onMounted(() => {
 .resource-list h4,
 ::v-deep(.el-empty__description) {
   color: #fff !important;
+}
+</style> -->
+
+<style scoped>
+.lesson-plan-container {
+    min-height: 100%;
+    animation: page-fade-in 0.8s ease-out;
+    background: #f9f9f9;
+    color: #333;
+    padding: clamp(24px, 4vw, 48px);
+    border-radius: 24px;
+}
+
+@keyframes page-fade-in {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* 区域标题 */
+.section-title, h3, h4 {
+    font-size: clamp(20px, 3vw, 24px);
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 clamp(16px, 3vw, 24px) 0;
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 12px);
+    animation: section-fade-in 0.8s ease-out;
+}
+
+@keyframes section-fade-in {
+    0% { opacity: 0; transform: translateX(-20px); }
+    100% { opacity: 1; transform: translateX(0); }
+}
+
+/* 卡片样式 */
+.card, .el-card, .resource-item, .download-info, .upload-section, .lesson-section {
+    background: #fff;
+    margin-bottom: 25px;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: clamp(20px, 4vw, 32px);
+    transition: all 0.3s ease;
+    color: #333;
+}
+
+.lesson-plan-container:hover,
+.el-card:hover,
+.upload-section:hover,
+.lesson-section:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+}
+
+/* 按钮样式 */
+.el-button, .btn, button {
+    border-radius: 12px !important;
+    font-size: 14px !important;
+    font-weight: 500;
+    padding: 12px 24px !important;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.el-button:hover, .btn:hover, button:hover {
+    background: rgba(0, 0, 0, 0.1) !important;
+    transform: translateY(-2px);
+}
+
+/* 图标样式 */
+.icon, .fa, .fas, .far, .fal, .fab {
+    color: #333 !important;
+    font-size: 20px !important;
+}
+
+/* 上传和资源管理 */
+.upload-section,
+.lesson-section {
+    border-radius: 16px;
+    padding: 24px;
+    border: none;
+}
+
+.lesson-section h3,
+.upload-section h3 {
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 18px;
+}
+
+.resource-item {
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s;
+}
+
+.resource-item:hover {
+    box-shadow: 0 4px 24px rgba(64, 158, 255, 0.10);
+    border-color: #b3c6e0;
+}
+
+/* 资源信息 */
+.resource-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    font-size: 15px;
+}
+
+.resource-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.resource-actions .el-button {
+    background: transparent !important;
+    color: #333 !important;
+    border: 1.5px solid #333 !important;
+    border-radius: 8px !important;
+    font-size: 13px;
+    margin-bottom: 5px;
+    padding: 4px 10px;
+    transition: all 0.2s;
+}
+
+.resource-actions .el-button:hover {
+    background: #333 !important;
+    color: #fff !important;
+    border-color: #333 !important;
+}
+
+/* 错误和空状态 */
+.empty-activities {
+    text-align: center;
+    padding: 48px 24px;
+    color: #666;
+}
+
+.empty-activities i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.empty-activities p {
+    font-size: 16px;
+    margin: 0;
+}
+
+/* 响应式设计 */
+@media (max-width: 900px) {
+    .vertical-layout, .vertical-blocks {
+        gap: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .activity-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .activity-icon {
+        align-self: flex-start;
+    }
+}
+
+@media (max-width: 360px) {
+    .action-card, .stat-card, .activities-list {
+        padding: 16px;
+    }
 }
 </style>

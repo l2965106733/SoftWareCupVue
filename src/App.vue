@@ -64,7 +64,7 @@ const currentSystem = computed(() => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 /* 引入FontAwesome */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
 
@@ -80,19 +80,19 @@ const currentSystem = computed(() => {
 
 /* 学生系统背景 */
 #app.system-student {
-  background: rgb(93, 93, 209)
+  /* background: rgb(93, 93, 209) */
 }
 
 /* 教师系统背景 */
 #app.system-teacher {
   /* background: linear-gradient(135deg, #8e64cd 0%, #8953e5 50%, #a855f7 100%); */
-  background: rgb(93, 93, 209)
+  /* background: rgb(93, 93, 209) */
 }
 
 /* 管理员系统背景 */
 #app.system-admin {
   /* background: linear-gradient(135deg, #df3e66 0%, #df3e61 50%, #ec7085 100%); */
-  background: rgb(93, 93, 209)
+  /* background: rgb(93, 93, 209) */
 }
 
 /* 禁用滚动的样式 */
@@ -232,6 +232,166 @@ const currentSystem = computed(() => {
   75% {
     transform: translateY(3px) rotate(5deg);
   }
+}
+
+.main-content {
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main-content.with-header {
+  padding-top: 70px;
+}
+
+.main-content.no-scroll {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 针对学生系统等内部页面，不需要居中 */
+.main-content>* {
+  width: 100%;
+}
+
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.7s cubic-bezier(.4, 0, .2, 1);
+}
+
+.page-transition-enter-from {
+  opacity: 0;
+  transform: translateY(40px) scale(0.98);
+}
+
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-20px) scale(1.02);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .header-content {
+    padding: 0 20px;
+  }
+
+  .system-title {
+    font-size: 20px;
+  }
+
+  .title-icon {
+    font-size: 24px;
+  }
+
+  .startup-text {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    padding: 0 16px;
+  }
+
+  .system-title {
+    font-size: 18px;
+  }
+
+  .startup-text {
+    font-size: 14px;
+  }
+}
+</style> -->
+
+<style scoped>
+#app {
+  min-height: 100vh;
+  background: #f9f9f9;
+  color: #333;
+  transition: background 0.5s ease;
+}
+
+/* 公共页面背景（登录、注册、找回密码） */
+#app.system-public {
+  background: #f1f1f1;
+}
+
+/* 学生系统背景 */
+#app.system-student {
+  background: #f1f1f1;
+}
+
+/* 教师系统背景 */
+#app.system-teacher {
+  background: #f1f1f1;
+}
+
+/* 管理员系统背景 */
+#app.system-admin {
+  background: #f1f1f1;
+}
+
+/* 禁用滚动的样式 */
+#app.no-scroll {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 全局页眉样式 */
+.global-header {
+  height: 70px;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  padding: 0 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+}
+
+.system-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.title-icon {
+  margin-right: 12px;
+  font-size: 28px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.startup-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+}
+
+.startup-icon {
+  margin-right: 8px;
 }
 
 .main-content {

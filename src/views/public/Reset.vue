@@ -118,7 +118,7 @@ const back = () => {
   </div>
 </template>
 
-<style scoped>
+<!-- <style scoped>
 #container {
   display: flex;
   justify-content: center;
@@ -200,6 +200,86 @@ const back = () => {
 
 .confirm-btn:hover {
   background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+}
+</style> -->
+
+<style scoped>
+#container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 90px 20px 20px 20px;
+  width: 100%;
+}
+
+.reset-form {
+  width: 370px;
+  background: #fff;
+  padding: 36px 32px 28px 32px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  position: relative;
+  margin-top: 90px;
+}
+
+.page-transition {
+  animation: page-fade-in 0.7s cubic-bezier(.4,0,.2,1);
+}
+
+@keyframes page-fade-in {
+  0% { opacity: 0; transform: translateY(40px) scale(0.98); }
+  100% { opacity: 1; transform: none; }
+}
+
+.title {
+  text-align: center;
+  font-size: 26px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #333;
+  letter-spacing: 0.04em;
+}
+
+.el-form-item {
+  margin-bottom: 18px;
+}
+
+.button-group {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 24px;
+}
+
+.reset-button {
+  flex: 1;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+  border: none;
+  padding: 12px 24px;
+}
+
+.back-btn {
+  background: #f0f0f0;
+  color: #666;
+}
+
+.back-btn:hover {
+  background: #e0e0e0;
+  transform: translateY(-1px);
+}
+
+.confirm-btn {
+  background: #333;
+  color: #fff;
+}
+
+.confirm-btn:hover {
+  background: #444;
   transform: translateY(-1px);
 }
 </style>
